@@ -1,0 +1,5 @@
+{
+  "artifactType": "ARTIFACT_TYPE_OTHER",
+  "summary": "Scratch PowerShell script to safely archive legacy Electron files without command-line parsing conflicts.",
+  "updatedAt": "2026-06-19T15:11:04.565428Z"
+}

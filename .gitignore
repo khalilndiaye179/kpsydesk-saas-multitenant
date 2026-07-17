@@ -1,0 +1,75 @@
+# ==============================================================
+# .gitignore — KPSyDesk SaaS Multi-Tenant Platform
+# ==============================================================
+
+# ---- Dépendances ----
+node_modules/
+
+# ---- Builds / Outputs ----
+dist/
+build/
+.output/
+*.tsbuildinfo
+
+# ---- Variables d'environnement & SECRETS (NE JAMAIS COMMITER) ----
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+backend/.env
+backend/.env.local
+backend/.env.production
+
+# ---- Logs ----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# ---- OS / Éditeurs ----
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+
+# ---- Docker volumes / données locales ----
+postgres-data/
+pgdata/
+
+# ---- Archives & backups lourds ----
+*.7z
+*.iso
+*.zip
+*.tar.gz
+KPSyDesk_Backup_*.json
+
+# ---- Fichiers Electron legacy ----
+legacy_electron_backup/
+
+# ---- Coverage / Tests ----
+coverage/
+.nyc_output/
+
+# ---- Prisma generated (can be regenerated) ----
+# backend/node_modules/@prisma/client/ — already covered by node_modules/
+
+# ---- Fichiers de travail temporaires ----
+*.tmp
+*.swp
+
+# ---- Scripts de debug avec données personnelles (NE JAMAIS COMMITER) ----
+backend/set_pass.js
+backend/check.js
+backend/check_user.js
+backend/check_raw.js
+backend/print_user.js
+backend/print_finance_users.js
+backend/force_update.js
+
+# ---- Fichiers de licences et mots de passe ----
+licences_kpsydesk_v3.txt
+licences_2ans_kpsydesk_v3.txt
+KPsy2026!.txt

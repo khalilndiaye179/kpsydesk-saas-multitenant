@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" Name="KPsyITAgent" Language="1036" Codepage="1252" Version="1.0.0.0" Manufacturer="KPsyIT" UpgradeCode="7e324ab5-9b76-4d43-982a-5bb4987f2a1b">
+        <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+        <MajorUpgrade DowngradeErrorMessage="Une version plus recente de [ProductName] est deja installee." />
+        <MediaTemplate EmbedCab="yes" />
+
+        <!-- Propriété pour stocker l'URL du serveur ITAM et l'identifiant Tenant -->
+        <Property Id="SERVERURL" Value="http://localhost:3010" />
+        <Property Id="TENANTID" Value="legacy" />
+        <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+        <!-- Structure des répertoires de destination -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFilesFolder">
+                <Directory Id="INSTALLFOLDER" Name="KPsyITAgent">
+                    <Component Id="AgentFiles" Guid="a649d21c-5d1b-4171-bc5a-8b835928d1ac">
+                        <File Id="AgentPs1" Source="agent.ps1" KeyPath="yes" />
+                        <File Id="DummyConfig" Source="config.json" />
+                    </Component>
+                    
+                    <Component Id="RegistryConfiguration" Guid="f829d21c-5d1b-4171-bc5a-8b835928d1ac">
+                        <RegistryKey Root="HKLM" Key="Software\KPsyITAgent">
+                            <RegistryValue Type="string" Name="ServerUrl" Value="[SERVERURL]" KeyPath="yes" />
+                            <RegistryValue Type="string" Name="TenantId" Value="[TENANTID]" />
+                        </RegistryKey>
+                    </Component>
+                </Directory>
+            </Directory>
+        </Directory>
+
+        <!-- Actions personnalisées (CustomActions) -->
+        
+        <!-- Création de la tâche planifiée sous le compte SYSTEM -->
+        <CustomAction Id="CreateTask" 
+                      Directory="INSTALLFOLDER" 
+                      ExeCommand="schtasks.exe /Create /TN &quot;KPsyITAgent&quot; /SC DAILY /ST 12:00 /TR &quot;powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File '[INSTALLFOLDER]agent.ps1'&quot; /RU &quot;SYSTEM&quot; /F" 
+                      Execute="deferred" 
+                      Return="check" 
+                      Impersonate="no" />
+
+        <!-- Exécution de la tâche immédiatement après l'installation -->
+        <CustomAction Id="RunAgent" 
+                      Directory="INSTALLFOLDER" 
+                      ExeCommand="schtasks.exe /Run /TN &quot;KPsyITAgent&quot;" 
+                      Execute="deferred" 
+                      Return="ignore" 
+                      Impersonate="no" />
+
+        <!-- Suppression de la tâche planifiée lors de la désinstallation -->
+        <CustomAction Id="RemoveTask" 
+                      Directory="INSTALLFOLDER" 
+                      ExeCommand="schtasks.exe /Delete /TN &quot;KPsyITAgent&quot; /F" 
+                      Execute="deferred" 
+                      Return="ignore" 
+                      Impersonate="no" />
+
+        <!-- Séquence d'exécution des CustomActions -->
+        <InstallExecuteSequence>
+            <!-- Ces actions s'exécutent lors de l'installation uniquement -->
+            <Custom Action="CreateTask" After="InstallFiles">NOT Installed AND NOT PATCH</Custom>
+            <Custom Action="RunAgent" After="CreateTask">NOT Installed AND NOT PATCH</Custom>
+            
+            <!-- Cette action s'exécute lors de la désinstallation uniquement -->
+            <Custom Action="RemoveTask" Before="RemoveFiles">Installed AND NOT PATCH</Custom>
+        </InstallExecuteSequence>
+
+        <!-- Interface Utilisateur Interactive (WiX UI) -->
+        <UI>
+            <UIRef Id="WixUI_InstallDir" />
+            <DialogRef Id="ServerConfigDlg" />
+
+            <!-- Enchaînement personnalisé : Bypasser la licence et insérer la saisie de l'URL -->
+            <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="ServerConfigDlg" Order="2">1</Publish>
+            
+            <Publish Dialog="ServerConfigDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg">1</Publish>
+            <Publish Dialog="ServerConfigDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg">1</Publish>
+            
+            <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="ServerConfigDlg" Order="2">1</Publish>
+        </UI>
+
+        <!-- Dialogue de configuration personnalisée -->
+        <UI>
+            <Dialog Id="ServerConfigDlg" Width="370" Height="270" Title="Configuration du Serveur - [ProductName]">
+                <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="!(loc.InstallDirDlgBannerBitmap)" />
+                <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes" Text="{\WixUI_Font_Title}Configuration de l'Agent" />
+                <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes" Text="Saisissez l'URL de connexion au serveur d'inventaire ITAM." />
+                <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+                
+                <!-- Saisie URL du serveur -->
+                <Control Id="ServerUrlLabel" Type="Text" X="20" Y="55" Width="290" Height="15" Text="&amp;URL du Serveur d'Inventaire :" />
+                <Control Id="ServerUrlEdit" Type="Edit" X="20" Y="68" Width="320" Height="18" Property="SERVERURL" Indirect="no" Multiline="no" />
+                
+                <!-- Saisie Tenant ID -->
+                <Control Id="TenantIdLabel" Type="Text" X="20" Y="95" Width="290" Height="15" Text="&amp;Identifiant Entreprise (Tenant ID) :" />
+                <Control Id="TenantIdEdit" Type="Edit" X="20" Y="108" Width="320" Height="18" Property="TENANTID" Indirect="no" Multiline="no" />
+                
+                <!-- Explication -->
+                <Control Id="NoteText" Type="Text" X="20" Y="135" Width="320" Height="80" Text="Exemple : URL = http://192.168.1.6:3012 et Tenant ID = ladin&#10;&#10;Ces informations permettent a l'agent d'envoyer l'inventaire materiel et reseau automatiquement a votre espace abonné de la plateforme." />
+
+                <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+                
+                <!-- Boutons de navigation -->
+                <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="&amp;Precedent" />
+                <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="&amp;Suivant" />
+                <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="&amp;Annuler">
+                    <Publish Event="SpawnDialog" Value="CancelDlg">1</Publish>
+                </Control>
+            </Dialog>
+        </UI>
+
+        <!-- Fonctionnalités installées (Features) -->
+        <Feature Id="ProductFeature" Title="KPsyITAgent" Level="1">
+            <ComponentRef Id="AgentFiles" />
+            <ComponentRef Id="RegistryConfiguration" />
+        </Feature>
+    </Product>
+</Wix>

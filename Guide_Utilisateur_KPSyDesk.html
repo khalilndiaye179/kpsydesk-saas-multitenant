@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manuel d'Utilisation Détaillé - KPSyDesk v3.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4A148C;
+            --primary-light: #9C27B0;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --border: #E5E7EB;
+            --bg-color: #FFFFFF;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            background: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 40px auto;
+            background: var(--bg-color);
+            padding: 60px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+
+        /* Print formatting */
+        @media print {
+            body { background: white; margin: 0; padding: 0; }
+            .container {
+                box-shadow: none; margin: 0; padding: 0; width: 100%; max-width: 100%;
+            }
+            .page-break { page-break-before: always; }
+            .no-print { display: none !important; }
+            img { max-width: 100%; break-inside: avoid; }
+            h1, h2, h3, h4 { break-after: avoid; }
+            .step-box { break-inside: avoid; }
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-bottom: 50px;
+            font-weight: 300;
+        }
+
+        h2 {
+            color: var(--primary-light);
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+            margin-top: 40px;
+            font-size: 1.8rem;
+        }
+
+        h3 {
+            color: var(--primary);
+            margin-top: 30px;
+            font-size: 1.3rem;
+            background: rgba(74, 20, 140, 0.05);
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        h4 {
+            color: var(--text-main);
+            font-size: 1.1rem;
+            margin-top: 20px;
+        }
+
+        p { margin-bottom: 15px; text-align: justify; }
+
+        .image-box {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9fc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            break-inside: avoid;
+        }
+
+        .image-box img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .image-caption {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        ul, ol { margin-bottom: 20px; padding-left: 20px; }
+        li { margin-bottom: 10px; }
+
+        .btn-print {
+            display: block;
+            width: 100%;
+            text-align: center;
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+        .btn-print:hover { background: var(--primary-light); }
+
+        .info-box {
+            background: rgba(156, 39, 176, 0.05);
+            border-left: 4px solid var(--primary-light);
+            padding: 15px;
+            margin: 20px 0;
+            break-inside: avoid;
+        }
+        
+        .alert-box {
+            background: rgba(244, 67, 54, 0.05);
+            border-left: 4px solid #F44336;
+            padding: 15px;
+            margin: 20px 0;
+            break-inside: avoid;
+        }
+
+        .step-box {
+            background: #fff;
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .key-term {
+            font-weight: 600;
+            color: var(--primary);
+            background: rgba(74, 20, 140, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .button-ref {
+            font-weight: 600;
+            background: #eee;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <button class="btn-print no-print" onclick="window.print()">Télécharger / Imprimer en PDF</button>
+
+    <h1>Manuel de Formation KPSyDesk</h1>
+    <div class="subtitle">Guide pas-à-pas pour les débutants - Apprenez à gérer votre matériel simplement</div>
+
+    <div class="info-box">
+        <strong>À qui s'adresse ce guide ?</strong> Ce document a été rédigé spécialement pour les personnes n'ayant pas de compétences techniques particulières en informatique. Nous allons vous expliquer, pas à pas et avec des mots simples, comment utiliser le logiciel KPSyDesk au quotidien.
+    </div>
+
+    <h2>1. Introduction : Comprendre KPSyDesk</h2>
+    <p><strong>Qu'est-ce que KPSyDesk ?</strong><br>
+    C'est un logiciel qui sert de carnet d'adresses géant pour tout le matériel informatique de votre entreprise (ordinateurs, imprimantes, téléphones). Au lieu de tout noter sur un cahier ou un fichier Excel compliqué, KPSyDesk classe tout automatiquement.</p>
+    
+    <p><strong>La sécurité avant tout (Le mode Hors-Ligne)</strong><br>
+    Contrairement à Facebook ou Google, KPSyDesk n'utilise <strong>pas Internet</strong> pour fonctionner. Toutes les informations que vous tapez restent enfermées dans votre propre ordinateur. C'est ce qu'on appelle le stockage "Local". Cela signifie qu'aucun pirate ne peut voler vos données via Internet. L'inconvénient ? Si votre ordinateur brûle, vos données sont perdues. D'où l'importance capitale de faire des <strong>Sauvegardes</strong> (expliquées à la fin du guide).</p>
+
+    <div class="page-break"></div>
+
+    <h2>2. L'Accueil : Le Tableau de Bord</h2>
+    <p>Dès que vous ouvrez KPSyDesk, vous arrivez sur l'écran d'accueil, qu'on appelle le <strong>Tableau de bord</strong>. C'est le résumé visuel de l'état de santé de votre entreprise.</p>
+    
+    <div class="image-box">
+        <img src="img/dashboard.png" alt="Interface du Tableau de Bord">
+        <div class="image-caption">Figure 1 : Votre écran de contrôle (Tableau de bord).</div>
+    </div>
+
+    <h3>Comment lire cet écran ?</h3>
+    <ul>
+        <li><strong>Total des Équipements :</strong> Le nombre total d'appareils enregistrés dans le logiciel.</li>
+        <li><strong>Actifs :</strong> Le nombre d'appareils qui fonctionnent bien actuellement.</li>
+        <li><strong>En Panne :</strong> Le nombre d'appareils cassés ou inutilisables qui attendent d'être réparés.</li>
+        <li><strong>Les Graphiques :</strong> Les cercles colorés (les "camemberts") vous permettent de voir en un coup d'œil si vous avez plus de téléphones que d'ordinateurs, ou dans quels bureaux se trouvent vos machines.</li>
+        <li><strong>L'Activité Récente :</strong> Une liste en bas de l'écran qui agit comme un historique (ex: "Julien a ajouté un nouvel ordinateur hier à 14h").</li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <h2>3. Le Cœur du Logiciel : La Gestion du Matériel</h2>
+    <p>C'est ici que vous passerez le plus clair de votre temps. Cliquez sur <strong>"Inventaire"</strong> dans le menu sur le côté gauche pour y accéder.</p>
+
+    <div class="image-box">
+        <img src="img/inventory.png" alt="Vue d'inventaire du matériel">
+        <div class="image-caption">Figure 2 : La liste complète de tout votre matériel.</div>
+    </div>
+
+    <h3>A. Comment ajouter un nouvel appareil ?</h3>
+    <div class="step-box">
+        <ol>
+            <li>Cliquez sur le gros bouton <span class="button-ref">+ Ajouter un Actif</span> en haut à droite.</li>
+            <li>Une fenêtre s'ouvre. Remplissez les cases comme si vous remplissiez un formulaire d'inscription :
+                <ul>
+                    <li><strong>Nom de l'actif :</strong> Donnez-lui un nom facile (ex: <em>PC Portable Marie</em>).</li>
+                    <li><strong>Catégorie :</strong> Est-ce un ordinateur ? Un serveur ? Une imprimante ? Choisissez dans la liste.</li>
+                    <li><strong>Statut :</strong> S'il est neuf et fonctionne, choisissez <span class="key-term">En Stock</span> ou <span class="key-term">Actif</span>. S'il est cassé, choisissez <span class="key-term">En Panne</span>.</li>
+                    <li><strong>Affectation :</strong> À qui appartient cet appareil ? (ex: Département RH, ou le nom de l'employé).</li>
+                    <li><strong>Prix d'achat :</strong> (Optionnel) Combien a-t-il coûté ? Utile pour la comptabilité.</li>
+                </ul>
+            </li>
+            <li>Cliquez sur <span class="button-ref">Enregistrer</span> en bas de la fenêtre. C'est fait !</li>
+        </ol>
+    </div>
+
+    <h3>B. Comment modifier ou effacer un appareil ?</h3>
+    <p>Dans la liste de vos appareils, regardez tout à droite de la ligne d'un appareil : vous y verrez deux petits boutons.</p>
+    <ul>
+        <li><strong>Le bouton "Crayon" (Modifier) :</strong> Cliquez dessus si vous avez fait une erreur (ex: le prix était faux) ou si l'appareil a changé de propriétaire. Modifiez les informations et sauvegardez.</li>
+        <li><strong>Le bouton "Corbeille" (Supprimer) :</strong> Cliquez ici <strong>uniquement</strong> si vous voulez effacer définitivement l'appareil de la mémoire du logiciel (par exemple, s'il a été vendu ou jeté).</li>
+    </ul>
+
+    <h3>C. Imprimer des étiquettes</h3>
+    <p>Pour vous aider à vous y retrouver dans le monde réel, vous pouvez coller des étiquettes sur vos ordinateurs. Cliquez sur le bouton <span class="button-ref">Générer Étiquettes (PDF)</span>. Le logiciel va créer un document PDF prêt à être imprimé avec le nom et les numéros de tous vos appareils.</p>
+
+    <div class="page-break"></div>
+
+    <h2>4. Demandes d'Aide : Le Helpdesk (Tickets)</h2>
+    <p>Le <strong>Helpdesk</strong> (qui signifie "Bureau d'aide" en anglais) est l'endroit où vous gérez les pannes signalées par les employés.</p>
+
+    <div class="image-box">
+        <img src="img/helpdesk.png" alt="Centre de support Helpdesk">
+        <div class="image-caption">Figure 3 : Le centre de réparation et d'aide (Helpdesk).</div>
+    </div>
+
+    <h3>Qu'est-ce qu'un "Ticket" ?</h3>
+    <p>Un ticket, c'est simplement un petit message qui dit <em>"Au secours, j'ai un problème"</em>. Par exemple : <em>"L'imprimante du 2ème étage n'a plus d'encre"</em>. Au lieu de vous le dire à l'oral et que vous l'oubliiez, on crée un "Ticket".</p>
+
+    <h3>Comment gérer un Ticket ?</h3>
+    <div class="step-box">
+        <ol>
+            <li>Cliquez sur <span class="button-ref">+ Nouveau Ticket</span>.</li>
+            <li><strong>Sujet :</strong> Écrivez le problème courtement (ex: <em>Plus d'encre imprimante</em>).</li>
+            <li><strong>Demandeur :</strong> Qui a signalé le problème ? (ex: <em>Fatou, de la comptabilité</em>).</li>
+            <li><strong>Priorité :</strong> Est-ce <span class="key-term">Basse</span> (pas pressé), <span class="key-term">Normale</span>, ou <span class="key-term">Urgente</span> (ça bloque le travail) ?</li>
+            <li><strong>Statut :</strong> Par défaut, c'est "Nouveau". Quand vous commencez à le réparer, changez-le en "En cours". Quand c'est réparé, mettez "Résolu".</li>
+        </ol>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>5. Gestion des Employés (Utilisateurs & RH)</h2>
+    <p>Allez dans le menu <strong>"Utilisateurs & RH"</strong>. C'est ici que vous enregistrez les personnes qui travaillent dans l'entreprise.</p>
+
+    <h3>L'Onboarding (L'arrivée d'un nouvel employé)</h3>
+    <p>Le mot anglais "Onboarding" désigne l'accueil d'un nouvel employé. Quand un nouveau collègue arrive, vous devez lui donner un ordinateur, une chaise, un badge, etc.</p>
+    <div class="step-box">
+        <ul>
+            <li>Cliquez sur l'onglet <strong>Processus RH</strong> en haut de la page.</li>
+            <li>Sélectionnez un employé dans la liste.</li>
+            <li>Vous verrez apparaître une liste de cases à cocher (Checklist). Vous n'avez plus qu'à cocher "Ordinateur fourni", "Badge d'accès donné", etc., pour être sûr de n'avoir rien oublié !</li>
+        </ul>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>6. Le Cahier de Procédures : Base de Connaissances (Wiki)</h2>
+    <p>Le menu <strong>Base de Connaissances</strong> fonctionne comme un grand cahier de recettes pour votre entreprise.</p>
+    <p>Au lieu de réexpliquer 100 fois comment changer le toner de l'imprimante ou comment configurer le Wi-Fi, vous écrivez un <strong>Article</strong> ici une seule fois.</p>
+    
+    <div class="step-box">
+        <ol>
+            <li>Cliquez sur <span class="button-ref">+ Rédiger un Article</span>.</li>
+            <li>Donnez-lui un titre (ex: <em>Comment changer l'encre de l'imprimante HP</em>).</li>
+            <li>Écrivez votre explication.</li>
+            <li>Enregistrez. Désormais, tout le monde pourra venir lire cette "recette" au lieu de vous déranger !</li>
+        </ol>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>7. L'Étape la plus IMPORTANTE : Sauvegarde et Restauration</h2>
+    <div class="alert-box">
+        <strong>ATTENTION DANGER :</strong> Comme expliqué au début, KPSyDesk ne stocke rien sur Internet. Si votre ordinateur tombe en panne, s'il est volé, ou si vous videz l'historique (cache) de votre navigateur Internet, <strong>TOUTES VOS DONNÉES SERONT EFFACÉES DÉFINITIVEMENT.</strong><br>
+        La seule solution est de faire une "Sauvegarde" toutes les semaines.
+    </div>
+
+    <h3>Comment Sauvegarder (Faire un double de sécurité) :</h3>
+    <div class="step-box">
+        <ol>
+            <li>Allez dans le menu <strong>Paramètres & Export</strong>.</li>
+            <li>Cherchez le gros bouton bleu <span class="button-ref">Exporter Base de Données (.json)</span> et cliquez dessus.</li>
+            <li>Un petit fichier (terminant par <code>.json</code>) va se télécharger sur votre ordinateur (souvent dans le dossier "Téléchargements").</li>
+            <li><strong>TRÈS IMPORTANT :</strong> Copiez ce petit fichier sur une <strong>Clé USB</strong>, envoyez-le vous par email, ou mettez-le sur votre Google Drive. L'essentiel est de le mettre en sécurité à l'extérieur de votre ordinateur !</li>
+        </ol>
+    </div>
+
+    <h3>Comment Restaurer (Réparer en cas de problème) :</h3>
+    <p>Si un jour votre ordinateur casse, vous rachetez un nouvel ordinateur, vous copiez le dossier KPSyDesk dessus. Il sera totalement vide au début. Pas de panique !</p>
+    <div class="step-box">
+        <ol>
+            <li>Allez dans le menu <strong>Paramètres & Export</strong>.</li>
+            <li>Dans la section "Restauration", cliquez sur le bouton pour choisir un fichier.</li>
+            <li>Allez chercher le fameux fichier <code>.json</code> que vous aviez mis de côté sur votre clé USB.</li>
+            <li>Cliquez sur <span class="button-ref">Restaurer les données</span>. Comme par magie, tout votre inventaire réapparaîtra exactement comme il était le jour de la sauvegarde !</li>
+        </ol>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>8. Gestion de la Licence</h2>
+    <div class="image-box">
+        <img src="img/license.png" alt="Concept de sécurité des licences">
+        <div class="image-caption">Figure 4 : Clé cryptographique pour l'activation.</div>
+    </div>
+    
+    <p>Le logiciel est protégé. À la première ouverture, vous bénéficiez de <strong>7 jours d'essai gratuit</strong>. Un bandeau orange en haut de l'écran vous rappelle combien de jours il vous reste.</p>
+    
+    <h3>Comment activer le logiciel ?</h3>
+    <ol>
+        <li>Cliquez sur le bouton <strong>Activer la licence</strong> dans le bandeau orange en haut.</li>
+        <li>Une fenêtre noire va s'ouvrir.</li>
+        <li>Prenez la clé (le code secret) fournie par l'administrateur (ex: <code>D3R4-P29X-B87A-YSPK</code>).</li>
+        <li>Tapez cette clé dans la case prévue et validez. Le logiciel sera débloqué pour une durée de 1 an.</li>
+    </ol>
+    <p><em>Note : Pour vérifier si votre licence est active, allez dans le menu <strong>"À propos de l'application"</strong>. Vous y verrez le statut (Activé ou Expiré) et le nombre de jours restants.</em></p>
+
+
+    <p style="text-align: center; margin-top: 50px; color: var(--text-muted); font-size: 0.9rem;">
+        <em>Fin du manuel.<br>
+        KPSyDesk - Édition Professionnelle 2026<br>
+        Conçu et développé par Ibrahima NDIAYE.</em>
+    </p>
+
+</div>
+
+</body>
+</html>

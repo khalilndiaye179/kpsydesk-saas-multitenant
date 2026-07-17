@@ -1,0 +1,496 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Plan {
+  id                String           @id @default(uuid())
+  name              String           @unique
+  price             Float
+  quotaAssets       Int
+  quotaUsers        Int
+  featuresIncluded  Json?
+  isPublic          Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  description       String?
+  features          String[]
+  annualDiscountPct Float            @default(20.0)
+  invoices          Invoice[]
+  promos            Promo[]
+  quotes            Quote[]
+  subscriptions     Subscription[]
+  tenants           Tenant[]
+  volumeDiscounts   VolumeDiscount[]
+}
+
+model Promo {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  label       String
+  discountPct Float
+  maxUses     Int?
+  usedCount   Int       @default(0)
+  validFrom   DateTime  @default(now())
+  validUntil  DateTime?
+  isActive    Boolean   @default(true)
+  planId      String?
+  createdAt   DateTime  @default(now())
+  plan        Plan?     @relation(fields: [planId], references: [id])
+}
+
+model VolumeDiscount {
+  id          String @id @default(uuid())
+  planId      String
+  minAssets   Int    @default(0)
+  minUsers    Int    @default(0)
+  discountPct Float
+  label       String
+  plan        Plan   @relation(fields: [planId], references: [id])
+}
+
+model Quote {
+  id            String    @id @default(uuid())
+  quoteNo       String    @unique
+  tenantId      String?
+  planId        String
+  clientName    String?
+  clientEmail   String?
+  promoCode     String?
+  discountPct   Float     @default(0)
+  volumeDiscPct Float     @default(0)
+  subtotal      Float
+  tvaRate       Float     @default(0)
+  tvaAmount     Float     @default(0)
+  total         Float
+  notes         String?
+  status        String    @default("DRAFT")
+  validUntil    DateTime?
+  createdAt     DateTime  @default(now())
+  billingCycle  String    @default("monthly")
+  plan          Plan      @relation(fields: [planId], references: [id])
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+}
+
+model Tenant {
+  id             String          @id @default(uuid())
+  name           String
+  subdomain      String          @unique
+  status         TenantStatus    @default(TRIAL)
+  planId         String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  assets         Asset[]
+  assetHistories AssetHistory[]
+  auditLogs      AuditLog[]
+  consumables    Consumable[]
+  contracts      Contract[]
+  departments    Department[]
+  depreciations  Depreciation[]
+  invoices       Invoice[]
+  kbArticles     KBArticle[]
+  licenses       License[]
+  locations      Location[]
+  maintenances   Maintenance[]
+  movements      Movement[]
+  onboardings    Onboarding[]
+  purchaseOrders PurchaseOrder[]
+  quotes         Quote[]
+  sales          Sale[]
+  subscriptions  Subscription[]
+  suppliers      Supplier[]
+  plan           Plan?           @relation(fields: [planId], references: [id])
+  tickets        Ticket[]
+  ticketComments TicketComment[]
+  transactions   Transaction[]
+  users          User[]
+}
+
+model Subscription {
+  id              String             @id @default(uuid())
+  tenantId        String
+  planId          String
+  status          SubscriptionStatus @default(TRIALING)
+  startDate       DateTime           @default(now())
+  endDate         DateTime?
+  quotaAssets     Int?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  billingInterval String             @default("MONTHLY")
+  plan            Plan               @relation(fields: [planId], references: [id])
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Department {
+  id       String  @id @default(uuid())
+  name     String
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  users    User[]
+
+  @@unique([name, tenantId])
+}
+
+model Location {
+  id       String  @id @default(uuid())
+  name     String
+  type     String? @default("Stock")
+  city     String? @default("Dakar")
+  tenantId String?
+  assets   Asset[]
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@unique([name, tenantId])
+}
+
+model User {
+  id             String      @id @default(uuid())
+  email          String
+  password       String
+  firstName      String
+  lastName       String
+  username       String?
+  role           Role        @default(USER)
+  systemRole     String?
+  status         String?     @default("Actif")
+  entryDate      DateTime?
+  country        String?
+  position       String?
+  mfaEnabled     Boolean     @default(false)
+  departmentId   String?
+  tenantId       String?
+  phone          String?
+  recoveryEmail  String?     // Email de récupération de compte (Super-Admin)
+  recoveryPhone  String?     // Téléphone de récupération de compte (Super-Admin)
+  assets         Asset[]
+  assignedTix    Ticket[]    @relation("AssignedTickets")
+  tickets        Ticket[]    @relation("CreatedTickets")
+  department     Department? @relation(fields: [departmentId], references: [id])
+  tenant         Tenant?     @relation(fields: [tenantId], references: [id])
+
+  @@unique([email, tenantId])
+  @@unique([username, tenantId])
+}
+
+model Asset {
+  id                     String         @id @default(uuid())
+  inventoryCode          String
+  serialNumber           String?
+  name                   String
+  type                   String
+  status                 AssetStatus    @default(IN_STOCK)
+  purchaseDate           DateTime?
+  warrantyEnd            DateTime?
+  assignmentDate         DateTime?
+  warrantyMonths         Int?
+  country                String?
+  userId                 String?
+  locationId             String?
+  tenantId               String?
+  cpu                    String?
+  ram                    String?
+  storage                String?
+  os                     String?
+  ipAddress              String?
+  macAddress             String?
+  model                  String?
+  manufacturer           String?
+  lastAgentCommunication DateTime?
+  location               Location?      @relation(fields: [locationId], references: [id])
+  tenant                 Tenant?        @relation(fields: [tenantId], references: [id])
+  user                   User?          @relation(fields: [userId], references: [id])
+  histories              AssetHistory[]
+  tickets                Ticket[]
+
+  @@unique([inventoryCode, tenantId])
+}
+
+model Ticket {
+  id          String          @id @default(uuid())
+  title       String
+  description String
+  status      String
+  priority    String
+  createdAt   DateTime        @default(now())
+  creatorId   String
+  assigneeId  String?
+  assetId     String?
+  tenantId    String?
+  asset       Asset?          @relation(fields: [assetId], references: [id])
+  assignee    User?           @relation("AssignedTickets", fields: [assigneeId], references: [id])
+  creator     User            @relation("CreatedTickets", fields: [creatorId], references: [id])
+  tenant      Tenant?         @relation(fields: [tenantId], references: [id])
+  comments    TicketComment[]
+}
+
+model TicketComment {
+  id        String   @id @default(uuid())
+  content   String
+  ticketId  String
+  authorId  String
+  tenantId  String?
+  createdAt DateTime @default(now())
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+}
+
+model AssetHistory {
+  id         String   @id @default(uuid())
+  assetId    String
+  actionType String
+  oldValue   String?
+  newValue   String?
+  reason     String?
+  changedBy  String
+  tenantId   String?
+  createdAt  DateTime @default(now())
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  entityType  String
+  entityId    String
+  oldData     Json?
+  newData     Json?
+  performedBy String   @default("Système")
+  tenantId    String?
+  createdAt   DateTime @default(now())
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+model Supplier {
+  id        String          @id @default(uuid())
+  name      String
+  contact   String
+  email     String
+  phone     String
+  tenantId  String?
+  contracts Contract[]
+  orders    PurchaseOrder[]
+  tenant    Tenant?         @relation(fields: [tenantId], references: [id])
+
+  @@unique([name, tenantId])
+}
+
+model PurchaseOrder {
+  id          String   @id @default(uuid())
+  orderNo     String
+  supplierId  String
+  date        DateTime
+  amount      Float
+  status      String
+  tenantId    String?
+  attachments Json?
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@unique([orderNo, tenantId])
+}
+
+model Contract {
+  id          String   @id @default(uuid())
+  ref         String
+  type        String
+  supplierId  String
+  startDate   DateTime
+  endDate     DateTime
+  assetCode   String
+  status      String
+  tenantId    String?
+  attachments Json?
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@unique([ref, tenantId])
+}
+
+model Maintenance {
+  id          String   @id @default(uuid())
+  assetCode   String
+  type        String
+  date        DateTime
+  description String
+  cost        Float    @default(0)
+  status      String
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+model Consumable {
+  id              String  @id @default(uuid())
+  ref             String
+  desc            String
+  location        String
+  quantity        Int
+  alertThreshold  Int
+  type            String? @default("Consommable")
+  characteristics String?
+  specifications  String?
+  purchasePrice   Float?
+  sellingPrice    Float?
+  tenantId        String?
+  tenant          Tenant? @relation(fields: [tenantId], references: [id])
+
+  @@unique([ref, tenantId])
+}
+
+model Sale {
+  id          String   @id @default(uuid())
+  assetCode   String
+  buyerName   String
+  amount      Float
+  date        DateTime
+  status      String
+  tenantId    String?
+  attachments Json?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+model License {
+  id         String    @id @default(uuid())
+  name       String
+  publisher  String
+  key        String
+  type       String
+  seats      Int
+  used       Int
+  expireDate DateTime?
+  tenantId   String?
+  tenant     Tenant?   @relation(fields: [tenantId], references: [id])
+}
+
+model Onboarding {
+  id           String   @id @default(uuid())
+  type         String
+  employeeName String
+  department   String
+  position     String
+  startDate    DateTime
+  status       String
+  tenantId     String?
+  tasks        Json?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+model KBArticle {
+  id       String   @id @default(uuid())
+  title    String
+  category String
+  author   String
+  date     DateTime @default(now())
+  content  String
+  tenantId String?
+  tenant   Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+model Movement {
+  id            String   @id @default(uuid())
+  date          DateTime @default(now())
+  action        String
+  inventoryCode String
+  assetName     String
+  userName      String
+  performedBy   String
+  tenantId      String?
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id])
+}
+
+model Depreciation {
+  id            String   @id @default(uuid())
+  assetCode     String
+  assetName     String
+  purchaseDate  DateTime
+  initialCost   Float
+  durationYears Int
+  method        String   @default("Lineaire")
+  residualFloor Float    @default(0)
+  notes         String?
+  tenantId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id])
+
+  @@unique([assetCode, tenantId])
+}
+
+model PaymentGateway {
+  id          String    @id @default(uuid())
+  provider    String    @unique
+  apiKey      String
+  apiSecret   String
+  merchantId  String?
+  isSandbox   Boolean   @default(true)
+  isActive    Boolean   @default(false)
+  updatedAt   DateTime  @updatedAt
+  isPublished Boolean   @default(false)
+  validatedAt DateTime?
+}
+
+model Invoice {
+  id           String        @id @default(uuid())
+  invoiceNo    String        @unique
+  tenantId     String
+  planId       String
+  amountHT     Float
+  tvaRate      Float         @default(18.0)
+  tvaAmount    Float
+  amountTTC    Float
+  status       String        @default("PENDING")
+  dueDate      DateTime
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  plan         Plan          @relation(fields: [planId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  reference     String   @unique
+  tenantId      String
+  invoiceId     String?
+  amount        Float
+  type          String
+  paymentMethod String
+  createdAt     DateTime @default(now())
+  invoice       Invoice? @relation(fields: [invoiceId], references: [id])
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  USER
+  TECHNICIAN
+  ADMIN
+}
+
+enum AssetStatus {
+  IN_STOCK
+  ASSIGNED
+  BROKEN
+  IN_MAINTENANCE
+  OBSOLETE
+  RETIRED
+  LOST
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+  CANCELLED
+  GRACE_PERIOD
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  PAST_DUE
+  TRIALING
+  GRACE_PERIOD
+}

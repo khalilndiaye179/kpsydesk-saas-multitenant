@@ -1,0 +1,88 @@
+version: '3.9'
+
+# ============================================================
+# Inventaire Parc Informatique — Docker Compose
+# Ports alloués : 3010-3015 (voir PORTS.md pour le détail)
+# ============================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: itam_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-itam_db}
+      POSTGRES_USER: ${DB_USER:-itam_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-itam_password_dev_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Port 3012 → PostgreSQL (exposé en dev uniquement)
+      - "${DB_PORT:-3012}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-itam_user} -d ${DB_NAME:-itam_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: itam_backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://${DB_USER:-itam_user}:${DB_PASSWORD:-itam_password_dev_2026}@postgres:5432/${DB_NAME:-itam_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-itam_secret_jwt_key_2026_change_me}
+      # Multi-tenant : sous-domaine par défaut en dev (utiliser X-Tenant-ID header)
+      DEFAULT_LEGACY_SUBDOMAIN: ${DEFAULT_LEGACY_SUBDOMAIN:-legacy}
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+      - backend_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Port 3010 → Backend NestJS API
+      - "${BACKEND_PORT:-3010}:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: itam_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ""
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+    ports:
+      # Port 3011 → Frontend Vite dev server
+      - "${FRONTEND_PORT:-3011}:${FRONTEND_PORT:-3011}"
+
+  # ---- Services réservés (3013-3015) ----
+  # worker:          # Port 3013 — Worker de facturation (futur)
+  # notifications:   # Port 3014 — Service de notifications (futur)
+  # adminer:         # Port 3015 — Interface admin DB (dev optionnel)
+  #   image: adminer
+  #   container_name: itam_adminer
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3015:8080"
+  #   depends_on:
+  #     - postgres
+
+volumes:
+  postgres_data:
+  backend_node_modules:
+  frontend_node_modules:

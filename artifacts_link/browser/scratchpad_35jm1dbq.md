@@ -1,0 +1,16 @@
+# Tasks
+- [x] Check current page state at http://localhost:3005
+- [x] Log out if already logged in (Admin IT dropdown -> Se déconnecter)
+- [x] Verify login card and credentials footer on the login screen
+- [ ] Log in with admin@entreprise.com / admin123
+- [ ] Verify redirect to 'Première connexion : modification de mot de passe obligatoire' screen
+- [ ] Change password to 'admin2026!' and submit
+- [ ] Verify redirect to dashboard
+- [ ] Navigate to 'Paramètres & Sécurité' under 'Système & Admin'
+- [ ] Enable 'Activer l'Authentification Multifacteur (MFA simulée)' and click 'Mettre à jour mon profil'
+- [ ] Log out again
+- [ ] Log in with admin@entreprise.com and password 'admin2026!' (fallback: 'admin123')
+- [ ] Verify redirect to 'Validation MFA' screen
+- [ ] Submit MFA code '123456'
+- [ ] Verify redirect to dashboard
+- [ ] Capture final dashboard screenshot and report

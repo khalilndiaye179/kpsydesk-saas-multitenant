@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KPSyDesk v3.0 - Guide d'Utilisation Complet & Script de Formation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4A148C;
+            --primary-light: #7B1FA2;
+            --primary-dark: #300060;
+            --secondary: #00796B;
+            --accent: #FF6F00;
+            --text-main: #2D3748;
+            --text-muted: #718096;
+            --bg-body: #F7FAFC;
+            --bg-card: #FFFFFF;
+            --border: #E2E8F0;
+            --success: #2F855A;
+            --warning: #C05621;
+            --danger: #9B2C2C;
+            --info: #2B6CB0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            color: var(--text-main);
+            background-color: var(--bg-body);
+            line-height: 1.6;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .no-print-bar {
+            background-color: var(--primary-dark);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .no-print-bar h3 {
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-print {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            text-transform: uppercase;
+        }
+
+        .btn-print:hover {
+            background-color: #E65100;
+            transform: translateY(-1px);
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 40px auto;
+            background-color: var(--bg-card);
+            padding: 60px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        /* En-tête de couverture */
+        .cover-header {
+            text-align: center;
+            border-bottom: 3px double var(--primary);
+            padding-bottom: 40px;
+            margin-bottom: 40px;
+        }
+
+        .cover-title {
+            color: var(--primary);
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+
+        .cover-subtitle {
+            font-size: 1.4rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            margin-bottom: 25px;
+        }
+
+        .cover-meta {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+
+        .meta-item strong {
+            color: var(--text-main);
+        }
+
+        /* Sommaire */
+        .toc-box {
+            background-color: #F8FAFC;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 40px;
+        }
+
+        .toc-title {
+            font-size: 1.3rem;
+            color: var(--primary-dark);
+            margin-bottom: 15px;
+            font-weight: 700;
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 5px;
+        }
+
+        .toc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 30px;
+        }
+
+        .toc-item {
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            border-bottom: 1px dotted var(--border);
+        }
+
+        .toc-item a {
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.15s ease;
+        }
+
+        .toc-item a:hover {
+            color: var(--primary-light);
+        }
+
+        /* Éléments de structure */
+        h2 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 45px;
+            margin-bottom: 20px;
+            border-left: 5px solid var(--primary-light);
+            padding-left: 15px;
+            break-after: avoid;
+        }
+
+        h3 {
+            color: var(--primary-light);
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            break-after: avoid;
+        }
+
+        h4 {
+            color: var(--text-main);
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            break-after: avoid;
+        }
+
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+            font-size: 0.98rem;
+        }
+
+        ul, ol {
+            margin-bottom: 20px;
+            padding-left: 25px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            font-size: 0.96rem;
+        }
+
+        /* Boîtes et alertes */
+        .info-box {
+            background-color: rgba(43, 108, 176, 0.05);
+            border-left: 4px solid var(--info);
+            padding: 18px;
+            border-radius: 4px;
+            margin: 20px 0;
+            break-inside: avoid;
+        }
+
+        .info-box strong {
+            color: var(--info);
+        }
+
+        .alert-box {
+            background-color: rgba(155, 44, 44, 0.05);
+            border-left: 4px solid var(--danger);
+            padding: 18px;
+            border-radius: 4px;
+            margin: 20px 0;
+            break-inside: avoid;
+        }
+
+        .alert-box strong {
+            color: var(--danger);
+        }
+
+        .success-box {
+            background-color: rgba(47, 133, 90, 0.05);
+            border-left: 4px solid var(--success);
+            padding: 18px;
+            border-radius: 4px;
+            margin: 20px 0;
+            break-inside: avoid;
+        }
+
+        .success-box strong {
+            color: var(--success);
+        }
+
+        .role-tag {
+            display: inline-block;
+            padding: 3px 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-radius: 12px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .role-admin { background-color: #E2E8F0; color: #1A202C; }
+        .role-tech { background-color: #EBF8FF; color: #2B6CB0; }
+        .role-rh { background-color: #EBF4F6; color: #00796B; }
+        .role-finance { background-color: #FEFCBF; color: #B7791F; }
+        .role-all { background-color: #EDF2F7; color: #4A5568; }
+
+        /* Images et illustrations */
+        .image-container {
+            text-align: center;
+            margin: 35px 0;
+            padding: 20px;
+            background-color: #F8FAFC;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            break-inside: avoid;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 1px solid #E2E8F0;
+        }
+
+        .image-caption {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+            font-style: italic;
+        }
+
+        /* Tableaux */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9rem;
+            break-inside: avoid;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #F1F5F9;
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        tr:nth-child(even) {
+            background-color: #F8FAFC;
+        }
+
+        /* Script de formation / Dialogue */
+        .dialogue-section {
+            background-color: #FAF5FF;
+            border: 1px solid #E9D8FD;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .dialogue-section h3 {
+            color: #553C9A;
+            margin-top: 0;
+        }
+
+        .script-line {
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+
+        .script-speaker {
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .script-action {
+            font-style: italic;
+            color: var(--text-muted);
+            font-weight: 400;
+            background-color: #EDF2F7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        /* Mise en page impression */
+        .page-break {
+            page-break-before: always;
+            break-before: page;
+        }
+
+        @media print {
+            body {
+                background-color: white;
+                color: black;
+            }
+            .no-print-bar, .btn-print {
+                display: none !important;
+            }
+            .container {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                max-width: 100%;
+                border: none;
+            }
+            .page-break {
+                page-break-before: always;
+                break-before: page;
+            }
+            a {
+                text-decoration: none;
+                color: black;
+            }
+            .toc-box {
+                break-inside: avoid;
+            }
+            .image-container img {
+                box-shadow: none;
+                max-width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print-bar">
+    <h3>KPSyDesk v3.0 - Système d'Information de Formation</h3>
+    <button class="btn-print" onclick="window.print()">Télécharger / Imprimer en PDF</button>
+</div>
+
+<div class="container">
+    <!-- En-tête de couverture -->
+    <div class="cover-header">
+        <h1 class="cover-title">Guide d'Utilisation Officiel & Script de Formation</h1>
+        <div class="cover-subtitle">KPSyDesk v3.0 : ITAM (Gestion de Parc) & ITSM (Gestion des Services)</div>
+        <p style="text-align: center; max-width: 700px; margin: 0 auto 20px auto; color: var(--text-muted);">
+            Ce manuel est une ressource de formation conçue pour accompagner tous les utilisateurs (Administrateurs IT, Techniciens de Support, Ressources Humaines, Finance et Utilisateurs Standards) dans l'apprentissage et la maîtrise de l'ensemble des modules applicatifs de la solution.
+        </p>
+        <div class="cover-meta">
+            <div class="meta-item">Version : <strong>v3.0.0 (Édition 2026)</strong></div>
+            <div class="meta-item">Auteur : <strong>Ibrahima NDIAYE</strong></div>
+            <div class="meta-item">Statut : <strong>Approuvé / Prêt pour la formation</strong></div>
+        </div>
+    </div>
+
+    <!-- Sommaire -->
+    <div class="toc-box">
+        <h3 class="toc-title">Table des Matières</h3>
+        <div class="toc-grid">
+            <ul style="list-style: none; padding-left: 0;">
+                <li class="toc-item"><a href="#sec-intro">1. Introduction & Concepts Clés</a></li>
+                <li class="toc-item"><a href="#sec-auth">2. Authentification, Droits & MFA</a></li>
+                <li class="toc-item"><a href="#sec-dashboard">3. Tableau de Bord & Indicateurs</a></li>
+                <li class="toc-item"><a href="#sec-assets">4. Inventaire du Matériel</a></li>
+                <li class="toc-item"><a href="#sec-movements">5. Mouvements d'Actifs</a></li>
+                <li class="toc-item"><a href="#sec-helpdesk">6. Support, Helpdesk & Tickets</a></li>
+                <li class="toc-item"><a href="#sec-hr">7. Gestion RH & Onboarding IT</a></li>
+                <li class="toc-item"><a href="#sec-stock">8. Magasins & Consommables</a></li>
+                <li class="toc-item"><a href="#sec-purchases">9. Achats, Commandes & Logistique</a></li>
+            </ul>
+            <ul style="list-style: none; padding-left: 0;">
+                <li class="toc-item"><a href="#sec-contracts">10. Contrats de Garantie</a></li>
+                <li class="toc-item"><a href="#sec-sales">11. Ventes & Cessions d'Actifs</a></li>
+                <li class="toc-item"><a href="#sec-licenses">12. Logiciels & Licences</a></li>
+                <li class="toc-item"><a href="#sec-maintenance">13. Maintenances Curatives/Préventives</a></li>
+                <li class="toc-item"><a href="#sec-sla">14. Accords de Service (SLA)</a></li>
+                <li class="toc-item"><a href="#sec-kb">15. Base de Connaissances (Wiki)</a></li>
+                <li class="toc-item"><a href="#sec-audit">16. Historique & Audit</a></li>
+                <li class="toc-item"><a href="#sec-backup">17. Sauvegardes & Restauration</a></li>
+                <li class="toc-item"><a href="#sec-agent">18. Agent Windows & Enrôlement</a></li>
+                <li class="toc-item"><a href="#sec-script">19. Script de Formation (Tutoriel)</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <strong>Note d'utilisation globale :</strong> Les badges de couleur au niveau de chaque section indiquent les rôles applicatifs ayant les permissions d'exécution de la fonctionnalité. L'application est entièrement responsive et propose un basculement de thème (Clair / Sombre) accessible en un clic dans la barre supérieure.
+    </div>
+
+    <!-- 1. Introduction -->
+    <div id="sec-intro">
+        <h2>1. Introduction & Concepts Clés <span class="role-tag role-all">Tous Rôles</span></h2>
+        <p>
+            **KPSyDesk v3.0** est une solution intégrée de gestion des actifs informatiques (ITAM) et des services de support (ITSM). Son objectif principal est de centraliser et d'historiser le cycle de vie complet de chaque équipement au sein de l'entreprise, depuis son achat initial jusqu'à sa cession finale.
+        </p>
+        <p>
+            L'architecture de l'application privilégie la <strong>sécurité locale ("Local-first")</strong>. Contrairement aux solutions infonuagiques tierces, KPSyDesk fonctionne de manière autonome au sein de votre réseau interne (le plus souvent déployé via Docker avec un conteneur React pour l'interface utilisateur, un serveur NestJS pour l'API logique et PostgreSQL pour les données). Ce choix technologique garantit que vos configurations matérielles, listes de personnel et données financières restent confinées dans votre infrastructure physique, réduisant à néant les risques de piratage à distance.
+        </p>
+    </div>
+
+    <!-- 2. Authentification & Droits -->
+    <div id="sec-auth" class="page-break">
+        <h2>2. Authentification, Droits & MFA <span class="role-tag role-all">Tous Rôles</span></h2>
+        <p>
+            Chaque collaborateur accède à KPSyDesk via ses identifiants uniques fournis par la direction informatique. Les droits d'accès au sein du logiciel sont régis par cinq rôles métiers distincts :
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Rôle applicatif</th>
+                    <th>Périmètre de droits</th>
+                    <th>Exemple d'utilisation métier</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Admin IT</strong></td>
+                    <td>Contrôle total sur tous les modules, configurations système, base de données et gestion des licences.</td>
+                    <td>Directeur des Systèmes d'Information, Administrateur Système.</td>
+                </tr>
+                <tr>
+                    <td><strong>Technicien</strong></td>
+                    <td>Gestion des tickets helpdesk, des fiches matérielles de l'inventaire et des cycles de maintenance.</td>
+                    <td>Technicien support de proximité, Responsable Helpdesk.</td>
+                </tr>
+                <tr>
+                    <td><strong>Ressources Humaines (RH)</strong></td>
+                    <td>Accès exclusif à la gestion du personnel, fiches collaborateurs, et checklists d'onboarding/offboarding.</td>
+                    <td>Chargé de recrutement, DRH.</td>
+                </tr>
+                <tr>
+                    <td><strong>Finance / Achat</strong></td>
+                    <td>Visualisation et modification des modules financiers (Fournisseurs, Achats, Contrats, Ventes).</td>
+                    <td>Comptable, Acheteur IT.</td>
+                </tr>
+                <tr>
+                    <td><strong>Standard User</strong></td>
+                    <td>Création de tickets pour ses propres pannes, lecture de la Base de Connaissances.</td>
+                    <td>Employé de bureau, utilisateur final d'un PC portable.</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>
+            <strong>Sécurité Renforcée (MFA) :</strong> Afin de protéger les comptes à haut privilège (Admins et Techniciens), KPSyDesk intègre l'authentification à double facteur (MFA). Lors de la première connexion, l'utilisateur scanne un QR code à l'aide d'une application d'authentification standard (Google Authenticator, Microsoft Authenticator) et saisit un code à 6 chiffres temporaire (TOTP) pour valider l'association.
+        </p>
+    </div>
+
+    <!-- 3. Tableau de Bord -->
+    <div id="sec-dashboard" class="page-break">
+        <h2>3. Tableau de Bord & Indicateurs <span class="role-tag role-all">Tous Rôles</span></h2>
+        <p>
+            Le <strong>Tableau de Bord</strong> s'affiche immédiatement après la connexion. C'est l'écran de synthèse centralisé. Dans la version 3.0, il regroupe <strong>8 indicateurs statistiques clés</strong> sous forme de cartes d'analyse et de graphiques dynamiques :
+        </p>
+        <ul>
+            <li><strong>Total Équipements :</strong> Nombre brut de tous les matériels répertoriés.</li>
+            <li><strong>Actifs Assignés :</strong> Matériel actuellement attribué à un collaborateur et en cours d'utilisation.</li>
+            <li><strong>Équipements en Stock :</strong> Matériels disponibles en magasin pour de futures affectations.</li>
+            <li><strong>Tickets Ouverts :</strong> Demandes de support en cours de traitement par les techniciens.</li>
+            <li><strong>Collaborateurs :</strong> Nombre d'utilisateurs référencés dans la base de données.</li>
+            <li><strong>Licences Actives :</strong> Nombre de clés logicielles valides et enregistrées.</li>
+            <li><strong>Contrats Actifs :</strong> Garanties ou contrats de maintenance en cours de validité.</li>
+            <li><strong>Alertes Stock Consommables :</strong> Nombre de consommables sous le seuil d'alerte critique.</li>
+        </ul>
+
+        <div class="image-container">
+            <img src="img/dashboard_overview.png" alt="Tableau de Bord Complet KPSyDesk">
+            <div class="image-caption">Figure 1 : Vue d'ensemble du Tableau de Bord (Dashboard) avec les 8 cartes statistiques.</div>
+        </div>
+
+        <p>
+            Les graphiques circulaires représentent la répartition de l'inventaire par catégorie (PC fixes, PC portables, Téléphones...) et l'état d'urgence des tickets helpdesk en temps réel.
+        </p>
+
+        <div class="image-container">
+            <img src="img/dashboard_dark.png" alt="Dashboard KPSyDesk en Mode Sombre">
+            <div class="image-caption">Figure 2 : Tableau de bord basculé en Mode Sombre pour un meilleur confort visuel nocturne.</div>
+        </div>
+    </div>
+
+    <!-- 4. Inventaire du Matériel -->
+    <div id="sec-assets" class="page-break">
+        <h2>4. Inventaire du Matériel <span class="role-tag role-tech">Techniciens</span> <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Ce module gère le matériel de l'entreprise. Pour ajouter un nouvel équipement :
+        </p>
+        <ol>
+            <li>Rendez-vous dans la section <strong>Actifs Informatiques</strong> puis cliquez sur <strong>+ Ajouter un Actif</strong>.</li>
+            <li>Remplissez la fiche d'informations : Nom, Catégorie (Serveur, Ordinateur portable, Imprimante...), Modèle, Numéro de série et Code d'inventaire.</li>
+            <li>Sélectionnez le <strong>Statut</strong> : <em>Actif</em>, <em>En Stock</em> (disponible), <em>En Panne</em> (bloqué pour maintenance), ou <em>Réformé</em> (hors d'usage/vendu).</li>
+            <li>Associez un collaborateur si le matériel lui est affecté individuellement.</li>
+            <li>Cliquez sur <strong>Enregistrer</strong>.</li>
+        </ol>
+        <p>
+            Chaque équipement se voit attribuer une étiquette PDF avec un <strong>QR Code unique</strong> généré automatiquement par l'application. En scannant ce code avec un terminal mobile, le technicien accède directement à la fiche de maintenance de l'appareil dans la base KPSyDesk.
+        </p>
+    </div>
+
+    <!-- 5. Mouvements d'Actifs -->
+    <div id="sec-movements">
+        <h2>5. Mouvements d'Actifs <span class="role-tag role-tech">Techniciens</span> <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Pour éviter les pertes, KPSyDesk journalise chaque changement d'état physique d'un appareil. Lorsqu'un ordinateur portable est transféré du Département Finance au Département Marketing, ou lorsqu'il retourne au stock après le départ d'un employé, un mouvement est créé.
+        </p>
+        <p>
+            Le technicien effectue un <strong>Check-out</strong> (affectation) ou un <strong>Check-in</strong> (remise en stock) depuis la fiche de l'actif. Chaque mouvement enregistre automatiquement l'ancien détenteur, le nouveau détenteur, la date de la modification et le technicien qui a opéré le changement. Un onglet "Historique" sur la fiche de l'équipement permet de retracer sa vie de bout en bout.
+        </p>
+    </div>
+
+    <!-- 6. Support & Pannes (Helpdesk) -->
+    <div id="sec-helpdesk" class="page-break">
+        <h2>6. Support & Pannes (Helpdesk & Tickets) <span class="role-tag role-all">Tous Rôles</span></h2>
+        <p>
+            La gestion des pannes repose sur l'ouverture de <strong>Tickets</strong>. Un employé standard peut ouvrir un ticket s'il rencontre un problème technique.
+        </p>
+        <p><strong>Cycle de vie d'un ticket de support :</strong></p>
+        <div style="background-color: #F8FAFC; padding: 15px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 15px;">
+            <p><strong>1. Nouveau :</strong> Le ticket est créé par l'utilisateur final ou saisi par un technicien. Le sujet et la description sont renseignés.</p>
+            <p><strong>2. Assigné / En Cours :</strong> Le responsable du helpdesk attribue le ticket à un technicien spécifique. Le statut passe à "En cours de résolution".</p>
+            <p><strong>3. Résolu :</strong> Le technicien saisit des <em>notes de résolution</em> (ex: "Remplacement du câble réseau défectueux") et clôture le ticket. Une alerte informe le demandeur.</p>
+        </div>
+        <p>
+            Les tickets sont triés par priorité (Basse, Normale, Haute, Critique). Les incidents critiques apparaissent en rouge clignotant sur la console du technicien pour une intervention prioritaire.
+        </p>
+    </div>
+
+    <!-- 7. Gestion du Personnel & Onboarding IT -->
+    <div id="sec-hr" class="page-break">
+        <h2>7. Gestion du Personnel (RH & Onboarding IT) <span class="role-tag role-rh">RH</span> <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Le module **Collaborateurs & Départements** permet de gérer l'affectation du personnel de l'entreprise.
+        </p>
+        <p>
+            <strong>Le Défi de l'Onboarding / Offboarding :</strong> L'arrivée d'un nouvel employé nécessite la coordination de l'équipe informatique et des RH. KPSyDesk intègre des <strong>Checklists de processus RH</strong> :
+        </p>
+        <ul>
+            <li><strong>À l'arrivée (Onboarding) :</strong> Les RH ou l'admin valident la liste des étapes obligatoires : *Attribuer un ordinateur*, *Créer l'adresse e-mail*, *Remettre le badge physique*, *Former sur les outils*.</li>
+            <li><strong>Au départ (Offboarding) :</strong> Lors de la rupture du contrat d'un employé, le système affiche les actifs liés. Les RH cochent la restitution de la machine, la fermeture du compte d'accès et la révocation du badge.</li>
+        </ul>
+
+        <div class="image-container">
+            <img src="img/departments_tab.webp" alt="Module de Gestion des Départements">
+            <div class="image-caption">Figure 3 : L'onglet "Départements" qui permet de diviser l'entreprise en pôles analytiques.</div>
+        </div>
+
+        <div class="image-container">
+            <img src="img/user_edit_department.webp" alt="Attribution d'un Département à un Collaborateur">
+            <div class="image-caption">Figure 4 : Formulaire de modification d'un collaborateur avec l'attribution de son pôle/département de rattachement.</div>
+        </div>
+    </div>
+
+    <!-- 8. Gestion du Stockage (Magasins) -->
+    <div id="sec-stock" class="page-break">
+        <h2>8. Gestion du Stockage (Magasins & Locaux) <span class="role-tag role-tech">Techniciens</span> <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Les matériels informatiques neufs ou en attente d'affectation sont placés dans des <strong>Magasins de stockage</strong> géographiques (ex: *Stock Central Bureau 102*, *Magasin Annexe A*).
+        </p>
+        <p>
+            <strong>Consommables et Seuils d'Alerte :</strong> Ce sous-module liste les petites fournitures (souris, claviers, cartouches d'encre HP Noir, câbles HDMI). Chaque consommable possède un champ <strong>"Seuil d'alerte"</strong>. Si le stock restant descend en dessous de ce chiffre (ex: moins de 5 cartouches d'encre), l'indicateur *Alertes Stock* du tableau de bord s'incrémente et s'affiche en rouge, alertant le gestionnaire qu'il est temps de réapprovisionner le matériel.
+        </p>
+    </div>
+
+    <!-- 9. Logistique & Achats -->
+    <div id="sec-purchases">
+        <h2>9. Logistique, Finances & Achats <span class="role-tag role-finance">Finance</span> <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Le module **Finances** gère l'aspect budgétaire.
+        </p>
+        <ul>
+            <li><strong>Fournisseurs :</strong> Base de données des vendeurs (Nom, Téléphone, Adresse, Contact commercial).</li>
+            <li><strong>Bons de Commande :</strong> Enregistrement des achats d'équipements avec liaison au fournisseur et scan de la facture PDF. Un bon de commande permet d'importer directement en stock une série d'ordinateurs achetés en un seul clic, limitant les saisies manuelles fastidieuses.</li>
+        </ul>
+    </div>
+
+    <!-- 10. Contrats & Garanties -->
+    <div id="sec-contracts" class="page-break">
+        <h2>10. Contrats & Garanties <span class="role-tag role-finance">Finance</span> <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Il est capital de suivre les garanties constructeurs pour éviter de payer des réparations qui auraient dû être prises en charge gratuitement.
+        </p>
+        <p>
+            Le module **Contrats** permet de lier un équipement à un contrat de garantie ou de maintenance tiers (ex: *Garantie HP Care Pack 3 ans*). L'application calcule la date de fin de contrat et affiche des notifications d'avertissement 60 et 30 jours avant le terme pour renégocier les conditions ou déclarer les derniers matériels en panne.
+        </p>
+    </div>
+
+    <!-- 11. Ventes & Cessions -->
+    <div id="sec-sales">
+        <h2>11. Ventes & Cessions de matériel <span class="role-tag role-finance">Finance</span> <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Lorsqu'un matériel informatique atteint sa fin de cycle de vie au sein de l'entreprise, il peut être réformé. KPSyDesk v3.0 intègre un processus de <strong>cession / vente au personnel</strong> ou de mise au rebut.
+        </p>
+        <p>
+            En sélectionnant un équipement réformé, le comptable peut enregistrer une "Vente", en spécifiant la date, le prix symbolique consenti, et le collaborateur acquéreur. Dès la validation de la vente, le matériel change automatiquement de statut pour passer en **Réformé/Cédé**, le libérant ainsi des inventaires actifs de l'entreprise tout en gardant une trace légale de sa sortie physique.
+        </p>
+    </div>
+
+    <!-- 12. Abonnements & Logiciels -->
+    <div id="sec-licenses" class="page-break">
+        <h2>12. Abonnements & Logiciels (Licences) <span class="role-tag role-tech">Techniciens</span> <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            La gestion des licences logicielles prévient le risque de sur-utilisation (amendes lors d'audits éditeurs) ou de sous-utilisation (gaspillage budgétaire).
+        </p>
+        <p>
+            Le module **Licences** permet de déclarer chaque logiciel acquis (ex: *Microsoft Office 365 Business*), sa clé d'activation, sa date d'expiration et son quota de postes maximum autorisés. À chaque fois qu'un technicien affecte le logiciel à la fiche d'un ordinateur, le nombre de licences consommées s'incrémente de 1. Si le quota de postes autorisés est dépassé, une alerte visuelle orange s'affiche. Une ligne rouge s'affiche également si la date d'expiration de la licence survient dans moins de 30 jours.
+        </p>
+    </div>
+
+    <!-- 13. Maintenance Curative & Préventive -->
+    <div id="sec-maintenance">
+        <h2>13. Maintenance Curative & Préventive <span class="role-tag role-tech">Techniciens</span></h2>
+        <p>
+            Les interventions techniques sur le matériel informatique se divisent en deux catégories dans KPSyDesk :
+        </p>
+        <ul>
+            <li><strong>Maintenance Curative :</strong> Fait suite à une panne signalée sur un ticket. Elle détaille le coût des pièces remplacées (ex: *Disque SSD 500 Go* à 45 €) et le coût de la main-d'œuvre si un réparateur externe intervient.</li>
+            <li><strong>Maintenance Préventive :</strong> Planifiée à intervalles réguliers (ex: *Dépoussiérage des serveurs* tous les 6 mois). Le technicien programme des rappels récurrents pour exécuter ces tâches de maintenance périodiques.</li>
+        </ul>
+    </div>
+
+    <!-- 14. Niveau de Service (SLA) -->
+    <div id="sec-sla" class="page-break">
+        <h2>14. Niveau de Service (SLA) <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Les **SLA (Service Level Agreements)** mesurent l'efficacité de l'équipe de support informatique. Dans les paramètres système, l'administrateur définit des règles temporelles strictes par niveau de priorité :
+        </p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Priorité du Ticket</th>
+                    <th>Délai de Prise en Charge Max</th>
+                    <th>Délai de Résolution Max</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span style="color:red; font-weight:bold;">Critique</span></td>
+                    <td>15 minutes</td>
+                    <td>2 heures</td>
+                </tr>
+                <tr>
+                    <td><span style="color:orange; font-weight:bold;">Haute</span></td>
+                    <td>1 heure</td>
+                    <td>4 heures</td>
+                </tr>
+                <tr>
+                    <td><strong>Normale</strong></td>
+                    <td>4 heures</td>
+                    <td>24 heures</td>
+                </tr>
+                <tr>
+                    <td>Basse</td>
+                    <td>8 heures</td>
+                    <td>48 heures</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>
+            Si un ticket dépasse les délais de résolution imposés par sa priorité, KPSyDesk déclenche une **alerte d'escalade** visuelle et envoie une alerte automatique au responsable de l'équipe informatique.
+        </p>
+    </div>
+
+    <!-- 15. Base de connaissances -->
+    <div id="sec-kb">
+        <h2>15. Base de Connaissances (Wiki) <span class="role-tag role-all">Tous Rôles</span></h2>
+        <p>
+            La **Base de connaissances** est la bibliothèque de résolutions de pannes de l'entreprise.
+        </p>
+        <p>
+            Lorsqu'un technicien résout un problème complexe (ex: *Configuration de l'accès VPN sur macOS*), il rédige un article explicatif avec des étapes numérotées. Les utilisateurs standards ont un accès en lecture à cette base. Avant d'ouvrir un ticket pour une panne simple, ils peuvent rechercher des solutions directement dans ce Wiki (auto-assistance), désengorgeant le flux de demandes du helpdesk.
+        </p>
+    </div>
+
+    <!-- 16. Traçabilité & Audit -->
+    <div id="sec-audit" class="page-break">
+        <h2>16. Traçabilité & Audit de Sécurité <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Pour se conformer aux normes de gouvernance informatique et de sécurité, chaque action effectuée sur KPSyDesk est enregistrée de manière inaltérable dans les **Journaux d'Audit (Audit Logs)**.
+        </p>
+        <p>
+            Chaque log contient la date exacte, l'adresse IP de l'utilisateur, l'identifiant de la personne, le type d'action (CRÉATION, MODIFICATION, SUPPRESSION) et les anciennes valeurs comparées aux nouvelles valeurs. L'administrateur peut filtrer ces logs par date ou par utilisateur pour mener des investigations en cas d'erreur humaine ou d'action malveillante suspectée.
+        </p>
+    </div>
+
+    <!-- 17. Sauvegardes & Restauration -->
+    <div id="sec-backup" class="page-break">
+        <h2>17. Sauvegardes & Restauration <span class="role-tag role-admin">Admins</span></h2>
+        <div class="alert-box">
+            <strong>RÈGLE D'OR DE SÉCURITÉ :</strong> KPSyDesk v3.0 stocke ses données localement. En cas de vol du serveur, de panne matérielle lourde ou d'effacement accidentel du cache du navigateur, <strong>TOUT VOTRE SYSTÈME SERA PERDU</strong>. Une sauvegarde externe hebdomadaire sur clé USB sécurisée ou NAS distant est obligatoire.
+        </div>
+        <p>
+            Le module **Paramètres & Sauvegardes** propose un bouton d'exportation en 1 clic :
+        </p>
+        <ul>
+            <li><strong>Sauvegarde Totale :</strong> L'export génère un fichier JSON sécurisé contenant la totalité de la base de données (actifs, utilisateurs, départements, consommables, tickets d'historique, contrats, configurations, et journaux d'audit).</li>
+            <li><strong>Restauration :</strong> Sur une nouvelle machine vierge, l'administrateur réinstalle l'application, sélectionne le fichier JSON sauvegardé dans l'outil de restauration et clique sur "Restaurer". L'intégralité du système est reconstituée instantanément.</li>
+        </ul>
+    </div>
+
+    <!-- 18. Agent Windows & Enrôlement -->
+    <div id="sec-agent" class="page-break">
+        <h2>18. Agent Windows & Enrôlement Automatique <span class="role-tag role-tech">Techniciens</span> <span class="role-tag role-admin">Admins</span></h2>
+        <p>
+            Pour éviter d'entrer manuellement les configurations techniques détaillées de chaque poste de travail, KPSyDesk v3.0 propose un **Agent d'Inventaire Windows** (`KPsyITAgent.msi`), équivalent à l'agent GLPI.
+        </p>
+
+        <div class="image-container">
+            <img src="img/settings_agent_download.png" alt="Téléchargement de l'agent d'inventaire dans les paramètres">
+            <div class="image-caption">Figure 5 : Section de téléchargement de l'agent MSI et commandes d'installation silencieuse réseau.</div>
+        </div>
+
+        <p><strong>Fonctionnement technique de l'agent client :</strong></p>
+        <ol>
+            <li><strong>Installation Interactive :</strong> Durant l'exécution manuelle du fichier `.msi`, une fenêtre graphique invite l'administrateur ou le technicien à saisir l'adresse URL du serveur KPSyDesk (ex: `http://192.168.1.50:3002`).</li>
+            <li><strong>Stockage Registre :</strong> L'URL saisie est enregistrée de manière permanente dans la base de registre Windows au chemin `HKLM\Software\KPsyITAgent` (avec gestion de la redirection Wow6432Node pour compatibilité Windows 64-bits).</li>
+            <li><strong>Collecte des Caractéristiques :</strong> L'agent (script PowerShell natif compilé) interroge le matériel via WMI : Nom d'hôte, numéro de série du BIOS, constructeur, modèle, système d'exploitation, caractéristiques du processeur (CPU), taille de la mémoire RAM installée, partitions des disques durs (taille totale et espace libre actuel), adresse IP locale et adresse physique MAC.</li>
+            <li><strong>Tâche Planifiée (SYSTEM) :</strong> Une tâche planifiée nommée `KPsyITAgent` est enregistrée dans Windows pour s'exécuter silencieusement chaque jour, de manière invisible, sous le compte d'administration local `SYSTEM` de l'ordinateur.</li>
+            <li><strong>Envoi de Données & Fallback :</strong> Les informations sont transmises au point de terminaison HTTP du serveur (`POST /api/assets/enroll`). Si le numéro de série du BIOS renvoyé est invalide ou générique (ex: "To Be Filled By O.E.M."), l'agent utilise comme identifiant de repli ("fallback") l'adresse MAC physique réseau pour éviter les conflits d'enrôlement ou la création de machines doublons.</li>
+        </ol>
+
+        <div class="image-container">
+            <img src="img/asset_details_agent_specs.png" alt="Spécifications matérielles collectées par l'agent">
+            <div class="image-caption">Figure 6 : Encart "Spécifications Matérielles (Agent)" apparaissant au bas d'un équipement après enrôlement automatique.</div>
+        </div>
+    </div>
+
+    <!-- 19. Script de Formation (Tutoriel) -->
+    <div id="sec-script" class="page-break dialogue-section">
+        <h2>19. Script de Formation : "Premiers pas avec KPSyDesk v3.0"</h2>
+        <p><em>
+            Ce script scénarisé simule une session de formation animée par un formateur IT à destination de collaborateurs découvrant le logiciel. Il peut servir de trame pour créer des vidéos d'aide ou des webinaires.
+        </em></p>
+        <br>
+        
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Bonjour à toutes et à tous, et bienvenue dans cette session de formation à l'utilisation de **KPSyDesk v3.0**, votre nouvelle console de gestion de parc informatique et d'assistance. »
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Aujourd'hui, nous allons nous mettre dans la peau d'un administrateur et de son équipe pour suivre la vie d'un nouvel équipement informatique au sein de notre entreprise. » <span class="script-action">Action : Affiche le Tableau de bord (Figure 1)</span>
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Regardez l'écran d'accueil. Nous avons actuellement 8 cartes statistiques qui résument le parc en temps réel. Notre entreprise s'est agrandie, et la direction des Ressources Humaines vient de nous signaler l'arrivée imminente d'une nouvelle collaboratrice au département "Ressources Humaines". »
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Notre première tâche est d'intégrer cette personne et de lui fournir un ordinateur fonctionnel. Commençons par aller dans l'onglet **Collaborateurs & Départements**. » <span class="script-action">Action : Clique sur "Collaborateurs" (Figure 3)</span>
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Un stagiaire :</span> « Comment sait-on si son département existe déjà dans le logiciel ? »
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « C'est une excellente question. Dans la section *Collaborateurs*, nous avons un sous-onglet nommé *Départements*. Si nous cliquons dessus, nous voyons la liste des divisions de l'entreprise. Si le département "Ressources Humaines" n'existait pas, nous pourrions cliquer sur "Nouveau Département" pour le créer. Ici, il existe déjà ! Retournons donc dans *Collaborateurs* et cliquons sur "Modifier" sur notre fiche ou créons-en une nouvelle pour lui attribuer son département. » <span class="script-action">Action : Ouvre le formulaire d'édition (Figure 4)</span>
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Grâce au nouveau menu déroulant, nous associons facilement notre collaboratrice au département "Ressources Humaines". »
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Maintenant que l'utilisatrice est configurée, nous devons lui attribuer un ordinateur portable. Deux solutions s'offrent à nous : l'enrôler manuellement ou utiliser le déploiement automatique. »
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Si nous utilisons le déploiement réseau automatique, nous téléchargeons l'agent d'inventaire depuis l'onglet **Paramètres & Sécurité**. » <span class="script-action">Action : Montre la carte de l'agent Windows (Figure 5)</span>
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Une fois le fichier MSI installé sur la machine de test de notre nouvelle collègue, l'agent extrait automatiquement le processeur, la quantité de RAM, les disques de l'appareil et les envoie directement vers KPSyDesk. En ouvrant la fiche de l'équipement dans notre inventaire, regardez ce qui apparaît en bas de page. » <span class="script-action">Action : Fait défiler le formulaire d'édition de l'actif (Figure 6)</span>
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « La zone **Spécifications Matérielles (Agent)** contient toutes les informations réelles récoltées par l'agent (BIOS, CPU Intel Core i7, 32 Go de RAM...). Il ne nous reste plus qu'à lier cet équipement à notre collaboratrice en modifiant le détenteur sur la fiche principale. »
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Un stagiaire :</span> « Et que se passe-t-il si la machine tombe en panne dans quelques mois ? »
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Très simple. Notre collègue pourra se connecter avec son profil d'utilisateur standard, se rendre dans le module **Helpdesk / Tickets** et créer un ticket en sélectionnant son PC portable défectueux. Notre équipe de techniciens recevra immédiatement une notification visuelle, pourra assigner la panne et suivre la réparation étape par étape jusqu'à la saisie de la résolution. »
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Enfin, n'oubliez jamais la règle de sécurité absolue pour notre serveur local : allez chaque vendredi soir dans **Paramètres & Sauvegardes**, cliquez sur "Exporter Base de Données (.json)" et stockez ce fichier sur une clé USB externe pour être paré à toute éventualité. »
+        </div>
+
+        <div class="script-line">
+            <span class="script-speaker">Le Formateur :</span> « Des questions sur ce flux de gestion ? Non ? Alors à vous de jouer pour les exercices pratiques ! »
+        </div>
+    </div>
+
+    <!-- Pied de page -->
+    <p style="text-align: center; margin-top: 60px; color: var(--text-muted); font-size: 0.88rem; border-top: 1px solid var(--border); padding-top: 25px;">
+        Document de Référence Technique & Formation - KPSyDesk v3.0 | Édition Professionnelle 2026
+    </p>
+</div>
+
+</body>
+</html>
