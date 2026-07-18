@@ -110,7 +110,7 @@ export class TenantsService {
 
     // 8. Créer la subscription
     const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 14); // 14 jours d'essai
+    trialEndDate.setDate(trialEndDate.getDate() + 7); // 7 jours d'essai
 
     await this.prisma.subscription.create({
       data: {

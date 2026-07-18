@@ -94,6 +94,7 @@ function App() {
 
   // Subscription lifecycle states
   const [tenantStatus, setTenantStatus] = useState<string>('ACTIVE');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('ACTIVE');
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<string | null>(null);
 
   const fetchMaintenanceAlerts = useCallback(async () => {
@@ -189,6 +190,7 @@ function App() {
             setTenantStatus(res.data.tenant.status);
           }
           if (res.data.subscription) {
+            setSubscriptionStatus(res.data.subscription.status);
             setSubscriptionEndDate(res.data.subscription.endDate);
           }
         })
@@ -1075,8 +1077,30 @@ function App() {
     );
   }
 
+  // Trial Logic
+  let trialDaysLeft = 0;
+  let isTrialLocked = false;
+  let isGracePeriod = false;
+
+  if (subscriptionStatus === 'TRIALING' && subscriptionEndDate) {
+    const end = new Date(subscriptionEndDate).getTime();
+    const now = new Date().getTime();
+    const diff = end - now;
+    trialDaysLeft = Math.ceil(diff / (1000 * 3600 * 24));
+    
+    if (trialDaysLeft <= 0) {
+      if (trialDaysLeft >= -2) {
+        // Période de grâce de 2 jours (jours 0, -1, -2)
+        isGracePeriod = true;
+      } else {
+        // Verrouillage total
+        isTrialLocked = true;
+      }
+    }
+  }
+
   // Render Main Layout when Authenticated
-  if (isAuthenticated && tenantStatus === 'SUSPENDED' && currentUser?.email?.toLowerCase() !== 'admin@entreprise.com') {
+  if (isAuthenticated && (tenantStatus === 'SUSPENDED' || isTrialLocked) && currentUser?.email?.toLowerCase() !== 'admin@entreprise.com') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', color: 'white' }}>
         <header style={{ padding: '1rem 2rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)' }}>
@@ -1090,9 +1114,13 @@ function App() {
             <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#ef444415', border: '2px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
               <i className="ph ph-warning" style={{ fontSize: '2.5rem', color: '#ef4444' }} />
             </div>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '1rem' }}>Accès Suspendu - Abonnement Expiré</h1>
+            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '1rem' }}>
+              {isTrialLocked ? "Période d'Essai Terminée" : "Accès Suspendu - Abonnement Expiré"}
+            </h1>
             <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-              Le délai de grâce de votre abonnement a expiré. L'accès à vos fonctionnalités et à vos données est temporairement restreint.
+              {isTrialLocked 
+                ? "Votre période d'essai gratuite ainsi que votre délai de grâce sont arrivés à échéance. L'accès à vos fonctionnalités est temporairement restreint."
+                : "Le délai de grâce de votre abonnement a expiré. L'accès à vos fonctionnalités et à vos données est temporairement restreint."}
               <br /><strong>Rassurez-vous, aucune de vos données n'a été supprimée ou altérée.</strong>
             </p>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
@@ -1379,6 +1407,20 @@ function App() {
             </div>
           </div>
         </header>
+
+        {/* Trial Banner */}
+        {subscriptionStatus === 'TRIALING' && trialDaysLeft > 0 && (
+          <div style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '10px 20px', color: '#fff', textAlign: 'center', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(245,158,11,0.2)' }}>
+            <i className="ph-fill ph-clock"></i>
+            Vous disposez d'une version d'essai. Il vous reste {trialDaysLeft} jour{trialDaysLeft > 1 ? 's' : ''}.
+          </div>
+        )}
+        {subscriptionStatus === 'TRIALING' && isGracePeriod && (
+          <div style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', padding: '10px 20px', color: '#fff', textAlign: 'center', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(239,68,68,0.2)' }}>
+            <i className="ph-fill ph-warning"></i>
+            Votre essai a expiré. Période de grâce avant verrouillage de votre compte ({trialDaysLeft + 2} jour{trialDaysLeft + 2 > 1 ? 's' : ''} restant{trialDaysLeft + 2 > 1 ? 's' : ''}).
+          </div>
+        )}
 
         {/* Content body wrapper */}
         <main className="main-content" style={{ maxWidth: '100%', margin: '0', padding: '2rem' }}>

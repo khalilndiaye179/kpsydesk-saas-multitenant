@@ -275,22 +275,7 @@ export function SubscriptionView() {
               )}
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              {info.tenant.id !== 'demo' && (
-                <button
-                  onClick={handleSimulatePayment}
-                  style={{
-                    padding: '8px 18px', borderRadius: '8px', border: '1px solid #22c55e', cursor: 'pointer',
-                    background: '#22c55e15',
-                    color: '#22c55e', fontWeight: 700, fontSize: '0.85rem',
-                    transition: 'opacity 0.2s'
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                >
-                  <i className="ph-bold ph-lightning" style={{ marginRight: '6px' }} />
-                  Simuler Webhook Waves/MM
-                </button>
-              )}
+
               <button
                 onClick={() => { setShowUpgrade(!showUpgrade); setSelectedNewPlan(''); }}
                 style={{
