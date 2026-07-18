@@ -1143,7 +1143,8 @@ export class AdminTenantsController {
 
     const fs = require('fs');
     const path = require('path');
-    const backupDir = path.join(process.cwd(), 'backups', 'tenants');
+    const os = require('os');
+    const backupDir = path.join(os.tmpdir(), 'itam-tenants-backups');
     
     if (!fs.existsSync(backupDir)) {
       fs.mkdirSync(backupDir, { recursive: true });
