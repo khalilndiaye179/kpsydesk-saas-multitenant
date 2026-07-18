@@ -879,9 +879,9 @@ function App() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '3rem', alignItems: 'center', marginTop: '2rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'flex-start', marginTop: '2rem' }}>
             {/* Left Column: Old layout (Grid & Info) */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: '300px' }}>
               {/* Slogan */}
               <div className="login-slogan-banner" style={{ margin: 0 }}>
                 <div className="login-slogan-text">Votre Partenaire en Technologie</div>
@@ -923,7 +923,7 @@ function App() {
             </div>
 
             {/* Right Column: Marketing Text */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: '350px' }}>
               <h1 style={{ 
                 fontSize: '2.2rem', 
                 fontWeight: '800', 
@@ -949,26 +949,37 @@ function App() {
             </div>
           </div>
           {/* Left Footer Credit */}
-          <div className="login-left-footer">
-            <div className="login-footer-copy">© 2026 K'PSY INFORMATIQUE — TOUS DROITS RÉSERVÉS.</div>
-            <div className="login-footer-dev">Développeur : <span>Ibrahima NDIAYE</span></div>
-            <div className="login-footer-contacts">
-              <a href="tel:+221778034758" className="login-footer-contact-item">
-                <i className="ph-bold ph-phone"></i>
-                <span>+221 77 803 47 58</span>
-              </a>
-              <a href="tel:+221782813939" className="login-footer-contact-item">
-                <i className="ph-bold ph-phone"></i>
-                <span>+221 78 281 39 39</span>
-              </a>
-              <a href="mailto:khalil.ndiaye@kpsyinformatique.com" className="login-footer-contact-item">
-                <i className="ph-bold ph-envelope"></i>
-                <span>khalil.ndiaye@kpsyinformatique.com</span>
-              </a>
-              <a href="https://kpsyinformatique.com" target="_blank" rel="noopener noreferrer" className="login-footer-contact-item">
-                <i className="ph-bold ph-globe"></i>
-                <span>kpsyinformatique.com</span>
-              </a>
+          <div className="login-left-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 'auto' }}>
+            <div style={{ flex: 1 }}>
+              <div className="login-footer-copy">© 2026 K'PSY INFORMATIQUE — TOUS DROITS RÉSERVÉS.</div>
+              <div className="login-footer-dev">Développeur : <span>Ibrahima NDIAYE</span></div>
+              <div className="login-footer-contacts">
+                <a href="tel:+221778034758" className="login-footer-contact-item">
+                  <i className="ph-bold ph-phone"></i>
+                  <span>+221 77 803 47 58</span>
+                </a>
+                <a href="tel:+221782813939" className="login-footer-contact-item">
+                  <i className="ph-bold ph-phone"></i>
+                  <span>+221 78 281 39 39</span>
+                </a>
+                <a href="mailto:khalil.ndiaye@kpsyinformatique.com" className="login-footer-contact-item">
+                  <i className="ph-bold ph-envelope"></i>
+                  <span>khalil.ndiaye@kpsyinformatique.com</span>
+                </a>
+                <a href="https://kpsyinformatique.com" target="_blank" rel="noopener noreferrer" className="login-footer-contact-item">
+                  <i className="ph-bold ph-globe"></i>
+                  <span>kpsyinformatique.com</span>
+                </a>
+              </div>
+            </div>
+            
+            {/* Thumbnail Image at bottom left */}
+            <div>
+              <img 
+                src="/kpsy-thumbnail.png" 
+                alt="K'PSy Informatique Thumbnail" 
+                style={{ width: '120px', height: 'auto', borderRadius: '8px', border: '2px solid rgba(139, 92, 246, 0.3)', boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }} 
+              />
             </div>
           </div>
         </div>

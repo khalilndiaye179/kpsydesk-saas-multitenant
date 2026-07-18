@@ -169,6 +169,14 @@ export class GenerateQuoteDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsString()
+  @IsOptional()
+  billingCycle?: string;
+
+  @IsNumber()
+  @IsOptional()
+  customAnnualDiscountPct?: number;
 }
 
 export class ApplyPromoDto {

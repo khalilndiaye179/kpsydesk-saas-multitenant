@@ -664,7 +664,7 @@ export class AdminTenantsController {
     }
 
     // Si facturation annuelle, multiplier le prix mensuel de base par 12 avant remises
-    const isYearly = (body as any).billingCycle === 'yearly';
+    const isYearly = body.billingCycle === 'yearly';
     if (isYearly) {
       basePrice = basePrice * 12;
     }
@@ -746,7 +746,7 @@ export class AdminTenantsController {
         total,
         notes: body.notes || null,
         validUntil,
-        billingCycle: (body as any).billingCycle || 'monthly'
+        billingCycle: body.billingCycle || 'monthly'
       } as any,
       include: { plan: true, tenant: true },
     });
