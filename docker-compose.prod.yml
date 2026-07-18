@@ -32,6 +32,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${DB_USER:-itam_user}:${DB_PASSWORD:?DB_PASSWORD est obligatoire}@postgres:5432/${DB_NAME:-itam_db}?schema=public
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET est obligatoire}
+      CORS_ORIGINS: ${CORS_ORIGINS}
       # Multi-tenant : sous-domaine par défaut en dev (utiliser X-Tenant-ID header)
       DEFAULT_LEGACY_SUBDOMAIN: ${DEFAULT_LEGACY_SUBDOMAIN:-legacy}
     volumes:
