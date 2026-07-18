@@ -11,6 +11,7 @@ import {
 import { TenantsService } from './tenants.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantGuard } from './tenant.guard';
+import { Public } from '../auth/public.decorator';
 
 /**
  * TenantsController — Routes liées à la gestion des tenants.
@@ -30,6 +31,7 @@ export class TenantsController {
    * Inscription publique d'un nouveau tenant.
    * Crée : Tenant + utilisateur Admin + Subscription en période d'essai.
    */
+  @Public()
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   async signup(
@@ -53,6 +55,7 @@ export class TenantsController {
   /**
    * Liste publique des plans disponibles — utilisée par la page /pricing.
    */
+  @Public()
   @Get('plans')
   getPlans() {
     return this.tenantsService.getPublicPlans();
