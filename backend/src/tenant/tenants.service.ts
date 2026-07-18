@@ -184,11 +184,11 @@ export class TenantsService {
         subdomain: tenant.subdomain,
         status: tenant.status,
         createdAt: tenant.createdAt,
-        logoUrl: tenant.logoUrl,
-        companyAddress: tenant.companyAddress,
-        companyPhone: tenant.companyPhone,
-        companyEmail: tenant.companyEmail,
-        companyTaxId: tenant.companyTaxId,
+        logoUrl: (tenant as any).logoUrl,
+        companyAddress: (tenant as any).companyAddress,
+        companyPhone: (tenant as any).companyPhone,
+        companyEmail: (tenant as any).companyEmail,
+        companyTaxId: (tenant as any).companyTaxId,
       },
       subscription: activeSubscription
         ? {
