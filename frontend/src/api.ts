@@ -1,19 +1,10 @@
 import axios from 'axios';
 
-const getDynamicApiUrl = () => {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    return `http://${hostname}:3010`;
-  }
-  return 'http://localhost:3010';
-};
-
-const API_URL = typeof (import.meta as any).env?.VITE_API_URL === 'string' 
-  ? (import.meta as any).env.VITE_API_URL 
-  : getDynamicApiUrl();
-
+// Utilisation d'un chemin relatif pour l'API. 
+// Le reverse proxy Nginx (défini dans nginx.conf) se chargera de router /api vers le conteneur backend.
+// Cela élimine complètement les problèmes de CORS et de Mixed Content (HTTP vs HTTPS).
 export const api = axios.create({
-  baseURL: API_URL ? `${API_URL}/api` : '/api',
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
