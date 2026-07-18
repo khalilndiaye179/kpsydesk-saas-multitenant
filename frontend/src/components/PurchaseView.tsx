@@ -112,28 +112,30 @@ export const PurchaseView: React.FC = () => {
     if (!jspdf) return;
 
     const doc = new jspdf.jsPDF();
-    doc.setFontSize(20);
-    doc.text("BON DE COMMANDE", 105, 20, { align: 'center' });
-    
-    doc.setFontSize(11);
-    doc.text(`Référence : ${orderNo}`, 14, 40);
-    doc.text(`Date : ${new Date(date).toLocaleDateString().replace(/\//g, ' ')}`, 14, 47);
-    doc.text(`Fournisseur : ${supplierName}`, 14, 54);
 
-    const formattedAmount = amount.toLocaleString('fr-FR').replace(/[\u202f\u00a0\s]/g, ' ');
+    import('../pdfUtils').then(async ({ addBrandingToPdf }) => {
+      let startY = await addBrandingToPdf(doc, 20, `Bon de Commande ${orderNo}`);
 
-    doc.autoTable({
-      head: [["Description", "Quantité", "Prix Unitaire", "Total"]],
-      body: [
-        ["Matériels et équipements informatiques divers", "1", `${formattedAmount} FCFA`, `${formattedAmount} FCFA`]
-      ],
-      startY: 70,
-      theme: 'grid'
+      doc.setFontSize(11);
+      doc.text(`Fournisseur : ${supplierName}`, 14, startY + 10);
+      doc.text(`Date : ${new Date(date).toLocaleDateString().replace(/\//g, ' ')}`, 14, startY + 17);
+
+      const formattedAmount = amount.toLocaleString('fr-FR').replace(/[\u202f\u00a0\s]/g, ' ');
+
+      (doc as any).autoTable({
+        head: [["Description", "Quantité", "Prix Unitaire", "Total"]],
+        body: [
+          ["Matériels et équipements informatiques divers", "1", `${formattedAmount} FCFA`, `${formattedAmount} FCFA`]
+        ],
+        startY: startY + 30,
+        theme: 'grid'
+      });
+
+      const finalY = (doc as any).lastAutoTable.finalY || startY + 60;
+      doc.text(`Total TTC : ${amount.toLocaleString()} FCFA`, 14, finalY + 10);
+
+      doc.save(`Bon_Commande_${orderNo}.pdf`);
     });
-
-    const finalY = (doc as any).lastAutoTable.finalY || 100;
-    doc.text("Conception et développement : Ibrahima NDIAYE", 14, finalY + 30);
-    doc.save(`Bon_Commande_${orderNo}.pdf`);
   };
 
   const toggleOrderStatus = async (item: PurchaseOrder) => {

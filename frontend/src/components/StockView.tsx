@@ -171,16 +171,20 @@ export const StockView: React.FC = () => {
     const { jsPDF } = (window as any).jspdf;
     if (!jsPDF) return alert("Librairie jsPDF non chargée.");
     const doc = new jsPDF('landscape');
-    doc.text("Inventaire des Articles, Produits & Consommables", 14, 15);
-    const head = [['Type', 'Référence', 'Description', 'Emplacement', 'Achat', 'Vente', 'Qté', 'Seuil']];
-    const body = consumables.map(c => [
-      c.type || 'Consommable', c.ref, c.desc, c.location,
-      c.purchasePrice ? `${c.purchasePrice}` : '-',
-      c.sellingPrice ? `${c.sellingPrice}` : '-',
-      c.quantity, c.alertThreshold
-    ]);
-    (doc as any).autoTable({ startY: 20, head, body });
-    doc.save("Inventaire_Stock.pdf");
+
+    import('../pdfUtils').then(async ({ addBrandingToPdf }) => {
+      let startY = await addBrandingToPdf(doc, 15, "État du Stock des Consommables");
+      
+      const head = [['Type', 'Référence', 'Description', 'Emplacement', 'Achat', 'Vente', 'Qté', 'Seuil']];
+      const body = consumables.map(c => [
+        c.type || 'Consommable', c.ref, c.desc, c.location,
+        c.purchasePrice ? `${c.purchasePrice}` : '-',
+        c.sellingPrice ? `${c.sellingPrice}` : '-',
+        c.quantity, c.alertThreshold
+      ]);
+      (doc as any).autoTable({ startY, head, body });
+      doc.save("Inventaire_Stock.pdf");
+    });
   };
 
   const adjustQty = async (item: Consumable, amount: number) => {

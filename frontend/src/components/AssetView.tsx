@@ -434,52 +434,13 @@ export const AssetView: React.FC = () => {
     let startY = 20;
 
     try {
-      const res = await api.get('/tenants/me');
-      const tenant = res.data.tenant;
-      
-      if (tenant) {
-        if (tenant.logoUrl) {
-          try {
-            const baseUrl = (import.meta as any).env?.VITE_API_URL || '';
-            const imgUrl = `${baseUrl}${tenant.logoUrl}`;
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
-            img.src = imgUrl;
-            await new Promise((resolve, reject) => {
-              img.onload = () => resolve(true);
-              img.onerror = () => reject(new Error("Image load failed"));
-            });
-            // Calcul ratio pour largeur max 40 et hauteur max 20
-            const ratio = Math.min(40 / img.width, 20 / img.height);
-            doc.addImage(img, 'PNG', 14, 10, img.width * ratio, img.height * ratio);
-            startY = 10 + (img.height * ratio) + 10;
-          } catch (imgErr) {
-            console.warn("Impossible de charger le logo pour le PDF", imgErr);
-          }
-        }
-        
-        doc.setFontSize(10);
-        let textY = 15;
-        const textX = tenant.logoUrl ? 60 : 14;
-        
-        doc.text(tenant.name, textX, textY);
-        doc.setFontSize(8);
-        if (tenant.companyAddress) { textY += 5; doc.text(tenant.companyAddress, textX, textY); }
-        if (tenant.companyPhone || tenant.companyEmail) {
-          textY += 5;
-          const contact = [tenant.companyPhone, tenant.companyEmail].filter(Boolean).join(' - ');
-          doc.text(contact, textX, textY);
-        }
-        if (tenant.companyTaxId) { textY += 5; doc.text(`NIF/RC: ${tenant.companyTaxId}`, textX, textY); }
-        
-        startY = Math.max(startY, textY + 10);
-      }
+      const { addBrandingToPdf } = await import('../pdfUtils');
+      startY = await addBrandingToPdf(doc, startY, "Inventaire des Actifs IT");
     } catch (e) {
-      console.warn("Impossible de charger le branding", e);
+      console.warn("Erreur pdf", e);
+      doc.text("Inventaire des Actifs IT", 14, startY);
+      startY += 10;
     }
-
-    doc.setFontSize(14);
-    doc.text("Inventaire des Actifs IT (KPSyDesk)", 14, startY);
     startY += 10;
 
     const columns = ["Code", "Nom", "Type", "N° Série", "Garantie", "État", "Assigné à", "Site"];

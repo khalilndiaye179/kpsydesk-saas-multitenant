@@ -110,28 +110,30 @@ export const SaleView: React.FC = () => {
     if (!jspdf) return;
 
     const doc = new jspdf.jsPDF();
-    doc.setFontSize(22);
-    doc.text("FACTURE DE CESSION", 105, 20, { align: 'center' });
-    
-    doc.setFontSize(11);
-    doc.text(`Date de vente : ${new Date(s.date).toLocaleDateString().replace(/\//g, ' ')}`, 14, 40);
-    doc.text(`Acheteur : ${s.buyerName}`, 14, 47);
-    doc.text(`Statut : ${s.status}`, 14, 54);
 
-    const formattedAmount = s.amount.toLocaleString('fr-FR').replace(/[\u202f\u00a0\s]/g, ' ');
+    import('../pdfUtils').then(async ({ addBrandingToPdf }) => {
+      let startY = await addBrandingToPdf(doc, 20, `Facture de Cession ${s.assetCode}`);
 
-    doc.autoTable({
-      head: [["Désignation", "Code Matériel", "Prix de cession"]],
-      body: [
-        ["Cession de matériel informatique réformé", s.assetCode, `${formattedAmount} FCFA`]
-      ],
-      startY: 70,
-      theme: 'grid'
+      doc.setFontSize(11);
+      doc.text(`Client / Acheteur : ${s.buyerName}`, 14, startY + 10);
+      doc.text(`Date de Vente : ${new Date(s.date).toLocaleDateString().replace(/\//g, ' ')}`, 14, startY + 17);
+
+      const formattedAmount = s.amount.toLocaleString('fr-FR').replace(/[\u202f\u00a0\s]/g, ' ');
+
+      (doc as any).autoTable({
+        head: [["Code Actif", "Description", "Prix de Vente"]],
+        body: [
+          [s.assetCode, 'Matériel réformé', `${formattedAmount} FCFA`]
+        ],
+        startY: startY + 30,
+        theme: 'grid'
+      });
+
+      const finalY = (doc as any).lastAutoTable.finalY || startY + 60;
+      doc.text(`Total Réglé : ${formattedAmount} FCFA`, 14, finalY + 10);
+
+      doc.save(`Facture_Cession_${s.assetCode}.pdf`);
     });
-
-    const finalY = (doc as any).lastAutoTable.finalY || 100;
-    doc.text("Signature : Ibrahima NDIAYE", 14, finalY + 30);
-    doc.save(`Facture_Cession_${s.assetCode}.pdf`);
   };
 
   const handleDelete = async (id: string) => {

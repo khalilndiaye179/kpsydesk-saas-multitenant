@@ -142,30 +142,27 @@ export const SlaView: React.FC = () => {
     if (!jspdf) return;
 
     const doc = new jspdf.jsPDF();
-    doc.text("Rapport d'analyse SLA & Performances IT (KPSyDesk)", 14, 15);
-    doc.text(`Taux de respect global : ${slaRate}`, 14, 25);
-    doc.text(`Temps de résolution moyen : ${avgTime}`, 14, 32);
-    doc.text(`Nombre total de tickets clôturés : ${closedCount}`, 14, 39);
 
-    const cols = ["Ticket ID", "Sujet", "Demandeur", "Date", "Priorité", "Temps", "SLA"];
-    const rows = resolvedTickets.map(t => [
-      t.id, t.title, t.creator, t.createdAt.replace(/\//g, ' '), t.priority, t.resolutionTime, t.slaStatus
-    ]);
+    import('../pdfUtils').then(async ({ addBrandingToPdf }) => {
+      let startY = await addBrandingToPdf(doc, 15, "Rapport d'analyse SLA & Performances IT");
 
-    doc.autoTable({
-      head: [cols],
-      body: rows,
-      startY: 48,
-      theme: 'grid',
-      headStyles: { fillColor: [16, 185, 129] }
+      const columns = ["Indicateur", "Valeur", "Tendance"];
+      const rows = [
+        ["Total Tickets", closedCount.toString(), "Stable"],
+        ["Résolution Moyenne", avgTime, "Amélioration"],
+        ["SLA Respecté", slaRate, "Objectif Atteint"]
+      ];
+
+      (doc as any).autoTable({
+        head: [columns],
+        body: rows,
+        startY: startY + 10,
+        theme: 'striped',
+        styles: { fontSize: 10 }
+      });
+
+      doc.save("Rapport_IT_SLA_2026.pdf");
     });
-
-    // Signature credit as original Electron version
-    const finalY = (doc as any).lastAutoTable.finalY || 100;
-    doc.setFontSize(10);
-    doc.text("Conception et développement : Ibrahima NDIAYE", 14, finalY + 20);
-
-    doc.save("Rapport_IT_SLA_2026.pdf");
   };
 
   return (

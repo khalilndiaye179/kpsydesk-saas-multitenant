@@ -329,29 +329,32 @@ export const UserView: React.FC = () => {
 
     const doc = new jspdf.jsPDF('landscape');
     
-    if (activeSubTab === 'users') {
-      doc.text("Liste des Collaborateurs (KPSyDesk)", 14, 15);
-      const columns = ["Nom Complet", "Email", "Poste", "Departement", "Statut", "Materiels"];
-      const rows = filteredUsers.map(u => [
-        `${u.firstName} ${u.lastName}`,
-        u.email,
-        u.position || '-',
-        u.department ? u.department.name : '-',
-        u.status || 'Actif',
-        u.assets ? u.assets.length.toString() : '0'
-      ]);
-      doc.autoTable({ head: [columns], body: rows, startY: 20, theme: 'grid', styles: { fontSize: 9 } });
-      doc.save("Liste_Collaborateurs.pdf");
-    } else {
-      doc.text("Liste des Departements (KPSyDesk)", 14, 15);
-      const columns = ["Nom du Departement", "Nombre de collaborateurs"];
-      const rows = departments.map(d => [
-        d.name,
-        users.filter(u => u.departmentId === d.id).length.toString()
-      ]);
-      doc.autoTable({ head: [columns], body: rows, startY: 20, theme: 'grid', styles: { fontSize: 10 } });
-      doc.save("Liste_Departements.pdf");
-    }
+    import('../pdfUtils').then(async ({ addBrandingToPdf }) => {
+      let startY = 15;
+      if (activeSubTab === 'users') {
+        startY = await addBrandingToPdf(doc, startY, "Liste des Collaborateurs");
+        const columns = ["Nom Complet", "Email", "Poste", "Departement", "Statut", "Materiels"];
+        const rows = filteredUsers.map(u => [
+          `${u.firstName} ${u.lastName}`,
+          u.email,
+          u.position || '-',
+          u.department ? u.department.name : '-',
+          u.status || 'Actif',
+          u.assets ? u.assets.length.toString() : '0'
+        ]);
+        doc.autoTable({ head: [columns], body: rows, startY, theme: 'grid', styles: { fontSize: 9 } });
+        doc.save("Liste_Collaborateurs.pdf");
+      } else {
+        startY = await addBrandingToPdf(doc, startY, "Liste des Départements");
+        const columns = ["Nom du Departement", "Nombre de collaborateurs"];
+        const rows = departments.map(d => [
+          d.name,
+          users.filter(u => u.departmentId === d.id).length.toString()
+        ]);
+        doc.autoTable({ head: [columns], body: rows, startY, theme: 'grid', styles: { fontSize: 9 } });
+        doc.save("Liste_Departements.pdf");
+      }
+    });
   };
 
   return (
