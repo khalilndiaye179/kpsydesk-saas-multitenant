@@ -1,4 +1,4 @@
-import api from './api';
+import { api } from './api';
 
 export async function addBrandingToPdf(doc: any, startY: number, title: string) {
   let tenantName = "Mon Entreprise";
