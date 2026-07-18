@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { api } from '../api';
 import { AboutView } from './AboutView';
 
@@ -364,7 +364,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
     }
   };
 
-  const loadData = async (isBackground = false) => {
+  const loadData = useCallback(async (isBackground = false) => {
     try {
       if (isBackground) {
         setBgError('');
@@ -443,7 +443,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userRole, selectedGateway]);
 
   useEffect(() => {
     loadData(false);
