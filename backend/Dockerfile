@@ -30,6 +30,7 @@ CMD ["sh", "-c", "npx prisma db push && npm run start:dev"]
 FROM deps AS builder
 COPY . .
 RUN npm run build
+RUN npx tsc prisma/seed.ts --outDir dist/prisma
 
 # ============================================================
 # Stage 5 : Production finale
@@ -45,4 +46,4 @@ COPY --from=builder /app/dist ./dist
 EXPOSE 3000
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
-CMD ["sh", "-c", "npx prisma db push && npm run seed && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma db push && npx prisma db seed && node dist/main.js"]
