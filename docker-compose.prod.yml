@@ -56,7 +56,7 @@ services:
       - backend
     ports:
       # Port 3011 → Frontend Vite dev server
-      - "${FRONTEND_PORT:-3011}:${FRONTEND_PORT:-3011}"
+      - "${FRONTEND_PORT:-3011}:80"
 
   # ---- Services réservés (3013-3015) ----
   # worker:          # Port 3013 — Worker de facturation (futur)
