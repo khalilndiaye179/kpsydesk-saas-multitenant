@@ -868,7 +868,44 @@ function App() {
             </div>
           </div>
 
-          {/* Removed Marketing Text as requested */}
+          {/* Slogan */}
+          <div className="login-slogan-banner">
+            <div className="login-slogan-text">Votre Partenaire en Technologie</div>
+          </div>
+
+          {/* Services Grid (2x2) */}
+          <div className="login-services-grid">
+            <div className="login-service-item">
+              <i className="ph-duotone ph-desktop"></i>
+              <span>Matériels Informatiques</span>
+            </div>
+            <div className="login-service-item">
+              <i className="ph-duotone ph-keyboard"></i>
+              <span>Consommables & Périph.</span>
+            </div>
+            <div className="login-service-item">
+              <i className="ph-duotone ph-cloud"></i>
+              <span>Services Cloud & Réseau</span>
+            </div>
+            <div className="login-service-item">
+              <i className="ph-duotone ph-code"></i>
+              <span>Logiciels Métier & ERP</span>
+            </div>
+          </div>
+
+          {/* App Info Box */}
+          <div className="login-app-box">
+            <div className="login-app-box-header">
+              <div className="login-app-box-title">
+                <i className="ph-duotone ph-shield-check"></i>
+                <span>KPSyDesk ITAM</span>
+              </div>
+              <span className="login-app-box-version">v3.0.0</span>
+            </div>
+            <div className="login-app-box-desc">
+              Solution complète de gestion d'actifs informatiques, suivi des inventaires, mouvements de stock et gestion des tickets d'assistance (ITAM & ITSM).
+            </div>
+          </div>
           {/* Left Footer Credit */}
           <div className="login-left-footer">
             <div className="login-footer-copy">© 2026 K'PSY INFORMATIQUE — TOUS DROITS RÉSERVÉS.</div>
