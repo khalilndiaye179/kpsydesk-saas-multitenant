@@ -22,6 +22,7 @@ import { KbView } from './components/KbView';
 import { GuideView } from './components/GuideView';
 import { AboutView } from './components/AboutView';
 import { SettingsView } from './components/SettingsView';
+import { TenantSettingsView } from './components/TenantSettingsView';
 import { DepreciationView } from './components/DepreciationView';
 // Multi-tenant views
 import { SignupView } from './components/SignupView';
@@ -458,6 +459,10 @@ function App() {
       }
 
       switch (tabKey) {
+      case 'tenant_settings':
+        // Seuls les Admins IT peuvent modifier le branding de l'entreprise
+        return role === 'ADMIN' || systemRole === 'Admin IT';
+
       case 'dashboard':
       case 'kb':
       case 'guide':
@@ -595,6 +600,7 @@ function App() {
         { key: 'backup', label: 'Sauvegardes', icon: 'ph-duotone ph-database' },
         { key: 'subscription', label: 'Mon Abonnement', icon: 'ph-duotone ph-crown' },
         { key: 'settings', label: 'Paramètres & Sécurité', icon: 'ph-duotone ph-gear' },
+        { key: 'tenant_settings', label: 'Personnalisation (Branding)', icon: 'ph-duotone ph-palette' },
         { key: 'about', label: 'À Propos', icon: 'ph-duotone ph-info' },
       ]
     }
@@ -624,6 +630,7 @@ function App() {
       case 'audit': return <AuditView />;
       case 'backup': return <BackupView />;
       case 'settings': return <SettingsView />;
+      case 'tenant_settings': return <TenantSettingsView />;
       case 'about': return <AboutView />;
       case 'depreciation': return <DepreciationView />;
       case 'subscription': return <SubscriptionView />;
