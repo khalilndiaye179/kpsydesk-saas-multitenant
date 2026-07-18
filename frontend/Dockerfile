@@ -37,8 +37,4 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 
-RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup && \
-    chown -R appuser:appgroup /usr/share/nginx/html /var/cache/nginx /var/run
-USER appuser
-
 CMD ["nginx", "-g", "daemon off;"]
