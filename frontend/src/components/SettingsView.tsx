@@ -218,7 +218,7 @@ export const SettingsView: React.FC = () => {
             <h3 style={{ margin: 0 }}>Comptes Système</h3>
             <button className="btn-primary" onClick={() => {
               setEditingAccount(null);
-              setAccFields({ username: '', email: '', password: 'KPsy2026!', systemRole: 'Utilisateur Standard', mfaEnabled: false });
+              setAccFields({ username: '', email: '', phone: '', password: '', systemRole: 'Utilisateur Standard', mfaEnabled: false });
               setIsOpen(true);
             }}>
               <i className="ph ph-plus"></i> Nouveau Compte

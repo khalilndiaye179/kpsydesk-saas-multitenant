@@ -88,6 +88,7 @@ interface VolumeDiscountConfig {
 interface QuoteConfig {
   id: string;
   quoteNo: string;
+  billingCycle?: 'monthly' | 'yearly';
   tenantId?: string;
   tenant?: { name: string; subdomain: string };
   planId: string;
