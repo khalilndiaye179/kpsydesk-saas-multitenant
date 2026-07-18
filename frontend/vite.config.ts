@@ -8,6 +8,7 @@ export default defineConfig({
   server: {
     port: 3011,
     host: true,
+    allowedHosts: true, // Autoriser tous les hôtes pour éviter le blocage Vite (ex: app.kpsyinformatique.com)
     watch: {
       usePolling: true,
     },
