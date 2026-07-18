@@ -30,7 +30,7 @@ services:
     container_name: itam_backend
     restart: unless-stopped
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://${DB_USER:-itam_user}:${DB_PASSWORD:?DB_PASSWORD est obligatoire}@postgres:5432/${DB_NAME:-itam_db}?schema=public
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET est obligatoire}
