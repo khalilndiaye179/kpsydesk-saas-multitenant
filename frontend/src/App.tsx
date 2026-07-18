@@ -269,38 +269,11 @@ function App() {
       
       handleUserPostValidate(user);
     } catch (err: any) {
-      console.warn("Backend auth unavailable or invalid credentials, trying mock fallback...", err);
-      
-      // Offline fallback login validation
-      const mockUsers: Record<string, { pass: string; user: UserSession }> = {
-        'admin@entreprise.com': {
-          pass: 'admin123',
-          user: { id: 'admin-id', email: 'admin@entreprise.com', firstName: 'Admin', lastName: 'IT', role: 'ADMIN', systemRole: 'Admin IT', mfaEnabled: false }
-        },
-        'technicien@entreprise.com': {
-          pass: 'tech',
-          user: { id: 'tech-id', email: 'technicien@entreprise.com', firstName: 'Alice', lastName: 'Martin', role: 'TECHNICIAN', systemRole: 'Technicien IT', mfaEnabled: false }
-        },
-        'logistique@entreprise.com': {
-          pass: 'log',
-          user: { id: 'log-id', email: 'logistique@entreprise.com', firstName: 'Logistique', lastName: 'Achat', role: 'USER', systemRole: 'Logistique / Achat', mfaEnabled: false }
-        },
-        'finance@entreprise.com': {
-          pass: 'finance',
-          user: { id: 'finance-id', email: 'finance@entreprise.com', firstName: 'Compta', lastName: 'Finance', role: 'USER', systemRole: 'Finance', mfaEnabled: false }
-        },
-        'rh@entreprise.com': {
-          pass: 'rh',
-          user: { id: 'rh-id', email: 'rh@entreprise.com', firstName: 'Ressources', lastName: 'Humaines', role: 'USER', systemRole: 'RH', mfaEnabled: false }
-        }
-      };
-
-      const matched = mockUsers[email.toLowerCase()];
-      if (matched && matched.pass === password) {
-        setEnteredPassword(password);
-        handleUserPostValidate(matched.user);
-      } else {
+      console.error("Backend auth failed:", err);
+      if (err.response?.status === 401) {
         setLoginError('Email ou mot de passe incorrect.');
+      } else {
+        setLoginError('Erreur de connexion au serveur. Veuillez réessayer.');
       }
     }
   };
