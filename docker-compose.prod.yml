@@ -34,6 +34,8 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET est obligatoire}
       # Multi-tenant : sous-domaine par défaut en dev (utiliser X-Tenant-ID header)
       DEFAULT_LEGACY_SUBDOMAIN: ${DEFAULT_LEGACY_SUBDOMAIN:-legacy}
+    volumes:
+      - itam_uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,3 +72,4 @@ services:
 
 volumes:
   postgres_data:
+  itam_uploads:
