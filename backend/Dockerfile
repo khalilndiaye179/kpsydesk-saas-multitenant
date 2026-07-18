@@ -46,4 +46,4 @@ COPY --from=builder /app/dist ./dist
 EXPOSE 3000
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
-CMD ["sh", "-c", "npx prisma db push && npx prisma db seed && node dist/main.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
