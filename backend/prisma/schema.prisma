@@ -81,6 +81,13 @@ model Tenant {
   subdomain      String          @unique
   status         TenantStatus    @default(TRIAL)
   planId         String?
+
+  logoUrl        String?
+  companyAddress String?
+  companyPhone   String?
+  companyEmail   String?
+  companyTaxId   String?
+
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   assets         Asset[]
