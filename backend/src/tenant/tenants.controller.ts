@@ -2,12 +2,20 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Req,
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import * as fs from 'fs';
 import { TenantsService } from './tenants.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantGuard } from './tenant.guard';
@@ -80,5 +88,59 @@ export class TenantsController {
   @UseGuards(JwtAuthGuard, TenantGuard)
   getPaymentGateways() {
     return this.tenantsService.getAvailableGateways();
+  }
+
+  /**
+   * Met à jour les informations de branding du tenant.
+   * Protégé par TenantGuard pour l'isolation (un tenant ne peut modifier que lui-même).
+   */
+  @Patch('me/branding')
+  @UseGuards(JwtAuthGuard, TenantGuard)
+  @UseInterceptors(
+    FileInterceptor('logo', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/tenant-logos';
+          if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const tenantId = (req as any).tenantId ?? (req as any).user?.tenantId;
+          const randomName = Array(16)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          cb(null, `${tenantId}-${randomName}${extname(file.originalname)}`);
+        },
+      }),
+      limits: {
+        fileSize: 2 * 1024 * 1024, // 2 MB
+      },
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/\/(jpg|jpeg|png|svg\+xml|svg)$/)) {
+          return cb(new BadRequestException('Seules les images (JPG, PNG, SVG) sont autorisées.'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async updateBranding(
+    @Req() req: { user: { tenantId?: string }; tenantId?: string },
+    @Body() body: { companyAddress?: string; companyPhone?: string; companyEmail?: string; companyTaxId?: string },
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const tenantId = req.tenantId ?? req.user?.tenantId;
+    if (!tenantId) {
+      throw new BadRequestException('Tenant introuvable');
+    }
+
+    const brandingData: any = { ...body };
+    if (file) {
+      brandingData.logoUrl = `/uploads/tenant-logos/${file.filename}`;
+    }
+
+    return this.tenantsService.updateBranding(tenantId, brandingData);
   }
 }

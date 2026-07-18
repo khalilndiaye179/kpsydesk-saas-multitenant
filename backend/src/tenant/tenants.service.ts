@@ -463,5 +463,29 @@ export class TenantsService {
         status: 'SUSPENDED',
       };
     }
+  // ============================================================
+  // BRANDING DU TENANT
+  // ============================================================
+
+  async updateBranding(tenantId: string, brandingData: any) {
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        logoUrl: brandingData.logoUrl,
+        companyAddress: brandingData.companyAddress,
+        companyPhone: brandingData.companyPhone,
+        companyEmail: brandingData.companyEmail,
+        companyTaxId: brandingData.companyTaxId,
+      },
+      select: {
+        id: true,
+        name: true,
+        logoUrl: true,
+        companyAddress: true,
+        companyPhone: true,
+        companyEmail: true,
+        companyTaxId: true,
+      }
+    });
   }
 }
