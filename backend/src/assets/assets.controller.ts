@@ -9,6 +9,9 @@ import { TenantGuard } from '../tenant/tenant.guard';
 import { Public } from '../auth/public.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { CreateAssetDto } from './dto/create-asset.dto';
+import { UpdateAssetDto } from './dto/update-asset.dto';
+import { EnrollAssetDto } from './dto/enroll-asset.dto';
 
 /**
  * AssetsController — CRUD des équipements.
@@ -48,7 +51,7 @@ export class AssetsController {
    */
   @Post('enroll')
   @Public() // Bypass JwtAuthGuard, TenantGuard et RolesGuard
-  enroll(@Body() data: any) {
+  enroll(@Body() data: EnrollAssetDto) {
     return this.assetsService.enroll(data);
   }
 
@@ -84,13 +87,13 @@ export class AssetsController {
 
   @Post()
   @Roles(Role.ADMIN, Role.TECHNICIAN)
-  create(@Body() createAssetDto: any) {
+  create(@Body() createAssetDto: CreateAssetDto) {
     return this.assetsService.create(createAssetDto);
   }
 
   @Put(':id')
   @Roles(Role.ADMIN, Role.TECHNICIAN)
-  update(@Param('id') id: string, @Body() data: any) {
+  update(@Param('id') id: string, @Body() data: UpdateAssetDto) {
     return this.assetsService.update(id, data);
   }
 

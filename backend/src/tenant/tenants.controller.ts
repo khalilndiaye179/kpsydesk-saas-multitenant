@@ -20,6 +20,7 @@ import { TenantsService } from './tenants.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantGuard } from './tenant.guard';
 import { Public } from '../auth/public.decorator';
+import { CreateTenantDto, UpdateTenantSettingsDto } from './dto/tenants.dto';
 
 /**
  * TenantsController — Routes liées à la gestion des tenants.
@@ -43,19 +44,7 @@ export class TenantsController {
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   async signup(
-    @Body()
-    body: {
-      companyName: string;
-      subdomain: string;
-      adminEmail: string;
-      adminPassword: string;
-      adminFirstName: string;
-      adminLastName: string;
-      adminPhone: string;
-      adminCountry: string;
-      adminPosition: string;
-      planName?: string;
-    },
+    @Body() body: CreateTenantDto,
   ) {
     return this.tenantsService.signup(body);
   }
@@ -128,7 +117,7 @@ export class TenantsController {
   )
   async updateBranding(
     @Req() req: { user: { tenantId?: string }; tenantId?: string },
-    @Body() body: { companyAddress?: string; companyPhone?: string; companyEmail?: string; companyTaxId?: string },
+    @Body() body: UpdateTenantSettingsDto,
     @UploadedFile() file?: Express.Multer.File,
   ) {
     const tenantId = req.tenantId ?? req.user?.tenantId;

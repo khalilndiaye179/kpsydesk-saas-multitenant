@@ -48,7 +48,8 @@ export class ExtraController {
   }
 
   @Post()
-  create(@Param('entity') entity: string, @Body() body: any, @Req() req: any) {
+  create(@Param('entity') entity: string, @Req() req: any) {
+    const body = req.body;
     const isUser = req.user.role === Role.USER;
     const isAdmin = req.user.role === Role.ADMIN;
 
@@ -62,7 +63,8 @@ export class ExtraController {
   }
 
   @Put(':id')
-  update(@Param('entity') entity: string, @Param('id') id: string, @Body() body: any, @Req() req: any) {
+  update(@Param('entity') entity: string, @Param('id') id: string, @Req() req: any) {
+    const body = req.body;
     const isUser = req.user.role === Role.USER;
     const isAdmin = req.user.role === Role.ADMIN;
 

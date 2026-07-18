@@ -2,6 +2,7 @@ import { Controller, Post, Get, Patch, Body, Param, UnauthorizedException, Req, 
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './public.decorator';
+import { LoginDto, RequestResetDto, VerifyOtpDto, ResetPasswordDto, UpdateProfileDto } from './dto/auth.dto';
 
 /**
  * AuthController — Authentification et récupération de compte.
@@ -26,7 +27,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
-    @Body() body: { email: string; password: string },
+    @Body() body: LoginDto,
     @Req() req: { tenantId?: string },
   ) {
     const user = await this.authService.validateUser(
@@ -55,7 +56,7 @@ export class AuthController {
   @Post('super-admin/request-reset')
   @HttpCode(HttpStatus.OK)
   async superAdminRequestReset(
-    @Body() body: { recoveryEmail?: string; recoveryPhone?: string },
+    @Body() body: RequestResetDto,
   ) {
     return this.authService.requestSuperAdminReset(body.recoveryEmail, body.recoveryPhone);
   }
@@ -67,7 +68,7 @@ export class AuthController {
   @Public()
   @Post('super-admin/verify-otp')
   @HttpCode(HttpStatus.OK)
-  async superAdminVerifyOtp(@Body() body: { otp: string }) {
+  async superAdminVerifyOtp(@Body() body: VerifyOtpDto) {
     const result = this.authService.verifySuperAdminOtp(body.otp);
     if (!result.valid) {
       throw new UnauthorizedException('Code OTP invalide ou expiré.');
@@ -83,7 +84,7 @@ export class AuthController {
   @Post('super-admin/reset-password')
   @HttpCode(HttpStatus.OK)
   async superAdminResetPassword(
-    @Body() body: { otp: string; newPassword: string },
+    @Body() body: ResetPasswordDto,
   ) {
     await this.authService.resetSuperAdminPassword(body.otp, body.newPassword);
     return { message: 'Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.' };
@@ -113,7 +114,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async updateSuperAdminProfile(
     @Req() req: any,
-    @Body() body: { recoveryEmail?: string; recoveryPhone?: string },
+    @Body() body: UpdateProfileDto,
   ) {
     const userId = req.user.userId ?? req.user.sub;
     await this.authService.updateSuperAdminRecovery(userId, body.recoveryEmail, body.recoveryPhone);

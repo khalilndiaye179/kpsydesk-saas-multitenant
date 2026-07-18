@@ -5,6 +5,8 @@ import { TenantGuard } from '../tenant/tenant.guard';
 import { Role } from '@prisma/client';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { CreateTicketDto } from './dto/create-ticket.dto';
+import { UpdateTicketDto } from './dto/update-ticket.dto';
 
 /**
  * TicketsController — CRUD des tickets de support.
@@ -37,7 +39,7 @@ export class TicketsController {
   }
 
   @Post()
-  create(@Body() createTicketDto: any, @Req() req: any) {
+  create(@Body() createTicketDto: CreateTicketDto, @Req() req: any) {
     if (req.user.role === Role.USER) {
       createTicketDto.creatorId = req.user.userId;
     }
@@ -45,7 +47,7 @@ export class TicketsController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() data: any, @Req() req: any) {
+  async update(@Param('id') id: string, @Body() data: UpdateTicketDto, @Req() req: any) {
     const ticket = await this.ticketsService.findOne(id);
     if (req.user.role === Role.USER && ticket.creatorId !== req.user.userId) {
       throw new ForbiddenException("Vous n'avez pas l'autorisation de modifier ce ticket.");

@@ -12,6 +12,7 @@ import { TenantsService } from './tenants.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantGuard } from './tenant.guard';
 import { Public } from '../auth/public.decorator';
+import { RecordPaymentDto, SimulateCheckoutDto } from './dto/subscriptions.dto';
 
 /**
  * SubscriptionsController — Gestion de l'abonnement du tenant courant.
@@ -36,7 +37,7 @@ export class SubscriptionsController {
   @Public()
   @HttpCode(HttpStatus.OK)
   webhook(
-    @Body() body: { tenantId: string; status: 'success' | 'failed' },
+    @Body() body: RecordPaymentDto,
   ) {
     return this.tenantsService.confirmPayment(body.tenantId, body.status);
   }
@@ -48,7 +49,7 @@ export class SubscriptionsController {
   @Post('upgrade')
   @HttpCode(HttpStatus.OK)
   upgrade(
-    @Body() body: { planName: string; billingInterval?: string },
+    @Body() body: SimulateCheckoutDto,
     @Req() req: { tenantId?: string; user?: { tenantId?: string } },
   ) {
     const tenantId = req.tenantId ?? req.user?.tenantId;

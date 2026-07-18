@@ -17,6 +17,21 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantStatus } from '@prisma/client';
+import {
+  UpdateTenantStatusDto,
+  UpdateTenantQuotasDto,
+  ConfigurePaymentDto,
+  CreatePlanDto,
+  CreatePromoDto,
+  UpdatePromoDto,
+  CreateVolumeDiscountDto,
+  GenerateQuoteDto,
+  UpdateQuoteStatusDto,
+  TestInvoiceGenerationDto,
+  GenerateInvoicesPeriodDto,
+  SuperAdminCreateUserDto,
+  SuperAdminUpdateUserDto
+} from './dto/admin-tenants.dto';
 
 import * as bcrypt from 'bcryptjs';
 
@@ -322,7 +337,7 @@ export class AdminTenantsController {
   @Put('moderate/:id')
   async moderateTenant(
     @Param('id') id: string,
-    @Body() body: { status: TenantStatus },
+    @Body() body: UpdateTenantStatusDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string } },
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin']);
@@ -360,7 +375,7 @@ export class AdminTenantsController {
   @Put('quota/:id')
   async updateTenantQuota(
     @Param('id') id: string,
-    @Body() body: { quotaAssets: number; quotaUsers?: number },
+    @Body() body: UpdateTenantQuotasDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string } },
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin']);
@@ -404,7 +419,7 @@ export class AdminTenantsController {
     */
    @Post('payment-gateway')
    async savePaymentGateway(
-     @Body() body: { provider: string; apiKey: string; apiSecret: string; merchantId?: string; isSandbox: boolean; isActive: boolean },
+     @Body() body: ConfigurePaymentDto,
      @Req() req: { user: { role: string; systemRole?: string; email: string } },
    ) {
      this._checkConsoleAccess(req.user, ['SuperAdmin']);
@@ -470,7 +485,7 @@ export class AdminTenantsController {
   @Put('plans/:id')
   async updatePlan(
     @Param('id') id: string,
-    @Body() body: { price: number; quotaAssets: number; quotaUsers: number; description?: string; features?: string[]; annualDiscountPct?: number; featuresIncluded?: Record<string, boolean> },
+    @Body() body: CreatePlanDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string } },
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin']);
@@ -507,7 +522,7 @@ export class AdminTenantsController {
 
   @Post('promos')
   async createPromo(
-    @Body() body: { code: string; label: string; discountPct: number; maxUses?: number; validUntil?: string; planId?: string },
+    @Body() body: CreatePromoDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string } },
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin', 'Finance']);
@@ -535,7 +550,7 @@ export class AdminTenantsController {
   @Put('promos/:id')
   async updatePromo(
     @Param('id') id: string,
-    @Body() body: { label?: string; discountPct?: number; maxUses?: number; validUntil?: string; isActive?: boolean },
+    @Body() body: UpdatePromoDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string } },
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin', 'Finance']);
@@ -579,7 +594,7 @@ export class AdminTenantsController {
 
   @Post('volume-discounts')
   async createVolumeDiscount(
-    @Body() body: { planId: string; minAssets: number; minUsers: number; discountPct: number; label: string },
+    @Body() body: CreateVolumeDiscountDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string } },
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin', 'Finance']);
@@ -622,17 +637,7 @@ export class AdminTenantsController {
 
   @Post('quotes/generate')
   async generateQuote(
-    @Body() body: {
-      planId: string;
-      tenantId?: string;
-      clientName?: string;
-      clientEmail?: string;
-      assetsCount?: number;
-      usersCount?: number;
-      promoCode?: string;
-      applyTva?: boolean;
-      notes?: string;
-    },
+    @Body() body: GenerateQuoteDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string } },
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin', 'Finance']);
@@ -750,7 +755,7 @@ export class AdminTenantsController {
   @Put('quotes/:id/status')
   async updateQuoteStatus(
     @Param('id') id: string,
-    @Body() body: { status: string },
+    @Body() body: UpdateQuoteStatusDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string } },
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin', 'Finance']);
@@ -811,7 +816,7 @@ export class AdminTenantsController {
   async downloadInvoicePdf(
     @Param('id') id: string,
     @Req() req: { user: { role: string; systemRole?: string; email: string; tenantId?: string } },
-    @Body() body: { generatorUser: string },
+    @Body() body: TestInvoiceGenerationDto,
     @Res() res: any // Utilise Response
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin', 'Finance']);
@@ -828,7 +833,7 @@ export class AdminTenantsController {
   @Post('reports/consolidated-pdf')
   async downloadConsolidatedReport(
     @Req() req: { user: { role: string; systemRole?: string; email: string; tenantId?: string } },
-    @Body() body: { startDate?: string; endDate?: string; generatorUser: string },
+    @Body() body: GenerateInvoicesPeriodDto,
     @Res() res: any
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin', 'Finance']);
@@ -979,7 +984,7 @@ export class AdminTenantsController {
 
   @Post('collaborators')
   async createCollaborator(
-    @Body() body: { firstName: string; lastName: string; email: string; systemRole: string; password?: string },
+    @Body() body: SuperAdminCreateUserDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string; tenantId?: string } }
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin']);
@@ -1016,7 +1021,7 @@ export class AdminTenantsController {
   @Put('collaborators/:id')
   async updateCollaborator(
     @Param('id') id: string,
-    @Body() body: { firstName: string; lastName: string; systemRole: string; status: string },
+    @Body() body: SuperAdminUpdateUserDto,
     @Req() req: { user: { role: string; systemRole?: string; email: string; tenantId?: string } }
   ) {
     this._checkConsoleAccess(req.user, ['SuperAdmin']);
