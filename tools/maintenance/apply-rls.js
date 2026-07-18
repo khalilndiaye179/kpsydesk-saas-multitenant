@@ -1,3 +1,6 @@
+if (process.env.NODE_ENV === 'production') {
+  throw new Error('Script de maintenance bloqué en production. Exécution manuelle uniquement.');
+}
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();

@@ -29,22 +29,16 @@ RUN npm run build
 # ─── PRODUCTION STAGE ────────────────────────────────────────────
 FROM nginx:alpine AS production
 
-# Configuration Nginx pour un utilisateur non-root
-RUN rm -rf /usr/share/nginx/html/* && \
-    mkdir -p /var/cache/nginx /var/run /var/log/nginx && \
-    chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/run /var/log/nginx /etc/nginx/conf.d
-
 # Copy custom Nginx configuration for SPA routing fallback
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy static assets from the builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Modification des permissions des fichiers copiés
-RUN chown -R nginx:nginx /usr/share/nginx/html
-
-USER nginx
-
 EXPOSE 80
+
+RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup && \
+    chown -R appuser:appgroup /usr/share/nginx/html /var/cache/nginx /var/run
+USER appuser
 
 CMD ["nginx", "-g", "daemon off;"]

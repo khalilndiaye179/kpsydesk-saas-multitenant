@@ -1,22 +1,23 @@
 version: '3.9'
 
 # ============================================================
-# Inventaire Parc Informatique — Docker Compose PRODUCTION
+# Inventaire Parc Informatique — Docker Compose
+# Ports alloués : 3010-3015 (voir PORTS.md pour le détail)
 # ============================================================
 
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: itam_postgres_prod
-    restart: always
+    container_name: itam_postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is mandatory for production}
+      POSTGRES_DB: ${DB_NAME:-itam_db}
+      POSTGRES_USER: ${DB_USER:-itam_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD est obligatoire}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-itam_user} -d ${DB_NAME:-itam_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,32 +27,48 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: production
-    container_name: itam_backend_prod
-    restart: always
+    container_name: itam_backend
+    restart: unless-stopped
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 3000
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?schema=public
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is mandatory for production}
+      DATABASE_URL: postgresql://${DB_USER:-itam_user}:${DB_PASSWORD:?DB_PASSWORD est obligatoire}@postgres:5432/${DB_NAME:-itam_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET est obligatoire}
+      # Multi-tenant : sous-domaine par défaut en dev (utiliser X-Tenant-ID header)
+      DEFAULT_LEGACY_SUBDOMAIN: ${DEFAULT_LEGACY_SUBDOMAIN:-legacy}
     depends_on:
       postgres:
         condition: service_healthy
     ports:
-      - "3010:3000"
+      # Port 3010 → Backend NestJS API
+      - "${BACKEND_PORT:-3010}:3000"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
-    container_name: itam_frontend_prod
-    restart: always
+    container_name: itam_frontend
+    restart: unless-stopped
     environment:
-      VITE_API_URL: ${VITE_API_URL}
+      VITE_API_URL: ""
     depends_on:
       - backend
     ports:
-      - "3011:80"
+      # Port 3011 → Frontend Vite dev server
+      - "${FRONTEND_PORT:-3011}:${FRONTEND_PORT:-3011}"
+
+  # ---- Services réservés (3013-3015) ----
+  # worker:          # Port 3013 — Worker de facturation (futur)
+  # notifications:   # Port 3014 — Service de notifications (futur)
+  # adminer:         # Port 3015 — Interface admin DB (dev optionnel)
+  #   image: adminer
+  #   container_name: itam_adminer
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3015:8080"
+  #   depends_on:
+  #     - postgres
 
 volumes:
   postgres_data:
