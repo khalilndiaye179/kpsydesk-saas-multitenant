@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api';
+import PasswordStrengthIndicator, { isPasswordValid } from './PasswordStrengthIndicator';
 
 interface Account {
   id: string;
@@ -61,6 +62,10 @@ export const SettingsView: React.FC = () => {
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
+    if (newPassword && !isPasswordValid(newPassword)) {
+      alert("Le mot de passe ne respecte pas les critères de sécurité.");
+      return;
+    }
 
     try {
       const payload: any = { 
@@ -94,6 +99,10 @@ export const SettingsView: React.FC = () => {
     } as any;
 
     if (accFields.password) {
+      if (!isPasswordValid(accFields.password)) {
+        alert("Le mot de passe du compte ne respecte pas les critères de sécurité.");
+        return;
+      }
       dataToSend.password = accFields.password;
     }
 
@@ -161,6 +170,7 @@ export const SettingsView: React.FC = () => {
                 onChange={e => setNewPassword(e.target.value)}
                 style={{ width: '100%', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
               />
+              {newPassword && <PasswordStrengthIndicator password={newPassword} />}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
               <input 
@@ -175,7 +185,14 @@ export const SettingsView: React.FC = () => {
               </label>
             </div>
           </div>
-          <button type="submit" className="btn-primary">Mettre à jour mon profil</button>
+          <button 
+            type="submit" 
+            className="btn-primary"
+            disabled={!!newPassword && !isPasswordValid(newPassword)}
+            style={{ opacity: (newPassword && !isPasswordValid(newPassword)) ? 0.5 : 1 }}
+          >
+            Mettre à jour mon profil
+          </button>
         </form>
       </div>
 
@@ -310,12 +327,13 @@ export const SettingsView: React.FC = () => {
                   <label style={{ display: 'block', marginBottom: '5px' }}>Mot de passe</label>
                   <input 
                     type="password" 
-                    placeholder={editingAccount ? "Laisser vide pour ne pas modifier" : ""}
+                    placeholder={editingAccount ? "Laisser vide pour ne pas modifier" : "Minimum 10 caractères"}
                     value={accFields.password} 
                     onChange={e => setAccFields({...accFields, password: e.target.value})} 
                     style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
                     required={!editingAccount}
                   />
+                  {accFields.password && <PasswordStrengthIndicator password={accFields.password} />}
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '5px' }}>Rôle d'accès</label>
@@ -345,7 +363,14 @@ export const SettingsView: React.FC = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" className="btn-icon" onClick={() => setIsOpen(false)}>Annuler</button>
-                <button type="submit" className="btn-primary">Enregistrer</button>
+                <button 
+                  type="submit" 
+                  className="btn-primary"
+                  disabled={!!accFields.password && !isPasswordValid(accFields.password)}
+                  style={{ opacity: (accFields.password && !isPasswordValid(accFields.password)) ? 0.5 : 1 }}
+                >
+                  Enregistrer
+                </button>
               </div>
             </form>
           </div>

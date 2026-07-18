@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsEnum, IsBoolean } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsEnum, IsBoolean, MinLength, Matches } from 'class-validator';
 import { Role } from '@prisma/client';
 
 export class CreateUserDto {
@@ -8,6 +8,10 @@ export class CreateUserDto {
 
   @IsString()
   @IsNotEmpty({ message: 'Le mot de passe est obligatoire.' })
+  @MinLength(10, { message: 'Le mot de passe doit contenir au moins 10 caractères.' })
+  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+    message: 'Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre.',
+  })
   password: string;
 
   @IsString()

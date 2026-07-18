@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api';
+import PasswordStrengthIndicator, { isPasswordValid } from './PasswordStrengthIndicator';
 
 interface Asset {
   id: string;
@@ -194,6 +195,10 @@ export const UserView: React.FC = () => {
     };
 
     if (formFields.password) {
+      if (!isPasswordValid(formFields.password)) {
+        alert("Le mot de passe ne respecte pas les critères de sécurité.");
+        return;
+      }
       dataToSend.password = formFields.password;
     }
 
@@ -638,10 +643,12 @@ export const UserView: React.FC = () => {
                     <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem' }}>Mot de passe</label>
                     <input 
                       type="password" 
+                      placeholder="Minimum 10 caractères"
                       value={formFields.password} 
                       onChange={e => setFormFields({...formFields, password: e.target.value})} 
                       style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
                     />
+                    {formFields.password && <PasswordStrengthIndicator password={formFields.password} />}
                   </div>
                 )}
                 <div>
@@ -714,7 +721,14 @@ export const UserView: React.FC = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" className="btn-icon" onClick={() => setIsUserModalOpen(false)}>Annuler</button>
-                <button type="submit" className="btn-primary">Enregistrer</button>
+                <button 
+                  type="submit" 
+                  className="btn-primary"
+                  disabled={!!formFields.password && !isPasswordValid(formFields.password)}
+                  style={{ opacity: (formFields.password && !isPasswordValid(formFields.password)) ? 0.5 : 1 }}
+                >
+                  Enregistrer
+                </button>
               </div>
             </form>
           </div>

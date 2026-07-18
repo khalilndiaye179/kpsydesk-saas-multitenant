@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './index.css';
 import { api, initSession, clearSession } from './api';
+import PasswordStrengthIndicator, { isPasswordValid } from './components/PasswordStrengthIndicator';
 
 // Import all 19 Views
 import { DashboardView } from './components/DashboardView';
@@ -358,8 +359,8 @@ function App() {
     e.preventDefault();
     setForcePasswordError('');
 
-    if (newPassword.length < 5) {
-      setForcePasswordError('Le mot de passe doit comporter au moins 5 caractères.');
+    if (!isPasswordValid(newPassword)) {
+      setForcePasswordError('Le mot de passe ne respecte pas les critères de sécurité.');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -728,11 +729,12 @@ function App() {
                 <input 
                   type="password"
                   className="auth-input"
-                  placeholder="Minimum 5 caractères"
+                  placeholder="Minimum 10 caractères"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
                 />
+                <PasswordStrengthIndicator password={newPassword} />
               </div>
               <div className="auth-field">
                 <label>Confirmer le mot de passe</label>
@@ -745,7 +747,14 @@ function App() {
                   required
                 />
               </div>
-              <button type="submit" className="btn-primary" style={{ width: '100%' }}>Enregistrer & Continuer</button>
+              <button 
+                type="submit" 
+                className="btn-primary" 
+                style={{ width: '100%', opacity: (!isPasswordValid(newPassword) || newPassword !== confirmPassword) ? 0.5 : 1 }}
+                disabled={!isPasswordValid(newPassword) || newPassword !== confirmPassword}
+              >
+                Enregistrer & Continuer
+              </button>
             </form>
           </div>
         </div>

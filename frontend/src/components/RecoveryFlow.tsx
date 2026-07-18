@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../api';
+import PasswordStrengthIndicator, { isPasswordValid } from './PasswordStrengthIndicator';
 
 interface RecoveryFlowProps {
   onBack: () => void;
@@ -75,8 +76,8 @@ export function RecoveryFlow({ onBack, onSuccess, onError }: RecoveryFlowProps) 
       return;
     }
 
-    if (newPassword.length < 5) {
-      onError("Le mot de passe doit contenir au moins 5 caractères.");
+    if (!isPasswordValid(newPassword)) {
+      onError("Le mot de passe ne respecte pas les critères de sécurité.");
       return;
     }
 
@@ -224,12 +225,13 @@ export function RecoveryFlow({ onBack, onSuccess, onError }: RecoveryFlowProps) 
               <input
                 type="password"
                 className="login-input-field"
-                placeholder="Minimum 5 caractères"
+                placeholder="Minimum 10 caractères"
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 required
               />
             </div>
+            <PasswordStrengthIndicator password={newPassword} />
           </div>
 
           <div className="login-field-wrapper">
@@ -250,8 +252,8 @@ export function RecoveryFlow({ onBack, onSuccess, onError }: RecoveryFlowProps) 
           <button
             type="submit"
             className="btn-submit-gradient"
-            disabled={loading}
-            style={{ marginTop: '10px' }}
+            disabled={loading || !isPasswordValid(newPassword) || newPassword !== confirmPassword}
+            style={{ marginTop: '10px', opacity: (loading || !isPasswordValid(newPassword) || newPassword !== confirmPassword) ? 0.5 : 1 }}
           >
             {loading ? "Mise à jour..." : "Modifier le mot de passe"}
           </button>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../api';
+import PasswordStrengthIndicator, { isPasswordValid } from './PasswordStrengthIndicator';
 
 interface Props {
   onBack: () => void;
@@ -79,8 +80,8 @@ export function SuperAdminRecoveryFlow({ onBack }: Props) {
       setError("Les mots de passe ne correspondent pas.");
       return;
     }
-    if (newPassword.length < 6) {
-      setError("Le mot de passe doit contenir au moins 6 caractères.");
+    if (!isPasswordValid(newPassword)) {
+      setError("Le mot de passe ne respecte pas les critères de sécurité.");
       return;
     }
     setLoading(true);
@@ -263,11 +264,12 @@ export function SuperAdminRecoveryFlow({ onBack }: Props) {
             <label style={labelStyle}>Nouveau mot de passe</label>
             <input
               type="password" style={inputStyle}
-              placeholder="Minimum 6 caractères"
+              placeholder="Minimum 10 caractères"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               required
             />
+            <PasswordStrengthIndicator password={newPassword} />
           </div>
 
           <div>
@@ -281,7 +283,11 @@ export function SuperAdminRecoveryFlow({ onBack }: Props) {
             />
           </div>
 
-          <button type="submit" style={btnPrimary} disabled={loading}>
+          <button 
+            type="submit" 
+            style={{ ...btnPrimary, opacity: (loading || !isPasswordValid(newPassword) || newPassword !== confirmPassword) ? 0.5 : 1 }} 
+            disabled={loading || !isPasswordValid(newPassword) || newPassword !== confirmPassword}
+          >
             {loading ? 'Mise à jour...' : 'Modifier le mot de passe →'}
           </button>
         </form>

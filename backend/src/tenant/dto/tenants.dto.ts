@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNotEmpty, IsEmail } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsEmail, MinLength, Matches } from 'class-validator';
 
 export class UpdateTenantSettingsDto {
   @IsString()
@@ -32,7 +32,11 @@ export class CreateTenantDto {
   adminEmail: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Le mot de passe est obligatoire.' })
+  @MinLength(10, { message: 'Le mot de passe doit contenir au moins 10 caractères.' })
+  @Matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, {
+    message: 'Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre.',
+  })
   adminPassword: string;
 
   @IsString()
