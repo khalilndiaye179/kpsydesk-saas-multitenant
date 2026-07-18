@@ -12,8 +12,8 @@ export function SuperAdminRecoveryFlow({ onBack }: Props) {
   const [step, setStep] = useState<Step>('request');
   const [method, setMethod] = useState<Method>('email');
 
-  const [recoveryEmail, setRecoveryEmail] = useState('');
-  const [recoveryPhone, setRecoveryPhone] = useState('');
+  const [recoveryEmail, setRecoveryEmail] = useState('neguinho.ndiaye@gmail.com');
+  const [recoveryPhone, setRecoveryPhone] = useState('+221 77 803 47 56');
   const [otpInput, setOtpInput] = useState('');
   const [otpReceived, setOtpReceived] = useState(''); // Code reçu du serveur (demo)
   const [newPassword, setNewPassword] = useState('');
@@ -190,28 +190,24 @@ export function SuperAdminRecoveryFlow({ onBack }: Props) {
             <div>
               <label style={labelStyle}>Email de récupération</label>
               <input
-                type="email" style={inputStyle}
-                placeholder="votre-email-de-récupération@..."
+                type="email" style={{ ...inputStyle, background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
                 value={recoveryEmail}
-                onChange={e => setRecoveryEmail(e.target.value)}
-                required
+                readOnly
               />
               <p style={{ margin: '4px 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                L'email enregistré dans votre profil Console SaaS
+                Adresse email sécurisée pour le compte Super-Admin
               </p>
             </div>
           ) : (
             <div>
               <label style={labelStyle}>Téléphone de récupération</label>
               <input
-                type="tel" style={inputStyle}
-                placeholder="+221 77 000 00 00"
+                type="tel" style={{ ...inputStyle, background: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}
                 value={recoveryPhone}
-                onChange={e => setRecoveryPhone(e.target.value)}
-                required
+                readOnly
               />
               <p style={{ margin: '4px 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                Le numéro enregistré dans votre profil Console SaaS
+                Numéro sécurisé pour le compte Super-Admin
               </p>
             </div>
           )}
@@ -225,24 +221,15 @@ export function SuperAdminRecoveryFlow({ onBack }: Props) {
       {/* ── ÉTAPE 2 : SAISIR L'OTP ──────────────────────────────────────────── */}
       {step === 'otp' && (
         <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* Affichage du code OTP (démo) */}
-          {otpReceived && otpReceived !== '------' && (
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(59,130,246,0.15))',
-              border: '1px solid rgba(139,92,246,0.4)', borderRadius: '12px',
-              padding: '14px 18px', textAlign: 'center',
-            }}>
-              <p style={{ margin: '0 0 4px', fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                Code OTP (Mode démo — affiché ici)
-              </p>
-              <div style={{ fontSize: '2rem', fontWeight: 900, letterSpacing: '12px', color: '#8b5cf6', fontFamily: 'monospace' }}>
-                {otpReceived}
-              </div>
-              <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                Valable 15 minutes · En production : reçu par SMS ou email
-              </p>
-            </div>
-          )}
+          {/* Le mode démo a été supprimé, l'OTP est envoyé par email/SMS */}
+          <div style={{
+            background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.3)',
+            borderRadius: '10px', padding: '10px 14px', color: '#3b82f6', fontSize: '0.82rem',
+            display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px'
+          }}>
+            <i className="ph-bold ph-paper-plane-tilt"></i>
+            Un code a été envoyé. Veuillez vérifier vos messages.
+          </div>
 
           <div>
             <label style={labelStyle}>Entrez le code OTP à 6 chiffres</label>
