@@ -1,5 +1,3 @@
-version: '3.9'
-
 # ============================================================
 # Inventaire Parc Informatique — Docker Compose
 # Ports alloués : 3010-3015 (voir PORTS.md pour le détail)
