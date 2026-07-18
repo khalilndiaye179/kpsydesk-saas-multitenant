@@ -868,32 +868,7 @@ function App() {
             </div>
           </div>
 
-          {/* Marketing Text */}
-          <div style={{ marginTop: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '600px' }}>
-            <h1 style={{ 
-              fontSize: '2.2rem', 
-              fontWeight: '800', 
-              color: 'var(--text-primary, #f6effc)', 
-              lineHeight: '1.2',
-              letterSpacing: '-0.02em',
-              margin: 0
-            }}>
-              KPSyDesk — La fin du casse-tête de l'inventaire informatique
-            </h1>
-            
-            <p style={{ fontSize: '1.05rem', color: 'var(--text-secondary, rgba(255, 255, 255, 0.7))', lineHeight: '1.6', margin: 0 }}>
-              Tableur Excel introuvable, ordinateurs achetés il y a 5 ans dont personne ne connaît plus l'état, amortissements calculés à la main au moment de l'audit... Le parc informatique de votre entreprise mérite mieux qu'un fichier partagé.
-            </p>
-            
-            <p style={{ fontSize: '1.05rem', color: 'var(--text-secondary, rgba(255, 255, 255, 0.7))', lineHeight: '1.6', margin: 0 }}>
-              KPSyDesk centralise l'intégralité de votre inventaire informatique — postes, serveurs, licences, contrats fournisseurs — dans un espace unique et sécurisé. Chaque actif est suivi de son achat jusqu'à sa réforme : durée de vie, garantie, affectation, historique de maintenance. Les amortissements sont calculés automatiquement selon les normes SYSCOHADA, sans tableur ni recalcul manuel en fin d'exercice.
-            </p>
-            
-            <p style={{ fontSize: '1.05rem', color: 'var(--text-primary, #f6effc)', lineHeight: '1.6', fontWeight: '500', margin: 0, marginTop: '0.5rem', borderLeft: '3px solid #8b5cf6', paddingLeft: '1rem' }}>
-              Que vous gériez 20 ou 2 000 équipements, sur un ou plusieurs sites, KPSyDesk vous donne enfin une vue claire de ce que possède réellement votre entreprise — et ce que ça vous coûte.
-            </p>
-          </div>
-
+          {/* Removed Marketing Text as requested */}
           {/* Left Footer Credit */}
           <div className="login-left-footer">
             <div className="login-footer-copy">© 2026 K'PSY INFORMATIQUE — TOUS DROITS RÉSERVÉS.</div>
