@@ -955,7 +955,7 @@ function App() {
 
             <form onSubmit={handleLoginSubmit}>
               <div className="login-field-wrapper">
-                <label className="login-field-label">Identifiant entreprise <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.75rem' }}>(laisser vide pour le Super-Admin)</span></label>
+                <label className="login-field-label">Identifiant entreprise</label>
                 <div className="login-input-container">
                   <i className="ph ph-buildings"></i>
                   <input
