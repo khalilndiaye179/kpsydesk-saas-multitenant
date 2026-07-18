@@ -22,9 +22,18 @@ async function bootstrap() {
       .map((o) => o.trim())
       .filter(Boolean);
 
+    if (allowedOrigins.length === 0) {
+      console.error('FATAL ERROR: CORS_ORIGINS environment variable is empty or not set in production. Application will not start to prevent CORS vulnerability.');
+      process.exit(1);
+    }
+
     app.enableCors({
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.length === 0 || allowedOrigins.some((allowed) => origin.endsWith(allowed))) {
+        // En production, on exige une origine valide, sauf si l'origine est nulle (ex: curl/postman) qu'on accepte souvent, 
+        // ou on peut aussi forcer !origin à être rejeté si on veut être très strict, 
+        // mais le comportement standard de l'app était d'accepter !origin.
+        // Ici, on remplace endsWith par === pour une comparaison stricte.
+        if (!origin || allowedOrigins.some((allowed) => origin === allowed)) {
           callback(null, true);
         } else {
           callback(new Error(`CORS refusé pour l'origine: ${origin}`));
