@@ -8,10 +8,12 @@ const getDynamicApiUrl = () => {
   return 'http://localhost:3010';
 };
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || getDynamicApiUrl();
+const API_URL = typeof (import.meta as any).env?.VITE_API_URL === 'string' 
+  ? (import.meta as any).env.VITE_API_URL 
+  : getDynamicApiUrl();
 
 export const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: API_URL ? `${API_URL}/api` : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
