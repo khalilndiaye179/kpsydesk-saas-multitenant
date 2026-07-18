@@ -378,9 +378,25 @@ export const AssetView: React.FC = () => {
     }
   };
 
-  const handleExportXLSX = () => {
+  const handleExportXLSX = async () => {
     const XLSX = (window as any).XLSX;
     if (!XLSX) return;
+
+    let brandingText = [];
+    try {
+      const res = await api.get('/tenants/me');
+      const tenant = res.data.tenant;
+      if (tenant) {
+        brandingText.push([`Entreprise : ${tenant.name}`]);
+        if (tenant.companyAddress) brandingText.push([`Adresse : ${tenant.companyAddress}`]);
+        if (tenant.companyPhone) brandingText.push([`Tél : ${tenant.companyPhone}`]);
+        if (tenant.companyEmail) brandingText.push([`Email : ${tenant.companyEmail}`]);
+        if (tenant.companyTaxId) brandingText.push([`NIF/RC : ${tenant.companyTaxId}`]);
+        brandingText.push([]); // Ligne vide d'espacement
+      }
+    } catch (e) {
+      console.warn("Impossible de charger le branding", e);
+    }
 
     const data = assets.map(a => ({
       "Code Inventaire": a.inventoryCode,
@@ -395,18 +411,76 @@ export const AssetView: React.FC = () => {
       "Site": a.location ? a.location.name : '-'
     }));
 
-    const ws = XLSX.utils.json_to_sheet(data);
+    const ws = XLSX.utils.json_to_sheet([]);
+    
+    // Ajout du branding en haut (aoa = array of arrays)
+    if (brandingText.length > 0) {
+      XLSX.utils.sheet_add_aoa(ws, brandingText, { origin: "A1" });
+      XLSX.utils.sheet_add_json(ws, data, { origin: `A${brandingText.length + 1}` });
+    } else {
+      XLSX.utils.sheet_add_json(ws, data, { origin: "A1" });
+    }
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Assets");
     XLSX.writeFile(wb, "Inventaire_Parc_Informatique.xlsx");
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const jspdf = (window as any).jspdf;
     if (!jspdf) return;
 
     const doc = new jspdf.jsPDF('landscape');
-    doc.text("Inventaire des Actifs IT (KPSyDesk)", 14, 15);
+    let startY = 20;
+
+    try {
+      const res = await api.get('/tenants/me');
+      const tenant = res.data.tenant;
+      
+      if (tenant) {
+        if (tenant.logoUrl) {
+          try {
+            const baseUrl = (import.meta as any).env?.VITE_API_URL || '';
+            const imgUrl = `${baseUrl}${tenant.logoUrl}`;
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.src = imgUrl;
+            await new Promise((resolve, reject) => {
+              img.onload = () => resolve(true);
+              img.onerror = () => reject(new Error("Image load failed"));
+            });
+            // Calcul ratio pour largeur max 40 et hauteur max 20
+            const ratio = Math.min(40 / img.width, 20 / img.height);
+            doc.addImage(img, 'PNG', 14, 10, img.width * ratio, img.height * ratio);
+            startY = 10 + (img.height * ratio) + 10;
+          } catch (imgErr) {
+            console.warn("Impossible de charger le logo pour le PDF", imgErr);
+          }
+        }
+        
+        doc.setFontSize(10);
+        let textY = 15;
+        const textX = tenant.logoUrl ? 60 : 14;
+        
+        doc.text(tenant.name, textX, textY);
+        doc.setFontSize(8);
+        if (tenant.companyAddress) { textY += 5; doc.text(tenant.companyAddress, textX, textY); }
+        if (tenant.companyPhone || tenant.companyEmail) {
+          textY += 5;
+          const contact = [tenant.companyPhone, tenant.companyEmail].filter(Boolean).join(' - ');
+          doc.text(contact, textX, textY);
+        }
+        if (tenant.companyTaxId) { textY += 5; doc.text(`NIF/RC: ${tenant.companyTaxId}`, textX, textY); }
+        
+        startY = Math.max(startY, textY + 10);
+      }
+    } catch (e) {
+      console.warn("Impossible de charger le branding", e);
+    }
+
+    doc.setFontSize(14);
+    doc.text("Inventaire des Actifs IT (KPSyDesk)", 14, startY);
+    startY += 10;
 
     const columns = ["Code", "Nom", "Type", "N° Série", "Garantie", "État", "Assigné à", "Site"];
     const rows = assets.map(a => [
@@ -423,7 +497,7 @@ export const AssetView: React.FC = () => {
     doc.autoTable({
       head: [columns],
       body: rows,
-      startY: 20,
+      startY: startY,
       theme: 'grid',
       styles: { fontSize: 8 }
     });
