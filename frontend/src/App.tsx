@@ -1049,15 +1049,8 @@ function App() {
               </button>
             </form>
 
-            <div className="login-test-account-box">
-              <strong>Super-Admin :</strong> admin@entreprise.com / admin123 (sans identifiant entreprise)<br />
-              <strong>LADIN :</strong> <em>identifiant</em> = ladin — ladin@kpsy.com / KPsy2026!<br />
-              <strong>ALAMINE :</strong> <em>identifiant</em> = alamine — tapha@kpsy.com / KPsy2026!
-              <br />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', display: 'block' }}>
-                Votre espace : <code>votre-entreprise.kpsy.com</code>
-              </span>
-              <div style={{ marginTop: '10px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            <div className="login-test-account-box" style={{ padding: '15px', marginTop: '20px' }}>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                 <button type="button" onClick={() => setPublicRoute('signup')} style={{ background: 'linear-gradient(135deg,#8b5cf6,#3b82f6)', color: 'white', border: 'none', borderRadius: '8px', padding: '7px 16px', fontWeight: 700, cursor: 'pointer', fontSize: '0.8rem' }}>
                   <i className="ph ph-rocket-launch" style={{ marginRight: '6px' }} />Créer un compte
                 </button>
