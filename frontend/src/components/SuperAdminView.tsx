@@ -364,6 +364,22 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
     }
   };
 
+  const handlePurgeTenant = async (tenantId: string, tenantName: string) => {
+    const confirmText = prompt(`TAPEZ "PURGER" POUR CONFIRMER LA SUPPRESSION DÉFINITIVE DE L'ABONNÉ "${tenantName}" :\n(Une sauvegarde locale sera générée)`);
+    if (confirmText !== 'PURGER') {
+      alert('Purge annulée. Le texte de sécurité est incorrect.');
+      return;
+    }
+    
+    try {
+      const res = await api.delete(`/admin-tenants/${tenantId}/purge`, { headers: { 'X-Tenant-ID': 'legacy' } });
+      alert(`${res.data.message}\n\nFichier de sauvegarde généré : ${res.data.backupFile}`);
+      loadData(false);
+    } catch (err: any) {
+      alert('Erreur lors de la purge : ' + (err.response?.data?.message || err.message));
+    }
+  };
+
   const loadData = useCallback(async (isBackground = false) => {
     try {
       if (isBackground) {
@@ -1842,6 +1858,18 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                               }}
                             >
                               🔑 Reset Manuel
+                            </button>
+
+                            <button
+                              onClick={() => handlePurgeTenant(t.id, t.name)}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.4)',
+                                borderRadius: '6px', padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600,
+                                cursor: 'pointer', transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: '4px'
+                              }}
+                              title="Purger définitivement de la base et sauvegarder"
+                            >
+                              <i className="ph ph-trash" /> Purger
                             </button>
 
                             {t.status === 'ACTIVE' || t.status === 'TRIAL' ? (

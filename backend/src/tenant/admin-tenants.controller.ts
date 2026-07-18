@@ -1097,6 +1097,104 @@ export class AdminTenantsController {
   /**
    * PURGE : Supprime définitivement une liste de locataires et toutes leurs données
    */
+  /**
+   * Purge complète d'un locataire (Super-Admin uniquement)
+   * Génère d'abord une sauvegarde complète JSON locale, puis supprime définitivement toutes les données en cascade.
+   */
+  @Delete(':id/purge')
+  async purgeTenantWithBackup(
+    @Param('id') tenantId: string,
+    @Req() req: { user: { role: string; systemRole?: string; email: string; tenantId?: string } }
+  ) {
+    this._checkConsoleAccess(req.user, ['SuperAdmin']);
+
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) {
+      throw new NotFoundException('Locataire introuvable.');
+    }
+
+    // 1. Sauvegarde des données
+    const backupData = {
+      tenant,
+      assets: await this.prisma.asset.findMany({ where: { tenantId } }),
+      users: await this.prisma.user.findMany({ where: { tenantId } }),
+      auditLogs: await this.prisma.auditLog.findMany({ where: { tenantId } }),
+      transactions: await this.prisma.transaction.findMany({ where: { tenantId } }),
+      invoices: await this.prisma.invoice.findMany({ where: { tenantId } }),
+      quotes: await this.prisma.quote.findMany({ where: { tenantId } }),
+      subscriptions: await this.prisma.subscription.findMany({ where: { tenantId } }),
+      ticketComments: await this.prisma.ticketComment.findMany({ where: { tenantId } }),
+      tickets: await this.prisma.ticket.findMany({ where: { tenantId } }),
+      assetHistories: await this.prisma.assetHistory.findMany({ where: { tenantId } }),
+      movements: await this.prisma.movement.findMany({ where: { tenantId } }),
+      maintenances: await this.prisma.maintenance.findMany({ where: { tenantId } }),
+      depreciations: await this.prisma.depreciation.findMany({ where: { tenantId } }),
+      consumables: await this.prisma.consumable.findMany({ where: { tenantId } }),
+      licenses: await this.prisma.license.findMany({ where: { tenantId } }),
+      contracts: await this.prisma.contract.findMany({ where: { tenantId } }),
+      purchaseOrders: await this.prisma.purchaseOrder.findMany({ where: { tenantId } }),
+      suppliers: await this.prisma.supplier.findMany({ where: { tenantId } }),
+      locations: await this.prisma.location.findMany({ where: { tenantId } }),
+      departments: await this.prisma.department.findMany({ where: { tenantId } }),
+      onboardings: await this.prisma.onboarding.findMany({ where: { tenantId } }),
+      sales: await this.prisma.sale.findMany({ where: { tenantId } }),
+      kbArticles: await this.prisma.kBArticle.findMany({ where: { tenantId } }),
+    };
+
+    const fs = require('fs');
+    const path = require('path');
+    const backupDir = path.join(process.cwd(), 'backups', 'tenants');
+    
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupFilename = `tenant_${tenant.subdomain}_${timestamp}.json`;
+    const backupPath = path.join(backupDir, backupFilename);
+
+    fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
+
+    // 2. Suppression en cascade
+    const tId = tenantId;
+    await this.prisma.auditLog.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.transaction.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.invoice.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.quote.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.subscription.deleteMany({ where: { tenantId: tId } });
+    
+    await this.prisma.ticketComment.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.ticket.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.assetHistory.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.movement.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.maintenance.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.depreciation.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.asset.deleteMany({ where: { tenantId: tId } });
+    
+    await this.prisma.consumable.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.license.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.contract.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.purchaseOrder.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.supplier.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.location.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.department.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.onboarding.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.sale.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.kBArticle.deleteMany({ where: { tenantId: tId } });
+    
+    await this.prisma.user.deleteMany({ where: { tenantId: tId } });
+    
+    await this.prisma.tenant.delete({ where: { id: tId } });
+
+    this._logAction(req.user, 'PURGE_MANUELLE_ABONNE', 'Tenant', tId, undefined, { deleted: true, backupPath });
+
+    return { 
+      message: `L'abonné ${tenant.name} a été purgé définitivement.`,
+      backupFile: backupFilename,
+      backupPath
+    };
+  }
+
   @Post('purge-inactive')
   async purgeInactiveTenants(
     @Body('tenantIds') tenantIds: string[],
