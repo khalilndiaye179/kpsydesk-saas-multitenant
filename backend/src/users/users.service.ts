@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Role } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class UsersService {
@@ -68,6 +69,10 @@ export class UsersService {
       throw new BadRequestException(
         'Cette adresse email est réservée par le système et ne peut pas être utilisée pour un utilisateur de tenant.',
       );
+    }
+
+    if (prismaData.password) {
+      prismaData.password = await bcrypt.hash(prismaData.password, 12);
     }
 
     try {
