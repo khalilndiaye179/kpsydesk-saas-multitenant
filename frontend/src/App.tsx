@@ -389,8 +389,13 @@ function App() {
           completeAuthentication(tempUser);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Backend unavailable to update password, applying changes locally.", err);
+      if (err.response) {
+        alert("Erreur critique: Le serveur a refusé de mettre à jour le mot de passe. Statut: " + err.response.status + " Message: " + JSON.stringify(err.response.data));
+      } else {
+        alert("Erreur critique: Impossible de contacter le serveur pour mettre à jour le mot de passe.");
+      }
       if (tempUser) {
         const mfaIsEnabledOnStorage = localStorage.getItem(`mfa_${tempUser.email}`) === 'true';
         if (tempUser.mfaEnabled || mfaIsEnabledOnStorage) {
