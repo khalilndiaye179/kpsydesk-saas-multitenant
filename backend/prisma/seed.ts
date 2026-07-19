@@ -1,5 +1,6 @@
 import { PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -76,8 +77,6 @@ async function main() {
   // ─────────────────────────────────────────────────────────────────
   console.log('👤 Création du compte Super-Admin...');
 
-  const hashedPassword = await bcrypt.hash('[REDACTED_PASSWORD]', 12);
-
   const existingAdmin = await prisma.user.findFirst({
     where: {
       email: 'admin@entreprise.com',
@@ -86,18 +85,11 @@ async function main() {
   });
 
   if (existingAdmin) {
-    await prisma.user.update({
-      where: { id: existingAdmin.id },
-      data: {
-        password: hashedPassword,
-        firstName: 'Super',
-        lastName: 'Admin',
-        role: Role.ADMIN,
-        systemRole: 'Admin IT',
-        status: 'Actif',
-      },
-    });
+    console.log('   ✅ Super-Admin déjà existant, aucune modification effectuée sur son compte.\n');
   } else {
+    const temporaryPassword = crypto.randomBytes(12).toString('base64url');
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
+
     await prisma.user.create({
       data: {
         email: 'admin@entreprise.com',
@@ -111,9 +103,10 @@ async function main() {
         // Pas de tenantId → utilisateur global (portail legacy)
       },
     });
+    
+    console.log('   ✅ Super-Admin créé : admin@entreprise.com');
+    console.log(`   ⚠️  Mot de passe temporaire du Super-Admin (à changer immédiatement) : ${temporaryPassword}\n`);
   }
-
-  console.log('   ✅ Super-Admin : admin@entreprise.com\n');
 
   // ─────────────────────────────────────────────────────────────────
   // FIN — aucune donnée métier insérée
