@@ -53,6 +53,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [tempUser, setTempUser] = useState<UserSession | null>(null);
+  const [tempToken, setTempToken] = useState<string>('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginSubdomain, setLoginSubdomain] = useState(''); // ← champ subdomain tenant
@@ -257,6 +258,14 @@ function App() {
     try {
       // Attempt backend API login
       const response = await api.post('/auth/login', { email, password });
+      
+      if (response.data.mfaRequired) {
+        setTempToken(response.data.tempToken);
+        setShowMfa(true);
+        // On ne stocke pas encore de session
+        return;
+      }
+
       const { access_token, user } = response.data;
 
       // Sauvegarder le token JWT et le tenantId
@@ -409,16 +418,32 @@ function App() {
   };
 
   // MFA code submission
-  const handleMfaSubmit = (e: React.FormEvent) => {
+  const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMfaError('');
 
-    if (mfaCode === '123456') {
-      if (tempUser) {
-        completeAuthentication(tempUser);
-      }
-    } else {
-      setMfaError('Code MFA incorrect. Utilisez le code 123456 pour ce test.');
+    if (mfaCode.length < 6) {
+      setMfaError('Code MFA invalide.');
+      return;
+    }
+
+    try {
+      const response = await api.post('/auth/mfa/validate', { tempToken, token: mfaCode });
+      const { access_token, user } = response.data;
+
+      // Compléter la connexion comme un login normal
+      const subdomain = loginSubdomain.trim().toLowerCase();
+      const activeSubdomain = subdomain || user.tenantSubdomain || (user.tenant && user.tenant.subdomain) || 'legacy';
+      
+      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      initSession(access_token, activeSubdomain);
+      api.defaults.headers.common['X-Tenant-ID'] = activeSubdomain;
+      localStorage.setItem('token', access_token);
+      
+      setEnteredPassword(password);
+      handleUserPostValidate(user);
+    } catch (err: any) {
+      setMfaError(err.response?.data?.message || 'Code MFA incorrect.');
     }
   };
 
@@ -432,6 +457,7 @@ function App() {
     setCurrentUser(null);
     setIsAuthenticated(false);
     setTempUser(null);
+    setTempToken('');
     setShowMfa(false);
     setShowForcePassword(false);
     setActiveTab('dashboard');

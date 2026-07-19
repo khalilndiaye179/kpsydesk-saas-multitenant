@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, Param, UnauthorizedException, Req, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, UnauthorizedException, Req, HttpCode, HttpStatus, UseGuards, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './public.decorator';
@@ -41,6 +41,44 @@ export class AuthController {
     }
 
     return this.authService.login(user);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // MFA (TOTP) Endpoints
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/setup')
+  async setupMfa(@Req() req: any) {
+    const userId = req.user.userId ?? req.user.sub;
+    return this.authService.setupMfa(userId, req.user.email);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/verify-setup')
+  async verifyMfaSetup(@Req() req: any, @Body('token') token: string) {
+    if (!token) throw new BadRequestException('Le code est requis.');
+    const userId = req.user.userId ?? req.user.sub;
+    return this.authService.verifyMfaSetup(userId, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/disable')
+  @HttpCode(HttpStatus.OK)
+  async disableMfa(@Req() req: any, @Body('password') password: string) {
+    if (!password) throw new BadRequestException('Le mot de passe est requis.');
+    const userId = req.user.userId ?? req.user.sub;
+    await this.authService.disableMfa(userId, password);
+    return { message: 'MFA désactivé avec succès.' };
+  }
+
+  @Public()
+  @Post('mfa/validate')
+  @HttpCode(HttpStatus.OK)
+  async validateMfaCode(@Body('tempToken') tempToken: string, @Body('token') token: string) {
+    if (!tempToken || !token) throw new BadRequestException('Le token et le code sont requis.');
+    const userId = this.authService.verifyTempToken(tempToken);
+    return await this.authService.validateMfaCode(userId, token);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

@@ -233,6 +233,14 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // ── MFA States ───────────────────────────────────────────────────
+  const [mfaSetupData, setMfaSetupData] = useState<{ secret: string, qrCodeDataUrl: string } | null>(null);
+  const [mfaSetupCode, setMfaSetupCode] = useState('');
+  const [mfaBackupCodes, setMfaBackupCodes] = useState<string[] | null>(null);
+  const [mfaDisablePassword, setMfaDisablePassword] = useState('');
+  const [mfaMsg, setMfaMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [mfaLoading, setMfaLoading] = useState(false);
+
   // Recherche & Filtres
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -1313,6 +1321,178 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                 </button>
               </div>
             </form>
+          </div>
+
+
+          {/* MFA Section */}
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="ph-fill ph-shield-check" style={{ fontSize: '1.2rem', color: 'white' }} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Authentification à deux facteurs (A2F)</h3>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>Protégez votre compte avec un code temporaire (TOTP)</p>
+              </div>
+            </div>
+
+            {mfaMsg && (
+              <div style={{
+                padding: '12px 16px', borderRadius: '12px', fontSize: '0.85rem', marginBottom: '16px',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                background: mfaMsg.type === 'success' ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
+                border: `1px solid ${mfaMsg.type === 'success' ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                color: mfaMsg.type === 'success' ? '#22c55e' : '#ef4444',
+              }}>
+                <i className={`ph-bold ph-${mfaMsg.type === 'success' ? 'check-circle' : 'warning-circle'}`} />
+                {mfaMsg.text}
+              </div>
+            )}
+
+            {superAdminSession.mfaEnabled ? (
+              // MFA Activé
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ padding: '12px 16px', borderRadius: '10px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: '#22c55e', fontWeight: 600 }}>
+                  <i className="ph-bold ph-check-circle" />
+                  L'authentification à deux facteurs est actuellement activée.
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                    Mot de passe pour désactiver l'A2F
+                  </label>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <input
+                      type="password"
+                      value={mfaDisablePassword}
+                      onChange={e => setMfaDisablePassword(e.target.value)}
+                      placeholder="Saisissez votre mot de passe"
+                      style={{ flex: 1, padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', outline: 'none' }}
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!mfaDisablePassword) {
+                          setMfaMsg({ type: 'error', text: 'Mot de passe requis.' });
+                          return;
+                        }
+                        setMfaLoading(true);
+                        try {
+                          await api.post('/auth/mfa/disable', { password: mfaDisablePassword });
+                          const session = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                          session.mfaEnabled = false;
+                          localStorage.setItem('currentUser', JSON.stringify(session));
+                          setMfaDisablePassword('');
+                          setMfaMsg({ type: 'success', text: 'MFA désactivé avec succès.' });
+                        } catch (err: any) {
+                          setMfaMsg({ type: 'error', text: err.response?.data?.message || 'Erreur.' });
+                        } finally {
+                          setMfaLoading(false);
+                        }
+                      }}
+                      disabled={mfaLoading}
+                      style={{ padding: '10px 24px', borderRadius: '10px', border: '1px solid #ef4444', background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      Désactiver l'A2F
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // MFA Désactivé -> Afficher le flux de configuration
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {!mfaSetupData && !mfaBackupCodes ? (
+                  <button
+                    onClick={async () => {
+                      setMfaLoading(true);
+                      setMfaMsg(null);
+                      try {
+                        const res = await api.post('/auth/mfa/setup');
+                        setMfaSetupData(res.data);
+                      } catch (err: any) {
+                        setMfaMsg({ type: 'error', text: err.response?.data?.message || 'Erreur lors de la configuration.' });
+                      } finally {
+                        setMfaLoading(false);
+                      }
+                    }}
+                    disabled={mfaLoading}
+                    className="btn-primary"
+                    style={{ padding: '10px 24px', borderRadius: '10px', alignSelf: 'flex-start' }}
+                  >
+                    Configurer l'A2F
+                  </button>
+                ) : mfaSetupData && !mfaBackupCodes ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-primary)' }}>1. Scannez ce QR Code avec votre application (Google Authenticator, Authy...)</p>
+                    <div style={{ background: 'white', padding: '16px', borderRadius: '12px', alignSelf: 'flex-start' }}>
+                      <img src={mfaSetupData.qrCodeDataUrl} alt="QR Code MFA" style={{ display: 'block', width: '200px', height: '200px' }} />
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Code manuel : <code style={{ background: 'rgba(0,0,0,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{mfaSetupData.secret}</code></p>
+                    
+                    <p style={{ margin: '10px 0 0', fontSize: '0.9rem', color: 'var(--text-primary)' }}>2. Entrez le code à 6 chiffres généré par l'application</p>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <input
+                        type="text"
+                        value={mfaSetupCode}
+                        onChange={e => setMfaSetupCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="Ex: 123456"
+                        style={{ flex: 1, padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none', letterSpacing: '2px', fontSize: '1.2rem', fontFamily: 'monospace' }}
+                      />
+                      <button
+                        onClick={async () => {
+                          if (mfaSetupCode.length !== 6) {
+                            setMfaMsg({ type: 'error', text: 'Veuillez entrer les 6 chiffres.' });
+                            return;
+                          }
+                          setMfaLoading(true);
+                          try {
+                            const res = await api.post('/auth/mfa/verify-setup', { token: mfaSetupCode });
+                            setMfaBackupCodes(res.data.backupCodes);
+                            setMfaMsg({ type: 'success', text: 'Authentification à deux facteurs activée avec succès !' });
+                            const session = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                            session.mfaEnabled = true;
+                            localStorage.setItem('currentUser', JSON.stringify(session));
+                          } catch (err: any) {
+                            setMfaMsg({ type: 'error', text: err.response?.data?.message || 'Code invalide.' });
+                          } finally {
+                            setMfaLoading(false);
+                          }
+                        }}
+                        disabled={mfaLoading}
+                        className="btn-primary"
+                        style={{ padding: '10px 24px', borderRadius: '10px' }}
+                      >
+                        Vérifier et Activer
+                      </button>
+                    </div>
+                  </div>
+                ) : mfaBackupCodes ? (
+                  <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '12px', padding: '20px' }}>
+                    <h4 style={{ margin: '0 0 10px', color: '#f59e0b', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="ph-fill ph-warning" /> Codes de secours (IMPORTANT)
+                    </h4>
+                    <p style={{ margin: '0 0 16px', fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                      Conservez ces codes en lieu sûr. Ils vous permettront de vous connecter si vous perdez votre appareil. <strong>Ils ne seront affichés qu'une seule fois.</strong>
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontFamily: 'monospace', fontSize: '1.1rem', background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                      {mfaBackupCodes.map(code => (
+                        <div key={code} style={{ letterSpacing: '1px', color: 'var(--text-primary)' }}>{code}</div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setMfaBackupCodes(null);
+                        setMfaSetupData(null);
+                        setMfaSetupCode('');
+                      }}
+                      className="btn-primary"
+                      style={{ marginTop: '20px', padding: '10px 24px', borderRadius: '10px' }}
+                    >
+                      J'ai sauvegardé ces codes
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Info box */}

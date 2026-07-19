@@ -81,15 +81,13 @@ model Tenant {
   subdomain      String          @unique
   status         TenantStatus    @default(TRIAL)
   planId         String?
-
-  logoUrl        String?
-  companyAddress String?
-  companyPhone   String?
-  companyEmail   String?
-  companyTaxId   String?
-
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  companyAddress String?
+  companyEmail   String?
+  companyPhone   String?
+  companyTaxId   String?
+  logoUrl        String?
   assets         Asset[]
   assetHistories AssetHistory[]
   auditLogs      AuditLog[]
@@ -154,29 +152,29 @@ model Location {
 }
 
 model User {
-  id             String      @id @default(uuid())
-  email          String
-  password       String
-  firstName      String
-  lastName       String
-  username       String?
-  role           Role        @default(USER)
-  systemRole     String?
-  status         String?     @default("Actif")
-  entryDate      DateTime?
-  country        String?
-  position       String?
-  mfaEnabled     Boolean     @default(false)
-  departmentId   String?
-  tenantId       String?
-  phone          String?
-  recoveryEmail  String?     // Email de récupération de compte (Super-Admin)
-  recoveryPhone  String?     // Téléphone de récupération de compte (Super-Admin)
-  assets         Asset[]
-  assignedTix    Ticket[]    @relation("AssignedTickets")
-  tickets        Ticket[]    @relation("CreatedTickets")
-  department     Department? @relation(fields: [departmentId], references: [id])
-  tenant         Tenant?     @relation(fields: [tenantId], references: [id])
+  id            String      @id @default(uuid())
+  email         String
+  password      String
+  firstName     String
+  lastName      String
+  username      String?
+  role          Role        @default(USER)
+  systemRole    String?
+  status        String?     @default("Actif")
+  entryDate     DateTime?
+  country       String?
+  position      String?
+  mfaEnabled    Boolean     @default(false)
+  departmentId  String?
+  tenantId      String?
+  phone         String?
+  recoveryEmail String?
+  recoveryPhone String?
+  assets        Asset[]
+  assignedTix   Ticket[]    @relation("AssignedTickets")
+  tickets       Ticket[]    @relation("CreatedTickets")
+  department    Department? @relation(fields: [departmentId], references: [id])
+  tenant        Tenant?     @relation(fields: [tenantId], references: [id])
 
   @@unique([email, tenantId])
   @@unique([username, tenantId])

@@ -3,6 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as nodemailer from 'nodemailer';
+import { authenticator } from 'otplib';
+import * as qrcode from 'qrcode';
 
 /** Entrée OTP en mémoire avec TTL de 15 minutes */
 interface OtpEntry {
@@ -89,6 +91,14 @@ export class AuthService {
    * Génère un token JWT incluant le tenantId.
    */
   async login(user: any) {
+    if (user.mfaEnabled) {
+      const tempPayload = { sub: user.id, mfaPending: true };
+      return {
+        mfaRequired: true,
+        tempToken: this.jwtService.sign(tempPayload, { expiresIn: '5m' })
+      };
+    }
+
     const payload = {
       email: user.email,
       sub: user.id,
@@ -270,6 +280,98 @@ export class AuthService {
     `;
     if (!results || results.length === 0) throw new BadRequestException("Super-Admin introuvable.");
     return results[0];
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // MFA (TOTP) Management
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  async setupMfa(userId: string, email: string) {
+    const secret = authenticator.generateSecret();
+    const otpauthUrl = authenticator.keyuri(email, 'Console SaaS', secret);
+    const qrCodeDataUrl = await qrcode.toDataURL(otpauthUrl);
+    
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mfaSecret: secret }
+    });
+
+    return { secret, qrCodeDataUrl };
+  }
+
+  async verifyMfaSetup(userId: string, token: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.mfaSecret) throw new BadRequestException('MFA non initialisé.');
+
+    const isValid = authenticator.verify({ token, secret: user.mfaSecret });
+    if (!isValid) throw new BadRequestException('Code invalide.');
+
+    const backupCodes = Array.from({ length: 10 }, () => Math.random().toString(36).substring(2, 10).toUpperCase());
+    const hashedCodes = await Promise.all(backupCodes.map(code => bcrypt.hash(code, 12)));
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { 
+        mfaEnabled: true, 
+        mfaBackupCodes: hashedCodes 
+      }
+    });
+
+    return { backupCodes };
+  }
+
+  async disableMfa(userId: string, passwordConfirm: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new BadRequestException('Utilisateur introuvable.');
+
+    const isValid = await this._comparePassword(passwordConfirm, user.password);
+    if (!isValid) throw new BadRequestException('Mot de passe incorrect.');
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { 
+        mfaEnabled: false, 
+        mfaSecret: null, 
+        mfaBackupCodes: [] 
+      }
+    });
+  }
+
+  async validateMfaCode(userId: string, token: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.mfaEnabled || !user.mfaSecret) {
+      throw new BadRequestException('MFA non activé.');
+    }
+
+    const isTotpValid = authenticator.verify({ token, secret: user.mfaSecret });
+    if (isTotpValid) {
+      return this.login({ ...user, mfaEnabled: false }); // Bypass tempToken inside login
+    }
+
+    for (let i = 0; i < user.mfaBackupCodes.length; i++) {
+      const hashedCode = user.mfaBackupCodes[i];
+      const isBackupValid = await bcrypt.compare(token, hashedCode);
+      if (isBackupValid) {
+        const newCodes = user.mfaBackupCodes.filter((_, index) => index !== i);
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { mfaBackupCodes: newCodes }
+        });
+        return this.login({ ...user, mfaEnabled: false }); // Bypass tempToken inside login
+      }
+    }
+
+    throw new BadRequestException('Code invalide.');
+  }
+
+  verifyTempToken(tempToken: string) {
+    try {
+      const payload = this.jwtService.verify(tempToken);
+      if (!payload.mfaPending) throw new UnauthorizedException('Token invalide.');
+      return payload.sub;
+    } catch (e) {
+      throw new UnauthorizedException('Session expirée ou invalide.');
+    }
   }
 
   /**
