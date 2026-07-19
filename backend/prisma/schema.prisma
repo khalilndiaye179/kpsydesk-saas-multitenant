@@ -165,6 +165,8 @@ model User {
   country       String?
   position      String?
   mfaEnabled    Boolean     @default(false)
+  mfaSecret     String?
+  mfaBackupCodes String[]
   departmentId  String?
   tenantId      String?
   phone         String?

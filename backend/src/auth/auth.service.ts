@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
 import * as nodemailer from 'nodemailer';
-import { authenticator } from 'otplib';
+import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
 
 /** Entrée OTP en mémoire avec TTL de 15 minutes */
@@ -287,23 +287,27 @@ export class AuthService {
   // ─────────────────────────────────────────────────────────────────────────────
 
   async setupMfa(userId: string, email: string) {
-    const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(email, 'Console SaaS', secret);
-    const qrCodeDataUrl = await qrcode.toDataURL(otpauthUrl);
+    const secret = speakeasy.generateSecret({ length: 20, name: `KPSyDesk (${email})` });
+    const qrCodeDataUrl = await qrcode.toDataURL(secret.otpauth_url || '');
     
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaSecret: secret }
+      data: { mfaSecret: secret.base32 }
     });
 
-    return { secret, qrCodeDataUrl };
+    return { secret: secret.base32, qrCodeDataUrl };
   }
 
   async verifyMfaSetup(userId: string, token: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.mfaSecret) throw new BadRequestException('MFA non initialisé.');
 
-    const isValid = authenticator.verify({ token, secret: user.mfaSecret });
+    const isValid = speakeasy.totp.verify({
+      secret: user.mfaSecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
     if (!isValid) throw new BadRequestException('Code invalide.');
 
     const backupCodes = Array.from({ length: 10 }, () => Math.random().toString(36).substring(2, 10).toUpperCase());
@@ -343,7 +347,12 @@ export class AuthService {
       throw new BadRequestException('MFA non activé.');
     }
 
-    const isTotpValid = authenticator.verify({ token, secret: user.mfaSecret });
+    const isTotpValid = speakeasy.totp.verify({
+      secret: user.mfaSecret,
+      encoding: 'base32',
+      token,
+      window: 1,
+    });
     if (isTotpValid) {
       return this.login({ ...user, mfaEnabled: false }); // Bypass tempToken inside login
     }
