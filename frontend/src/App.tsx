@@ -1058,15 +1058,7 @@ function App() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '-10px', marginBottom: '15px' }}>
-                <button
-                  type="button"
-                  onClick={() => setPublicRoute('superadmin-recovery')}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.72rem', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <i className="ph-bold ph-shield-check" style={{ fontSize: '0.9rem', color: '#8b5cf6' }}></i>
-                  Console SaaS
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: '-10px', marginBottom: '15px' }}>
                 <button
                   type="button"
                   onClick={() => setPublicRoute('recovery')}

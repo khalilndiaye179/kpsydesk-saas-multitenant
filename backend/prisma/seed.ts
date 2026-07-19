@@ -76,7 +76,7 @@ async function main() {
   // ─────────────────────────────────────────────────────────────────
   console.log('👤 Création du compte Super-Admin...');
 
-  const hashedPassword = await bcrypt.hash('admin123', 12);
+  const hashedPassword = await bcrypt.hash('[REDACTED_PASSWORD]', 12);
 
   const existingAdmin = await prisma.user.findFirst({
     where: {
