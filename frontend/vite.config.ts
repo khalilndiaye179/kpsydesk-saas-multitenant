@@ -15,7 +15,7 @@ export default defineConfig({
     // Proxy vers le backend NestJS sur le port 3010
     proxy: {
       '/api': {
-        target: 'http://localhost:3010',
+        target: process.env.VITE_API_PROXY_URL || 'http://backend:3000',
         changeOrigin: true,
       },
     },
