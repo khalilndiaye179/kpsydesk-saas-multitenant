@@ -42,10 +42,10 @@ export const TenantSettingsView: React.FC = () => {
       }
       
       // Fetch payment methods
-      const pmRes = await api.get('/tenant-payments/methods');
+      const pmRes = await api.get('/tenant-payment/methods');
       setPaymentMethods(pmRes.data || []);
     } catch (err) {
-      console.error("Erreur lors du chargement des informations du tenant", err);
+      console.error("Erreur lors de la récupération des détails du tenant:", err);
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,7 @@ export const TenantSettingsView: React.FC = () => {
 
   const handleTogglePaymentMethod = async (method: any, newStatus: string) => {
     try {
-      await api.patch(`/tenant-payments/methods/${method.id}`, { status: newStatus });
+      await api.put(`/tenant-payment/methods/${method.id}/status`, { status: newStatus });
       fetchTenantDetails();
     } catch (err: any) {
       alert("Erreur lors du changement de statut: " + (err.response?.data?.message || err.message));
@@ -65,10 +65,9 @@ export const TenantSettingsView: React.FC = () => {
     if (!editingMethod) return;
     setSavingPaymentMethod(true);
     try {
-      await api.patch(`/tenant-payments/methods/${editingMethod.id}`, {
+      await api.put(`/tenant-payment/methods/${editingMethod.id}/config`, {
         configOverrides: editingMethod.configOverrides
       });
-      alert("Configuration sauvegardée");
       setEditingMethod(null);
       fetchTenantDetails();
     } catch (err: any) {
