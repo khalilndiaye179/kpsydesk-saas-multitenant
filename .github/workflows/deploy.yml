@@ -36,7 +36,8 @@ jobs:
             cd /root/app
 
             echo "📥 [1/4] Git pull..."
-            git pull origin master
+            git remote set-url origin https://github.com/${{ github.repository }}.git
+            git pull https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git master
 
             echo "🔨 [2/4] Rebuild des containers Docker..."
             docker compose up -d --build --remove-orphans
