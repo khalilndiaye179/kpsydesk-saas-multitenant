@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsDateString, IsInt } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsDateString, IsInt, IsNumber } from 'class-validator';
 import { AssetStatus } from '@prisma/client';
 
 export class CreateAssetDto {
@@ -81,4 +81,41 @@ export class CreateAssetDto {
   @IsString()
   @IsOptional()
   manufacturer?: string;
+
+  // Champs supplémentaires envoyés par le frontend
+  @IsString()
+  @IsOptional()
+  performedBy?: string;
+
+  @IsString()
+  @IsOptional()
+  brand?: string;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @IsNumber()
+  @IsOptional()
+  price?: number;
+
+  @IsNumber()
+  @IsOptional()
+  purchasePrice?: number;
+
+  @IsString()
+  @IsOptional()
+  supplierId?: string;
+
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @IsString()
+  @IsOptional()
+  condition?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
 }
