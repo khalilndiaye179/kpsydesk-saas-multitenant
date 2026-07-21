@@ -58,6 +58,7 @@ export class CreateUserDto {
   @IsOptional()
   phone?: string;
 
+  @IsString()
   @IsOptional()
   entryDate?: string | Date;
 }
