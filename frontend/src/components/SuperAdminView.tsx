@@ -284,8 +284,8 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
 
   // Auto-refresh states
   const [isAutoRefreshActive, setIsAutoRefreshActive] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(15);
-  const [secondsToNextRefresh, setSecondsToNextRefresh] = useState(15);
+  const [refreshInterval, setRefreshInterval] = useState(5);
+  const [secondsToNextRefresh, setSecondsToNextRefresh] = useState(5);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [bgError, setBgError] = useState('');
 
