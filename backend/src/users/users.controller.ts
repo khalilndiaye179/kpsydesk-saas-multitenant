@@ -59,7 +59,17 @@ export class UsersController {
     if (req.user.role === Role.USER && data.role) {
       delete data.role;
     }
+    // Personne ne doit pouvoir forcer l'activation/désactivation du MFA via ce endpoint
+    if ('mfaEnabled' in data) {
+      delete (data as any).mfaEnabled;
+    }
     return this.usersService.update(id, data);
+  }
+
+  @Post(':id/reset-mfa')
+  @Roles(Role.ADMIN)
+  resetMfa(@Param('id') id: string) {
+    return this.usersService.resetMfa(id);
   }
 
   @Delete(':id')

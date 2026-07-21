@@ -5,6 +5,7 @@ export const TenantSettingsView: React.FC = () => {
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     companyAddress: '',

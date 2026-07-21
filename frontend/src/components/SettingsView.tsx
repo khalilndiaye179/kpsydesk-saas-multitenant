@@ -21,6 +21,15 @@ export const SettingsView: React.FC = () => {
   const [emailInput, setEmailInput] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
 
+  // MFA states
+  const [mfaSetupData, setMfaSetupData] = useState<any>(null);
+  const [mfaSetupCode, setMfaSetupCode] = useState('');
+  const [mfaBackupCodes, setMfaBackupCodes] = useState<string[] | null>(null);
+  const [mfaDisablePassword, setMfaDisablePassword] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaMsg, setMfaMsg] = useState<{type: 'success'|'error', text: string} | null>(null);
+
+
   // Modals for Accounts
   const [isOpen, setIsOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -69,7 +78,6 @@ export const SettingsView: React.FC = () => {
 
     try {
       const payload: any = { 
-        mfaEnabled,
         email: emailInput,
         phone: phoneInput
       };
@@ -77,7 +85,7 @@ export const SettingsView: React.FC = () => {
 
       await api.put(`/users/${currentUser.id}`, payload);
       
-      const updatedUser = { ...currentUser, mfaEnabled, email: emailInput, phone: phoneInput };
+      const updatedUser = { ...currentUser, email: emailInput, phone: phoneInput };
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
       setNewPassword('');
@@ -172,17 +180,162 @@ export const SettingsView: React.FC = () => {
               />
               {newPassword && <PasswordStrengthIndicator password={newPassword} />}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-              <input 
-                type="checkbox" 
-                id="mfa-profile" 
-                checked={mfaEnabled} 
-                onChange={e => setMfaEnabled(e.target.checked)} 
-                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-              />
-              <label htmlFor="mfa-profile" style={{ cursor: 'pointer', fontSize: '0.9rem' }}>
-                Activer l'Authentification Multifacteur (MFA simulée)
-              </label>
+            {/* MFA Section */}
+            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border-color)' }}>
+              <h4 style={{ marginBottom: '10px' }}>Authentification à deux facteurs (A2F)</h4>
+              
+              {mfaMsg && (
+                <div style={{ padding: '10px', borderRadius: '6px', marginBottom: '15px', background: mfaMsg.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', color: mfaMsg.type === 'success' ? '#10b981' : '#ef4444', border: `1px solid ${mfaMsg.type === 'success' ? '#10b981' : '#ef4444'}` }}>
+                  {mfaMsg.text}
+                </div>
+              )}
+
+              {mfaEnabled ? (
+                <div style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '20px', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#10b981', marginBottom: '15px' }}>
+                    <i className="ph-fill ph-check-circle" style={{ fontSize: '1.5rem' }}></i>
+                    <strong style={{ fontSize: '1.1rem' }}>L'A2F est activée sur votre compte</strong>
+                  </div>
+                  <p style={{ margin: '0 0 15px', fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                    Votre compte est protégé. Vous devez saisir un code généré par votre application d'authentification lors de chaque connexion.
+                  </p>
+                  
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                    <input
+                      type="password"
+                      value={mfaDisablePassword}
+                      onChange={e => setMfaDisablePassword(e.target.value)}
+                      placeholder="Saisissez votre mot de passe"
+                      style={{ flex: 1, padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', outline: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!mfaDisablePassword) {
+                          setMfaMsg({ type: 'error', text: 'Mot de passe requis.' });
+                          return;
+                        }
+                        setMfaLoading(true);
+                        try {
+                          await api.post('/auth/mfa/disable', { password: mfaDisablePassword });
+                          const session = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                          session.mfaEnabled = false;
+                          localStorage.setItem('currentUser', JSON.stringify(session));
+                          setMfaEnabled(false);
+                          setMfaDisablePassword('');
+                          setMfaMsg({ type: 'success', text: 'MFA désactivé avec succès.' });
+                        } catch (err: any) {
+                          setMfaMsg({ type: 'error', text: err.response?.data?.message || 'Erreur.' });
+                        } finally {
+                          setMfaLoading(false);
+                        }
+                      }}
+                      disabled={mfaLoading}
+                      style={{ padding: '10px 24px', borderRadius: '10px', border: '1px solid #ef4444', background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    >
+                      Désactiver l'A2F
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {!mfaSetupData && !mfaBackupCodes ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setMfaLoading(true);
+                        setMfaMsg(null);
+                        try {
+                          const res = await api.post('/auth/mfa/setup');
+                          setMfaSetupData(res.data);
+                        } catch (err: any) {
+                          setMfaMsg({ type: 'error', text: err.response?.data?.message || 'Erreur lors de la configuration.' });
+                        } finally {
+                          setMfaLoading(false);
+                        }
+                      }}
+                      disabled={mfaLoading}
+                      className="btn-primary"
+                      style={{ padding: '10px 24px', borderRadius: '10px', alignSelf: 'flex-start' }}
+                    >
+                      Configurer l'A2F
+                    </button>
+                  ) : mfaSetupData && !mfaBackupCodes ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', background: 'var(--bg-tertiary)', padding: '20px', borderRadius: '12px' }}>
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-primary)' }}>1. Scannez ce QR Code avec votre application (Google Authenticator, Authy...)</p>
+                      <div style={{ background: 'white', padding: '16px', borderRadius: '12px', alignSelf: 'flex-start' }}>
+                        <img src={mfaSetupData.qrCodeDataUrl} alt="QR Code MFA" style={{ display: 'block', width: '200px', height: '200px' }} />
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)' }}>Code manuel : <code style={{ background: 'rgba(0,0,0,0.1)', padding: '2px 6px', borderRadius: '4px' }}>{mfaSetupData.secret}</code></p>
+                      
+                      <p style={{ margin: '10px 0 0', fontSize: '0.9rem', color: 'var(--text-primary)' }}>2. Entrez le code à 6 chiffres généré par l'application</p>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <input
+                          type="text"
+                          value={mfaSetupCode}
+                          onChange={e => setMfaSetupCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="Ex: 123456"
+                          style={{ flex: 1, padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none', letterSpacing: '2px', fontSize: '1.2rem', fontFamily: 'monospace' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (mfaSetupCode.length !== 6) {
+                              setMfaMsg({ type: 'error', text: 'Veuillez entrer les 6 chiffres.' });
+                              return;
+                            }
+                            setMfaLoading(true);
+                            try {
+                              const res = await api.post('/auth/mfa/verify-setup', { token: mfaSetupCode });
+                              setMfaBackupCodes(res.data.backupCodes);
+                              setMfaMsg({ type: 'success', text: 'Authentification à deux facteurs activée avec succès !' });
+                              const session = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                              session.mfaEnabled = true;
+                              localStorage.setItem('currentUser', JSON.stringify(session));
+                              setMfaEnabled(true);
+                            } catch (err: any) {
+                              setMfaMsg({ type: 'error', text: err.response?.data?.message || 'Code invalide.' });
+                            } finally {
+                              setMfaLoading(false);
+                            }
+                          }}
+                          disabled={mfaLoading}
+                          className="btn-primary"
+                          style={{ padding: '10px 24px', borderRadius: '10px' }}
+                        >
+                          Vérifier et Activer
+                        </button>
+                      </div>
+                    </div>
+                  ) : mfaBackupCodes ? (
+                    <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '12px', padding: '20px' }}>
+                      <h4 style={{ margin: '0 0 10px', color: '#f59e0b', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <i className="ph-fill ph-warning" /> Codes de secours (IMPORTANT)
+                      </h4>
+                      <p style={{ margin: '0 0 15px', fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: '1.5' }}>
+                        Conservez ces codes en lieu sûr. Ils vous permettront de vous connecter si vous perdez votre appareil. <strong>Ils ne seront affichés qu'une seule fois.</strong>
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontFamily: 'monospace', fontSize: '1.1rem', background: 'var(--bg-secondary)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                        {mfaBackupCodes.map(code => (
+                          <div key={code} style={{ letterSpacing: '1px', color: 'var(--text-primary)' }}>{code}</div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMfaBackupCodes(null);
+                          setMfaSetupData(null);
+                          setMfaSetupCode('');
+                        }}
+                        className="btn-primary"
+                        style={{ marginTop: '20px', padding: '10px 24px', borderRadius: '10px' }}
+                      >
+                        J'ai bien noté mes codes
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              )}
             </div>
           </div>
           <button 
@@ -272,6 +425,25 @@ export const SettingsView: React.FC = () => {
                         }}>
                           <i className="ph ph-pencil-simple"></i>
                         </button>
+                        {acc.mfaEnabled && (
+                          <button 
+                            className="btn-icon" 
+                            title="Réinitialiser le MFA" 
+                            onClick={async () => {
+                              if (confirm("Voulez-vous vraiment réinitialiser le MFA de ce collaborateur ? Il pourra se connecter sans code TOTP.")) {
+                                try {
+                                  await api.post(`/users/${acc.id}/reset-mfa`);
+                                  alert("MFA réinitialisé avec succès.");
+                                  fetchUserData();
+                                } catch (err: any) {
+                                  alert("Erreur: " + (err.response?.data?.message || err.message));
+                                }
+                              }
+                            }}
+                          >
+                            <i className="ph ph-key" style={{ color: 'var(--warning)' }}></i>
+                          </button>
+                        )}
                         {acc.username !== 'admin' && (
                           <button className="btn-icon" style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }} onClick={() => handleDeleteAccount(acc.id)}>
                             <i className="ph ph-trash"></i>
@@ -349,16 +521,6 @@ export const SettingsView: React.FC = () => {
                     <option value="RH">Ressources Humaines (Gestion Personnel)</option>
                     <option value="Utilisateur Standard">Utilisateur Standard (Tickets uniquement)</option>
                   </select>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '5px' }}>
-                  <input 
-                    type="checkbox" 
-                    id="mfa-account" 
-                    checked={accFields.mfaEnabled} 
-                    onChange={e => setAccFields({...accFields, mfaEnabled: e.target.checked})} 
-                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                  />
-                  <label htmlFor="mfa-account" style={{ cursor: 'pointer', fontSize: '0.85rem' }}>Activer le MFA</label>
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>

@@ -63,6 +63,21 @@ export class UsersService {
     });
   }
 
+  async resetMfa(id: string): Promise<User> {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`Utilisateur introuvable`);
+    }
+    
+    return this.prisma.user.update({
+      where: { id },
+      data: {
+        mfaEnabled: false,
+        mfaSecret: null,
+      },
+    });
+  }
+
   async update(id: string, data: any): Promise<User> {
     const { id: dataId, ...prismaData } = data;
     if (prismaData.email?.toLowerCase().trim() === 'admin@entreprise.com') {

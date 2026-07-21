@@ -25,6 +25,7 @@ import { AboutView } from './components/AboutView';
 import { SettingsView } from './components/SettingsView';
 import { TenantSettingsView } from './components/TenantSettingsView';
 import { DepreciationView } from './components/DepreciationView';
+import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 // Multi-tenant views
 import { SignupView } from './components/SignupView';
 import { PricingView } from './components/PricingView';
@@ -60,8 +61,7 @@ function App() {
   const [loginError, setLoginError] = useState('');
   const [enteredPassword, setEnteredPassword] = useState(''); // Keep track for first login check
 
-  // Multi-tenant public routes
-  const [publicRoute, setPublicRoute] = useState<'login' | 'signup' | 'pricing' | 'recovery' | 'superadmin-recovery'>('login');
+  const [publicRoute, setPublicRoute] = useState<'login' | 'signup' | 'pricing' | 'recovery' | 'superadmin-recovery' | 'privacy'>('login');
 
   // Security Steps
   const [showMfa, setShowMfa] = useState<boolean>(false);
@@ -684,6 +684,11 @@ function App() {
 
   // Render Login Card
   if (!isAuthenticated) {
+    // Route : Politique de confidentialité
+    if (publicRoute === 'privacy') {
+      return <PrivacyPolicyView onBack={() => setPublicRoute('login')} />;
+    }
+
     // Route : Page d'inscription
     if (publicRoute === 'signup') {
       return (
@@ -1114,6 +1119,19 @@ function App() {
                 </button>
               </div>
             </div>
+
+            {/* Privacy Notice */}
+            <div style={{ marginTop: '20px', padding: '15px', borderRadius: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5', textAlign: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '8px', color: 'var(--text-secondary)' }}>
+                <i className="ph-fill ph-lock-key" style={{ fontSize: '1rem' }}></i>
+                <span style={{ fontWeight: 600 }}>Protection des données</span>
+              </div>
+              Vos données sont hébergées et protégées conformément à la loi sénégalaise n° 2008-12 sur la protection des données à caractère personnel, sous le contrôle de la Commission de Protection des Données Personnelles (CDP). Chaque entreprise abonnée dispose d'un espace strictement isolé, inaccessible aux autres utilisateurs de la plateforme.
+              <div style={{ marginTop: '8px' }}>
+                <button onClick={() => setPublicRoute('privacy')} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, padding: 0, textDecoration: 'underline' }}>En savoir plus</button>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
