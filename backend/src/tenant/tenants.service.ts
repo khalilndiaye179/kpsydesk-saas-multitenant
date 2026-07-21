@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as bcrypt from 'bcryptjs';
 
 export interface SignupDto {
@@ -27,7 +28,10 @@ export interface SubscriptionUpdateDto {
 
 @Injectable()
 export class TenantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2
+  ) {}
 
   // ============================================================
   // INSCRIPTION D'UN NOUVEAU TENANT
@@ -121,6 +125,8 @@ export class TenantsService {
         endDate: trialEndDate,
       },
     });
+
+    this.eventEmitter.emit('tenant.created', tenant.id);
 
     return {
       message: 'Inscription réussie ! Votre espace est prêt.',
@@ -338,22 +344,22 @@ export class TenantsService {
   // ============================================================
 
   async getAvailableGateways() {
-    const gateways = await this.prisma.paymentGateway.findMany({
+    // Utilise le nouveau modèle PaymentProvider
+    const providers = await this.prisma.paymentProvider.findMany({
       where: {
-        isActive: true,
-        isPublished: true,
+        globalStatus: 'ACTIVE',
       },
       select: {
         id: true,
-        provider: true,
-        merchantId: true,
-        isSandbox: true,
-        isPublished: true,
-        validatedAt: true,
-        // Ne jamais exposer apiKey ni apiSecret
+        code: true,
+        displayName: true,
+        environment: true,
+        currency: true,
+        globalStatus: true,
+        // configEncrypted n'est jamais exposé
       },
     });
-    return gateways;
+    return providers;
   }
 
   // ============================================================

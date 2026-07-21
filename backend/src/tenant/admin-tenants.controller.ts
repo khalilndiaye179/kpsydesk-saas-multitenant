@@ -406,64 +406,69 @@ export class AdminTenantsController {
   }
 
   /**
-   * Récupérer les clés API de l'intégrateur de paiement mobile money (PayTech, Wave...)
+   * Récupérer les fournisseurs de paiement (route legacy pour compatibilité)
    */
   @Get('payment-gateway')
   async getPaymentGateways(@Req() req: { user: { role: string; systemRole?: string; email: string } }) {
-     this._checkConsoleAccess(req.user, ['SuperAdmin']);
-     return this.prisma.paymentGateway.findMany();
-   }
- 
-   /**
-    * Enregistrer ou mettre à jour la configuration d'un intégrateur de paiement
-    */
-   @Post('payment-gateway')
-   async savePaymentGateway(
-     @Body() body: ConfigurePaymentDto,
-     @Req() req: { user: { role: string; systemRole?: string; email: string } },
-   ) {
-     this._checkConsoleAccess(req.user, ['SuperAdmin']);
+    this._checkConsoleAccess(req.user, ['SuperAdmin']);
+    // Retourne la liste des PaymentProvider pour compatibilité avec l'ancienne UI
+    const providers = await this.prisma.paymentProvider.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    // Mappe vers l'ancien format attendu par le frontend
+    return providers.map(p => ({
+      id: p.id,
+      provider: p.code,
+      apiKey: '',  // Ne jamais exposer les clés chiffrées
+      apiSecret: '',
+      merchantId: '',
+      isSandbox: p.environment === 'SANDBOX',
+      isActive: p.globalStatus === 'ACTIVE',
+    }));
+  }
+
+  /**
+   * Enregistrer ou mettre à jour la configuration d'un fournisseur (route legacy)
+   */
+  @Post('payment-gateway')
+  async savePaymentGateway(
+    @Body() body: ConfigurePaymentDto,
+    @Req() req: { user: { role: string; systemRole?: string; email: string } },
+  ) {
+    this._checkConsoleAccess(req.user, ['SuperAdmin']);
 
     const { provider, apiKey, apiSecret, merchantId, isSandbox, isActive } = body;
 
-    // Si on active cette passerelle, on désactive les autres (une seule active à la fois)
-    if (isActive) {
-      await this.prisma.paymentGateway.updateMany({
-        where: { provider: { not: provider } },
-        data: { isActive: false, isPublished: false },
+    const environment = isSandbox ? 'SANDBOX' : 'PRODUCTION';
+    const globalStatus = isActive ? 'ACTIVE' : 'INACTIVE';
+
+    // Validation minimale
+    const isValid = apiKey && apiKey.length >= 8 && apiSecret && apiSecret.length >= 8;
+    const validationError = isValid ? null : 'Clés invalides — non publié vers les abonnés';
+
+    // Upsert via le nouveau modèle PaymentProvider
+    const existing = await this.prisma.paymentProvider.findUnique({ where: { code: provider } });
+    let gateway;
+    if (existing) {
+      gateway = await this.prisma.paymentProvider.update({
+        where: { code: provider },
+        data: { environment, globalStatus },
+      });
+    } else {
+      gateway = await this.prisma.paymentProvider.create({
+        data: {
+          code: provider,
+          displayName: provider,
+          currency: 'XOF',
+          environment,
+          globalStatus,
+        },
       });
     }
 
-    let isPublished = false;
-    let validatedAt: Date | null = null;
-    let validationError = '';
+    this._logAction(req.user, 'CONFIGURATION_PAIEMENT', 'PaymentProvider', provider, { globalStatus, environment });
 
-    // Déclencher automatiquement le test de connexion si isActive = true
-    if (isActive) {
-      // Test de connexion simulé rapide (timeout court)
-      // Ex: on considère que la clé est invalide si elle fait moins de 8 caractères
-      const pingSuccessful = apiKey.length >= 8 && apiSecret.length >= 8;
-      
-      if (pingSuccessful) {
-        isPublished = true;
-        validatedAt = new Date();
-      } else {
-        validationError = 'Clés invalides — non publié vers les abonnés';
-      }
-    }
-
-    const gateway = await this.prisma.paymentGateway.upsert({
-      where: { provider },
-      create: { provider, apiKey, apiSecret, merchantId, isSandbox, isActive, isPublished, validatedAt },
-      update: { apiKey, apiSecret, merchantId, isSandbox, isActive, isPublished, validatedAt },
-    });
-
-    this._logAction(req.user, 'CONFIGURATION_PAIEMENT', 'PaymentGateway', provider, { isActive, isSandbox, isPublished });
-
-    return {
-      gateway,
-      validationError: validationError || null,
-    };
+    return { gateway, validationError };
   }
 
   // ============================================================

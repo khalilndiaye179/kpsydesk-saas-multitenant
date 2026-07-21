@@ -40,6 +40,7 @@ api.interceptors.request.use((config) => {
     const isAuthOrPublicRoute =
       config.url?.includes('/auth/') ||
       config.url?.includes('/tenants/plans') ||
+      config.url?.includes('/tenants/payment-gateways') ||
       config.url?.includes('/admin-tenants');
 
     if (!isAuthOrPublicRoute) {

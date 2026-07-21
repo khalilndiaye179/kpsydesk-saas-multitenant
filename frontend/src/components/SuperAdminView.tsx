@@ -39,13 +39,14 @@ interface FinancialStats {
   }[];
 }
 
-interface GatewayConfig {
-  provider: string;
-  apiKey: string;
-  apiSecret: string;
-  merchantId?: string;
-  isSandbox: boolean;
-  isActive: boolean;
+interface PaymentProviderConfig {
+  id: string;
+  code: string;
+  displayName: string;
+  environment: string;
+  globalStatus: string;
+  currency: string;
+  config?: any;
 }
 
 interface PlanConfig {
@@ -329,13 +330,11 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
   const [savingQuota, setSavingQuota] = useState(false);
 
   // States pour la configuration Mobile Money
-  const [gateways, setGateways] = useState<GatewayConfig[]>([]);
-  const [selectedGateway, setSelectedGateway] = useState<string>('PayTech');
-  const [apiKey, setApiKey] = useState('');
-  const [apiSecret, setApiSecret] = useState('');
-  const [merchantId, setMerchantId] = useState('');
-  const [isSandbox, setIsSandbox] = useState(true);
-  const [isActive, setIsActive] = useState(false);
+  const [providers, setProviders] = useState<PaymentProviderConfig[]>([]);
+  const [selectedProviderCode, setSelectedProviderCode] = useState<string>('WAVE');
+  const [providerConfig, setProviderConfig] = useState<any>({});
+  const [environment, setEnvironment] = useState('SANDBOX');
+  const [globalStatus, setGlobalStatus] = useState('INACTIVE');
   const [savingGateway, setSavingGateway] = useState(false);
   const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'success' | 'failed'>('idle');
 
@@ -407,7 +406,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
       ] = await Promise.all([
         api.get('/admin-tenants/list', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })),
         api.get('/admin-tenants/stats-global', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: null })),
-        userRole === 'SuperAdmin' ? api.get('/admin-tenants/payment-gateway', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+        userRole === 'SuperAdmin' ? api.get('/admin-tenants/payment-providers', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
         api.get('/admin-tenants/plans', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })),
         (userRole === 'SuperAdmin' || userRole === 'Finance') ? api.get('/admin-tenants/promos', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
         api.get('/admin-tenants/quotes', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })),
@@ -427,23 +426,18 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
       setVolumeDiscounts(discountsRes.data || []);
       setAuditLogs(auditLogsRes.data || []);
       
-      const gwList: GatewayConfig[] = gatewayRes.data || [];
-      setGateways(gwList);
+      const provList: PaymentProviderConfig[] = gatewayRes.data || [];
+      setProviders(provList);
       
-      // Charger la configuration existante de la passerelle sélectionnée
-      const current = gwList.find(g => g.provider === selectedGateway);
+      const current = provList.find(p => p.code === selectedProviderCode);
       if (current) {
-        setApiKey(current.apiKey);
-        setApiSecret(current.apiSecret);
-        setMerchantId(current.merchantId || '');
-        setIsSandbox(current.isSandbox);
-        setIsActive(current.isActive);
+        setProviderConfig(current.config || {});
+        setEnvironment(current.environment);
+        setGlobalStatus(current.globalStatus);
       } else {
-        setApiKey('');
-        setApiSecret('');
-        setMerchantId('');
-        setIsSandbox(true);
-        setIsActive(false);
+        setProviderConfig({});
+        setEnvironment('SANDBOX');
+        setGlobalStatus('INACTIVE');
       }
 
       // NOUVEAU : Récupérer les factures, transactions et statistiques
@@ -467,11 +461,12 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
     } finally {
       setLoading(false);
     }
-  }, [userRole, selectedGateway]);
+  }, [userRole, selectedProviderCode]);
 
+  
   useEffect(() => {
     loadData(false);
-  }, [selectedGateway]);
+  }, [selectedProviderCode]);
 
   useEffect(() => {
     setSecondsToNextRefresh(refreshInterval);
@@ -494,7 +489,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isAutoRefreshActive, refreshInterval, selectedGateway]);
+  }, [isAutoRefreshActive, refreshInterval, selectedProviderCode]);
 
   const handleModerate = async (tenantId: string, newStatus: string) => {
     if (!window.confirm(`Voulez-vous vraiment changer le statut de ce locataire en "${newStatus}" ?`)) return;
@@ -535,21 +530,28 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
     e.preventDefault();
     setSavingGateway(true);
     try {
-      const res = await api.post('/admin-tenants/payment-gateway', {
-        provider: selectedGateway,
-        apiKey,
-        apiSecret,
-        merchantId,
-        isSandbox,
-        isActive
-      });
+      const current = providers.find(p => p.code === selectedProviderCode);
+      const payload = {
+        code: selectedProviderCode,
+        displayName: selectedProviderCode, // simplifie pour MVP
+        environment,
+        config: providerConfig,
+      };
       
-      if (res.data?.validationError) {
-        alert(`Configuration enregistrée mais non publiée :\n⚠️ ${res.data.validationError}`);
+      if (current) {
+        await api.put(`/admin-tenants/payment-providers/${current.id}`, payload);
+        if (current.globalStatus !== globalStatus) {
+           await api.put(`/admin-tenants/payment-providers/${current.id}/status`, { status: globalStatus });
+        }
       } else {
-        alert(`Configuration ${selectedGateway} enregistrée et publiée avec succès.`);
+        const res = await api.post('/admin-tenants/payment-providers', payload);
+        // La création par défaut est INACTIVE, donc si ACTIVE demandé on fait un second appel
+        if (globalStatus === 'ACTIVE' && res.data?.id) {
+           await api.put(`/admin-tenants/payment-providers/${res.data.id}/status`, { status: globalStatus });
+        }
       }
       
+      alert(`Configuration ${selectedProviderCode} enregistrée avec succès.`);
       loadData();
     } catch (err: any) {
       alert("Erreur lors de la sauvegarde : " + (err.response?.data?.message || err.message));
@@ -560,10 +562,15 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
 
   const testGatewayPing = async () => {
     setPingStatus('testing');
-    setTimeout(() => {
-      // Simulation ping API
-      setPingStatus(apiKey.length > 10 ? 'success' : 'failed');
-    }, 1200);
+    try {
+      const current = providers.find(p => p.code === selectedProviderCode);
+      if (!current) throw new Error("Provider non créé");
+      const res = await api.post(`/admin-tenants/payment-providers/${current.id}/test`);
+      setPingStatus(res.data.success ? 'success' : 'failed');
+      if (!res.data.success) alert(res.data.message);
+    } catch (err) {
+      setPingStatus('failed');
+    }
   };
 
   const formatPrice = (price: number) => {
@@ -2100,24 +2107,25 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
           <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)', marginBottom: '8px' }}>💳 Choisir un intégrateur</strong>
             {[
-              { id: 'PayTech', name: 'PayTech (Orange Money, Wave, Free)', logo: '⚡' },
-              { id: 'Wave', name: 'Wave Direct API (Sénégal / Côte d\'Ivoire)', logo: '🌊' },
-              { id: 'PayDunya', name: 'PayDunya (Sénégal / Côte d\'Ivoire / Bénin)', logo: '🌴' },
-              { id: 'FedaPay', name: 'FedaPay (Afrique de l\'Ouest / Centrale)', logo: '💳' },
+              { id: 'WAVE', name: 'Wave Direct API', logo: '🌊' },
+              { id: 'ORANGE_MONEY', name: 'Orange Money (Web Payment)', logo: '🍊' },
+              { id: 'FREE_MONEY', name: 'Free Money API', logo: '⚡' },
+              { id: 'CINETPAY', name: 'CinetPay (Afrique)', logo: '💳' },
+              { id: 'PAYDUNYA', name: 'PayDunya (Sénégal/Côte d\'Ivoire)', logo: '🌴' },
             ].map(gw => (
               <label key={gw.id} style={{
                 display: 'flex', alignItems: 'center', gap: '12px',
                 padding: '12px 16px', borderRadius: '10px', cursor: 'pointer',
-                border: selectedGateway === gw.id ? `2px solid var(--accent-blue)` : '1px solid var(--border-color)',
-                background: selectedGateway === gw.id ? `rgba(59, 130, 246, 0.1)` : 'var(--bg-tertiary)',
+                border: selectedProviderCode === gw.id ? `2px solid var(--accent-blue)` : '1px solid var(--border-color)',
+                background: selectedProviderCode === gw.id ? `rgba(59, 130, 246, 0.1)` : 'var(--bg-tertiary)',
                 transition: 'all 0.2s'
               }}>
                 <input 
                   type="radio" 
                   name="provider" 
                   value={gw.id} 
-                  checked={selectedGateway === gw.id} 
-                  onChange={() => setSelectedGateway(gw.id)}
+                  checked={selectedProviderCode === gw.id} 
+                  onChange={() => setSelectedProviderCode(gw.id)}
                   style={{ accentColor: 'var(--accent-blue)' }} 
                 />
                 <span style={{ fontSize: '1.2rem' }}>{gw.logo}</span>
@@ -2129,7 +2137,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
           {/* Config Form */}
           <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '8px', color: 'var(--text-primary)' }}>
-              ⚙️ Paramètres API - {selectedGateway}
+              ⚙️ Paramètres API - {selectedProviderCode}
             </h3>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '24px' }}>
               Configurez vos clés API de production ou de test pour recevoir les paiements par Mobile Money des abonnés.
@@ -2144,8 +2152,8 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                   </label>
                   <input
                     type="password"
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
+                    value={providerConfig.apiKey || ''}
+                    onChange={e => setProviderConfig({...providerConfig, apiKey: e.target.value})}
                     placeholder="pk_live_..."
                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                     required
@@ -2157,8 +2165,8 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                   </label>
                   <input
                     type="password"
-                    value={apiSecret}
-                    onChange={e => setApiSecret(e.target.value)} // stocké dans apiSecret
+                    value={providerConfig.apiSecret || ''}
+                    onChange={e => setProviderConfig({...providerConfig, apiSecret: e.target.value})}
                     placeholder="sk_live_..."
                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                     required
@@ -2166,16 +2174,16 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                 </div>
               </div>
 
-              {['PayTech', 'PayDunya'].includes(selectedGateway) && (
+              {['CINETPAY', 'PAYDUNYA'].includes(selectedProviderCode) && (
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
-                    {selectedGateway === 'PayDunya' ? "Token d'Application (Master Key / Token)" : "Code Marchand (Merchant ID)"}
+                    {selectedProviderCode === 'PAYDUNYA' ? "Token d'Application (Master Key / Token)" : "Code Marchand (Merchant ID)"}
                   </label>
                   <input
                     type="text"
-                    value={merchantId}
-                    onChange={e => setMerchantId(e.target.value)}
-                    placeholder={selectedGateway === 'PayDunya' ? "Ex: mp_live_..." : "Ex: march_8a927..."}
+                    value={providerConfig.merchantId || ''}
+                    onChange={e => setProviderConfig({...providerConfig, merchantId: e.target.value})}
+                    placeholder={selectedProviderCode === 'PAYDUNYA' ? "Ex: mp_live_..." : "Ex: march_8a927..."}
                     style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}
                   />
                 </div>
@@ -2185,8 +2193,8 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
                   <input 
                     type="checkbox" 
-                    checked={isSandbox} 
-                    onChange={e => setIsSandbox(e.target.checked)} 
+                    checked={environment === 'SANDBOX'} 
+                    onChange={e => setEnvironment(e.target.checked ? 'SANDBOX' : 'PRODUCTION')} 
                     style={{ accentColor: 'var(--accent-blue)' }}
                   />
                   Mode Sandbox / Test
@@ -2194,8 +2202,8 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem' }}>
                   <input 
                     type="checkbox" 
-                    checked={isActive} 
-                    onChange={e => setIsActive(e.target.checked)} 
+                    checked={globalStatus === 'ACTIVE'} 
+                    onChange={e => setGlobalStatus(e.target.checked ? 'ACTIVE' : 'INACTIVE')} 
                     style={{ accentColor: 'var(--accent-blue)' }}
                   />
                   Activer cette passerelle de paiement
@@ -2205,7 +2213,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
               <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px 16px', fontSize: '0.82rem' }}>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>🔗 URL Webhook automatique</div>
                 <code style={{ color: 'var(--accent-blue)', wordBreak: 'break-all' }}>
-                  http://api.inventaire-parc.com/api/subscriptions/webhook/{selectedGateway.toLowerCase()}
+                  http://api.inventaire-parc.com/api/subscriptions/webhook/{selectedProviderCode.toLowerCase()}
                 </code>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                   Copiez cette URL de notification dans le tableau de bord de votre intégrateur pour valider les paiements en direct.
@@ -2245,7 +2253,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
 
               {pingStatus === 'success' && (
                 <div style={{ color: '#22c55e', fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <i className="ph-fill ph-check-circle" /> Connexion réussie à l'API de {selectedGateway} ✅
+                  <i className="ph-fill ph-check-circle" /> Connexion réussie à l'API de {selectedProviderCode} ✅
                 </div>
               )}
               {pingStatus === 'failed' && (

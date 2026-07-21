@@ -13,7 +13,9 @@ export const TenantSettingsView: React.FC = () => {
     companyTaxId: '',
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [editingMethod, setEditingMethod] = useState<any>(null);
+  const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
 
   useEffect(() => {
     fetchTenantDetails();
@@ -38,10 +40,41 @@ export const TenantSettingsView: React.FC = () => {
           setLogoPreview(`${baseUrl}${res.data.tenant.logoUrl}`);
         }
       }
+      
+      // Fetch payment methods
+      const pmRes = await api.get('/tenant-payments/methods');
+      setPaymentMethods(pmRes.data || []);
     } catch (err) {
       console.error("Erreur lors du chargement des informations du tenant", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTogglePaymentMethod = async (method: any, newStatus: string) => {
+    try {
+      await api.patch(`/tenant-payments/methods/${method.id}`, { status: newStatus });
+      fetchTenantDetails();
+    } catch (err: any) {
+      alert("Erreur lors du changement de statut: " + (err.response?.data?.message || err.message));
+    }
+  };
+
+  const handleSavePaymentMethodConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMethod) return;
+    setSavingPaymentMethod(true);
+    try {
+      await api.patch(`/tenant-payments/methods/${editingMethod.id}`, {
+        configOverrides: editingMethod.configOverrides
+      });
+      alert("Configuration sauvegardée");
+      setEditingMethod(null);
+      fetchTenantDetails();
+    } catch (err: any) {
+      alert("Erreur lors de la sauvegarde de la configuration: " + (err.response?.data?.message || err.message));
+    } finally {
+      setSavingPaymentMethod(false);
     }
   };
 
@@ -213,6 +246,88 @@ export const TenantSettingsView: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* PAYMENT METHODS SECTION */}
+      <div className="module-container" style={{ maxWidth: '800px', marginTop: '2rem' }}>
+        <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+          Moyens de Paiement
+        </h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+          Activez ou désactivez les moyens de paiement proposés par la plateforme, et configurez vos propres paramètres (ex: frais à la charge du client) si autorisé.
+        </p>
+
+        {paymentMethods.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)' }}>Aucun moyen de paiement configuré sur la plateforme.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {paymentMethods.map((pm: any) => (
+              <div key={pm.id} style={{ padding: '15px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h4 style={{ margin: '0 0 5px 0' }}>{pm.providerCode}</h4>
+                    <span className={`status-badge ${pm.status === 'ACTIVE' ? 'success' : 'warning'}`}>
+                      {pm.status}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                      className="btn-outline" 
+                      onClick={() => setEditingMethod(pm)}
+                    >
+                      Configurer
+                    </button>
+                    {pm.status === 'ACTIVE' ? (
+                      <button 
+                        className="btn-primary" 
+                        style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }}
+                        onClick={() => handleTogglePaymentMethod(pm, 'INACTIVE')}
+                      >
+                        Désactiver
+                      </button>
+                    ) : (
+                      <button 
+                        className="btn-primary" 
+                        onClick={() => handleTogglePaymentMethod(pm, 'ACTIVE')}
+                      >
+                        Activer
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {editingMethod && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="module-container" style={{ width: '400px' }}>
+            <h3 style={{ marginBottom: '15px' }}>Configuration: {editingMethod.providerCode}</h3>
+            <form onSubmit={handleSavePaymentMethodConfig}>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={editingMethod.configOverrides?.customerPaysFee || false}
+                    onChange={(e) => setEditingMethod({
+                      ...editingMethod, 
+                      configOverrides: { ...editingMethod.configOverrides, customerPaysFee: e.target.checked }
+                    })}
+                  />
+                  Le client paie les frais de transaction
+                </label>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" className="btn-outline" onClick={() => setEditingMethod(null)} disabled={savingPaymentMethod}>Annuler</button>
+                <button type="submit" className="btn-primary" disabled={savingPaymentMethod}>
+                  {savingPaymentMethod ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -11,10 +11,12 @@ import { TenantModule } from './tenant/tenant.module';
 import { TenantMiddleware } from './tenant/tenant.middleware';
 
 import { ScheduleModule } from '@nestjs/schedule';
-
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { PaymentModule } from './payment/payment.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+    EventEmitterModule.forRoot(),
     // ── Rate limiting global (par IP + par tenant via l'extension Prisma) ──
     ThrottlerModule.forRoot([
       {
@@ -42,6 +44,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     TicketsModule,
     UsersModule,
     ExtraModule,
+    PaymentModule,
   ],
   controllers: [],
   providers: [

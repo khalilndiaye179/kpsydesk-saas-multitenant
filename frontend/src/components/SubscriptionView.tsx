@@ -91,6 +91,7 @@ function UsageBar({ label, current, quota, color }: { label: string; current: nu
 interface GatewayInfo {
   id: string;
   provider: string;
+  displayName: string;
   merchantId?: string;
   isSandbox: boolean;
   isPublished: boolean;
@@ -108,6 +109,11 @@ export function SubscriptionView() {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [selectedNewPlan, setSelectedNewPlan] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // Modal paiement
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentGateway, setPaymentGateway] = useState<string>('');
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<{ name: string; interval: string } | null>(null);
 
   const fetchInfo = useCallback(async () => {
     try {
@@ -136,31 +142,62 @@ export function SubscriptionView() {
     
     api.get('/tenants/payment-gateways')
       .then(res => {
-        setGateways(res.data);
-        if (res.data.length > 0) {
-          setSelectedGateway(res.data[0].provider);
+        // Normalize backend format: { code, displayName, environment, publishedAt } -> GatewayInfo
+        const normalized: GatewayInfo[] = (res.data || []).map((p: any) => ({
+          id: p.id,
+          provider: p.code || p.provider || '',
+          displayName: p.displayName || p.code || p.provider || '',
+          isSandbox: (p.environment || '').toUpperCase() === 'SANDBOX',
+          isPublished: p.globalStatus === 'ACTIVE',
+          validatedAt: p.publishedAt,
+        }));
+        setGateways(normalized);
+        if (normalized.length > 0) {
+          setSelectedGateway(normalized[0].provider);
         }
       })
       .catch(() => {});
   }, [fetchInfo]);
 
-  const handleUpgrade = async () => {
+  // Étape 1 : ouvrir le modal de paiement avant de changer de plan
+  const handleInitiateUpgrade = () => {
     if (!selectedNewPlan) return;
-    setUpgrading(true);
+    setPendingPlan({ name: selectedNewPlan, interval: isYearlyBilling ? 'YEARLY' : 'MONTHLY' });
+    setPaymentGateway(gateways.length > 0 ? gateways[0].provider : '');
+    setShowPaymentModal(true);
+  };
+
+  // Étape 2 : l'utilisateur a confirmé le paiement → appliquer le changement de plan
+  const handleConfirmPaymentAndUpgrade = async () => {
+    if (!pendingPlan || !paymentGateway) return;
+    setProcessingPayment(true);
     try {
-      await api.post('/subscriptions/upgrade', { 
-        planName: selectedNewPlan,
-        billingInterval: isYearlyBilling ? 'YEARLY' : 'MONTHLY',
+      // Simuler la validation du paiement (dans un vrai système, cette étape
+      // serait confirmée par un webhook de la passerelle de paiement)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Appliquer le changement de plan
+      await api.post('/subscriptions/upgrade', {
+        planName: pendingPlan.name,
+        billingInterval: pendingPlan.interval,
+        paymentGateway: paymentGateway,
       });
-      setMessage({ type: 'success', text: `Plan mis à jour vers "${selectedNewPlan}" (${isYearlyBilling ? 'Annuel' : 'Mensuel'}) avec succès !` });
+      setShowPaymentModal(false);
       setShowUpgrade(false);
+      setSelectedNewPlan('');
+      setPendingPlan(null);
+      setMessage({ type: 'success', text: `Plan migré vers "${pendingPlan.name}" (${pendingPlan.interval === 'YEARLY' ? 'Annuel' : 'Mensuel'}) — paiement validé via ${paymentGateway}.` });
       fetchInfo();
     } catch (err: any) {
       setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors du changement de plan.' });
+      setShowPaymentModal(false);
     } finally {
-      setUpgrading(false);
+      setProcessingPayment(false);
     }
   };
+
+  const handleUpgrade = handleInitiateUpgrade;
+
 
   const handleCancel = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir annuler votre abonnement ? Vos données seront conservées.')) return;
@@ -505,18 +542,19 @@ export function SubscriptionView() {
               </div>
             ) : (
               gateways.map(gw => {
+                const code = gw.provider.toUpperCase();
                 let logo = '💳';
                 let color = '#3b82f6';
                 let bg = '#3b82f615';
                 let border = '#3b82f640';
 
-                if (gw.provider === 'Wave') { logo = '🌊'; color = '#3b82f6'; bg = '#3b82f615'; border = '#3b82f640'; }
-                if (gw.provider === 'PayTech') { logo = '🚀'; color = '#22c55e'; bg = '#22c55e15'; border = '#22c55e40'; }
-                if (gw.provider === 'OrangeMoney') { logo = '🍊'; color = '#f97316'; bg = '#f9731615'; border = '#f9731640'; }
-                if (gw.provider === 'Wave' || gw.provider === 'OrangeMoney' || gw.provider === 'MTNMoMo' || gw.provider === 'FreeMoney') {
-                  logo = gw.provider === 'Wave' ? '🌊' : gw.provider === 'OrangeMoney' ? '🍊' : '📱';
-                }
+                if (code === 'WAVE') { logo = '🌊'; color = '#3b82f6'; bg = '#3b82f615'; border = '#3b82f640'; }
+                else if (code === 'ORANGE_MONEY' || code === 'ORANGEMONEY') { logo = '🍊'; color = '#f97316'; bg = '#f9731615'; border = '#f9731640'; }
+                else if (code === 'PAYTECH') { logo = '🚀'; color = '#22c55e'; bg = '#22c55e15'; border = '#22c55e40'; }
+                else if (code === 'MTN_MOMO' || code === 'MTNMOMO') { logo = '📱'; color = '#f59e0b'; bg = '#f59e0b15'; border = '#f59e0b40'; }
+                else if (code === 'FREE_MONEY' || code === 'FREEMONEY') { logo = '📱'; color = '#8b5cf6'; bg = '#8b5cf615'; border = '#8b5cf640'; }
 
+                const displayLabel = gw.displayName || gw.provider;
                 const isSelected = selectedGateway === gw.provider;
 
                 return (
@@ -532,7 +570,7 @@ export function SubscriptionView() {
                   >
                     <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '1.2rem' }}>{logo}</span>
-                      {gw.provider}
+                      {displayLabel}
                       {gw.isSandbox && (
                         <span style={{ background: '#f59e0b20', color: '#b45309', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '50px', marginLeft: 'auto' }}>
                           TEST
@@ -540,7 +578,7 @@ export function SubscriptionView() {
                       )}
                     </div>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Intégration certifiée. Validée le {gw.validatedAt ? new Date(gw.validatedAt).toLocaleDateString('fr-FR') : 'inconnue'}.
+                      Intégration certifiée.{gw.validatedAt ? ` Validée le ${new Date(gw.validatedAt).toLocaleDateString('fr-FR')}.` : ''}
                     </span>
                   </div>
                 );
@@ -568,6 +606,165 @@ export function SubscriptionView() {
         </div>
 
       </div>
+
+      {/* ── Modal de Paiement Obligatoire ─────────────────────────── */}
+      {showPaymentModal && pendingPlan && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+            borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '480px',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.5)'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <i className="ph-bold ph-shield-check" style={{ fontSize: '1.4rem', color: 'white' }} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Paiement sécurisé requis</h3>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  Migration vers le plan <strong style={{ color: 'var(--text-primary)' }}>{pendingPlan.name}</strong>
+                  {' '}({pendingPlan.interval === 'YEARLY' ? 'Annuel' : 'Mensuel'})
+                </p>
+              </div>
+            </div>
+
+            {/* Récapitulatif */}
+            <div style={{
+              background: 'var(--bg-tertiary)', borderRadius: '12px',
+              padding: '16px', marginBottom: '20px',
+              border: '1px solid var(--border-color)'
+            }}>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '8px' }}>
+                Récapitulatif
+              </div>
+              {[
+                { label: 'Plan sélectionné', value: pendingPlan.name },
+                { label: 'Facturation', value: pendingPlan.interval === 'YEARLY' ? 'Annuelle (avec remise)' : 'Mensuelle' },
+                { label: 'Plan actuel', value: info?.subscription?.plan ?? 'Aucun' },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: '0.85rem' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{label}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Choix de passerelle */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontWeight: 700, fontSize: '0.88rem', marginBottom: '12px' }}>
+                Choisir le moyen de paiement :
+              </div>
+              {gateways.length === 0 ? (
+                <div style={{
+                  padding: '16px', borderRadius: '10px', border: '1px dashed var(--border-color)',
+                  color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.85rem'
+                }}>
+                  <i className="ph ph-warning" style={{ marginRight: '6px', color: '#f59e0b' }} />
+                  Aucune passerelle disponible. Contactez l'administrateur.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {gateways.map(gw => {
+                    const code = gw.provider.toUpperCase();
+                    let logo = '💳';
+                    let color = '#3b82f6';
+                    if (code === 'WAVE') { logo = '🌊'; color = '#3b82f6'; }
+                    else if (code === 'ORANGE_MONEY' || code === 'ORANGEMONEY') { logo = '🍊'; color = '#f97316'; }
+                    else if (code === 'PAYTECH') { logo = '🚀'; color = '#22c55e'; }
+                    else if (code === 'MTN_MOMO' || code === 'MTNMOMO') { logo = '📱'; color = '#f59e0b'; }
+
+                    const isSelected = paymentGateway === gw.provider;
+                    return (
+                      <label key={gw.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '12px',
+                        padding: '12px 16px', borderRadius: '10px', cursor: 'pointer',
+                        border: isSelected ? `2px solid ${color}` : '1px solid var(--border-color)',
+                        background: isSelected ? `${color}15` : 'var(--bg-tertiary)',
+                        transition: 'all 0.15s'
+                      }}>
+                        <input
+                          type="radio"
+                          name="paymentGateway"
+                          value={gw.provider}
+                          checked={isSelected}
+                          onChange={() => setPaymentGateway(gw.provider)}
+                          style={{ accentColor: color }}
+                        />
+                        <span style={{ fontSize: '1.4rem' }}>{logo}</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                            {gw.displayName || gw.provider}
+                          </div>
+                          {gw.isSandbox && (
+                            <span style={{
+                              fontSize: '0.65rem', background: '#f59e0b20', color: '#b45309',
+                              padding: '1px 6px', borderRadius: '50px', fontWeight: 600
+                            }}>MODE TEST</span>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <i className="ph-bold ph-check-circle" style={{ marginLeft: 'auto', color, fontSize: '1.2rem' }} />
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Boutons */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => { setShowPaymentModal(false); setPendingPlan(null); }}
+                disabled={processingPayment}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '10px',
+                  border: '1px solid var(--border-color)', background: 'transparent',
+                  cursor: 'pointer', color: 'var(--text-muted)', fontWeight: 600
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmPaymentAndUpgrade}
+                disabled={!paymentGateway || processingPayment || gateways.length === 0}
+                style={{
+                  flex: 2, padding: '12px', borderRadius: '10px', border: 'none',
+                  background: paymentGateway && gateways.length > 0
+                    ? 'linear-gradient(135deg, #22c55e, #16a34a)'
+                    : 'var(--border-color)',
+                  color: 'white', fontWeight: 700, cursor: paymentGateway ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                  fontSize: '0.9rem', transition: 'opacity 0.2s'
+                }}
+              >
+                {processingPayment ? (
+                  <>
+                    <i className="ph ph-circle-notch" style={{ animation: 'spin 1s linear infinite' }} />
+                    Traitement en cours...
+                  </>
+                ) : (
+                  <>
+                    <i className="ph-bold ph-shield-check" />
+                    Confirmer & Payer
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

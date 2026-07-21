@@ -112,6 +112,7 @@ model Tenant {
   ticketComments TicketComment[]
   transactions   Transaction[]
   users          User[]
+  paymentMethods TenantPaymentMethod[]
 }
 
 model Subscription {
@@ -426,7 +427,55 @@ model Depreciation {
   @@unique([assetCode, tenantId])
 }
 
-model PaymentGateway {
+model PaymentProvider {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  displayName     String
+  logoUrl         String?
+  description     String?
+  configEncrypted Json?
+  environment     String   @default("SANDBOX")
+  globalStatus    String   @default("INACTIVE")
+  currency        String   @default("XOF")
+  feePercent      Float?
+  settlementDays  Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  publishedAt     DateTime?
+
+  tenantMethods   TenantPaymentMethod[]
+  auditLogs       ProviderAuditLog[]
+}
+
+model TenantPaymentMethod {
+  id                    String          @id @default(uuid())
+  tenantId              String
+  providerId            String
+  tenantStatus          String          @default("AVAILABLE")
+  mode                  String          @default("AGGREGATOR")
+  tenantConfigEncrypted Json?
+  activatedAt           DateTime?
+  createdAt             DateTime        @default(now())
+  
+  tenant                Tenant          @relation(fields: [tenantId], references: [id])
+  provider              PaymentProvider @relation(fields: [providerId], references: [id])
+
+  @@unique([tenantId, providerId])
+}
+
+model ProviderAuditLog {
+  id          String          @id @default(uuid())
+  providerId  String
+  action      String
+  performedBy String
+  oldConfig   Json?
+  newConfig   Json?
+  createdAt   DateTime        @default(now())
+
+  provider    PaymentProvider @relation(fields: [providerId], references: [id])
+}
+
+model PaymentGatewayLegacy {
   id          String    @id @default(uuid())
   provider    String    @unique
   apiKey      String
