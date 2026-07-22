@@ -2,9 +2,9 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
-import * as nodemailer from 'nodemailer';
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
+import { MailService } from '../mail/mail.service';
 
 /** Entrée OTP en mémoire avec TTL de 15 minutes */
 interface OtpEntry {
@@ -16,32 +16,14 @@ interface OtpEntry {
 @Injectable()
 export class AuthService {
   private readonly otpStore = new Map<string, OtpEntry>();
-  private transporter: nodemailer.Transporter | null = null;
 
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) {}
 
-  private async getTransporter() {
-    if (this.transporter) return this.transporter;
-    try {
-      const testAccount = await nodemailer.createTestAccount();
-      this.transporter = nodemailer.createTransport({
-        host: testAccount.smtp.host,
-        port: testAccount.smtp.port,
-        secure: testAccount.smtp.secure,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-      return this.transporter;
-    } catch (err) {
-      console.error('Failed to create nodemailer test account', err);
-      return null;
-    }
-  }
+
 
   /**
    * Valide les identifiants d'un utilisateur dans le contexte d'un tenant.
@@ -190,20 +172,11 @@ export class AuthService {
     this.otpStore.set(otp, { code: otp, userId: superAdmin.id, expiresAt });
 
     // Envoi de l'email
-    const transporter = await this.getTransporter();
-    if (transporter) {
-      const info = await transporter.sendMail({
-        from: '"Console SaaS" <noreply@consolesaas.com>',
-        to: superAdmin.recoveryEmail,
-        subject: "Votre code de récupération (Console SaaS)",
-        text: `Bonjour ${superAdmin.firstName},\n\nVotre code OTP de récupération est : ${otp}\nIl est valable 15 minutes.\n\nSi vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message.`,
-        html: `<p>Bonjour ${superAdmin.firstName},</p><p>Votre code OTP de récupération est : <b style="font-size:1.5rem;color:#3b82f6;letter-spacing:4px;">${otp}</b></p><p>Il est valable 15 minutes.</p><p>Si vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message.</p>`
-      });
-      console.log('--- EMAIL OTP ENVOYÉ ---');
-      console.log('Aperçu du mail : ' + nodemailer.getTestMessageUrl(info));
-    } else {
-      console.log('Erreur Mailer, OTP de fallback : ' + otp);
-    }
+    const subject = "Votre code de récupération (Console SaaS)";
+    const text = `Bonjour ${superAdmin.firstName},\n\nVotre code OTP de récupération est : ${otp}\nIl est valable 15 minutes.\n\nSi vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message.`;
+    const html = `<p>Bonjour ${superAdmin.firstName},</p><p>Votre code OTP de récupération est : <b style="font-size:1.5rem;color:#3b82f6;letter-spacing:4px;">${otp}</b></p><p>Il est valable 15 minutes.</p><p>Si vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message.</p>`;
+
+    await this.mailService.sendMail(superAdmin.recoveryEmail, subject, text, html);
 
     return {
       otp: '------',

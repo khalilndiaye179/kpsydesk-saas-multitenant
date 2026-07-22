@@ -13,6 +13,7 @@ import { TenantMiddleware } from './tenant/tenant.middleware';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PaymentModule } from './payment/payment.module';
+import { MailModule } from './mail/mail.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -45,6 +46,7 @@ import { PaymentModule } from './payment/payment.module';
     UsersModule,
     ExtraModule,
     PaymentModule,
+    MailModule,
   ],
   controllers: [],
   providers: [
