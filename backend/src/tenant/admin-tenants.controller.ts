@@ -1291,12 +1291,23 @@ export class AdminTenantsController {
   ) {
     this._checkConsoleAccess(req.user);
     
-    const user = await this.prisma.user.findUnique({
-      where: { id: body.targetUserId },
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { id: body.targetUserId },
+          {
+            tenantId: body.targetUserId,
+            role: 'ADMIN',
+          },
+          {
+            tenantId: body.targetUserId,
+          }
+        ]
+      },
       include: { tenant: true }
     });
     if (!user) {
-      throw new NotFoundException("Utilisateur introuvable.");
+      throw new NotFoundException("Utilisateur introuvable. Aucun utilisateur n'est associé à cet abonné ou cet identifiant.");
     }
 
     // Générer et enregistrer l'OTP
