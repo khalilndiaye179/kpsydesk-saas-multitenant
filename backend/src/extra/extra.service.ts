@@ -158,7 +158,7 @@ export class ExtraService {
   }
 
   async clearAuditLogs() {
-    return this.prisma.auditLog.deleteMany();
+    throw new BadRequestException("Accès refusé : Le journal d'audit est inaltérable et ne peut pas être vidé.");
   }
 
   private formatDates(entity: string, data: any): any {

@@ -34,18 +34,6 @@ export const AuditView: React.FC = () => {
     fetchLogs();
   }, []);
 
-  const handleClearLogs = async () => {
-    if (confirm("Êtes-vous sûr de vouloir vider TOUT le journal d'audit ? Cette action est irréversible.")) {
-      try {
-        await api.delete('/audit-logs/clear');
-        fetchLogs();
-      } catch (err) {
-        console.warn("API clear failed. Clearing locally.");
-        setLogs([]);
-      }
-    }
-  };
-
   return (
     <div className="fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -53,11 +41,6 @@ export const AuditView: React.FC = () => {
           <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Journal d'Audit (Traçabilité)</h1>
           <p style={{ color: 'var(--text-muted)' }}>Historique complet des modifications et suppressions du système</p>
         </div>
-        {isAdmin && (
-          <button className="btn-primary" style={{ backgroundColor: 'var(--danger)' }} onClick={handleClearLogs}>
-            <i className="ph ph-trash"></i> Vider l'historique
-          </button>
-        )}
       </div>
 
       <div className="module-container">

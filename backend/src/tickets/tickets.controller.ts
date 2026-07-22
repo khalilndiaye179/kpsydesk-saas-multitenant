@@ -43,7 +43,7 @@ export class TicketsController {
     if (req.user.role === Role.USER) {
       createTicketDto.creatorId = req.user.userId;
     }
-    return this.ticketsService.create(createTicketDto);
+    return this.ticketsService.create(createTicketDto, req.user);
   }
 
   @Put(':id')
@@ -70,13 +70,14 @@ export class TicketsController {
   assign(
     @Param('id') id: string,
     @Body('assigneeId') assigneeId: string,
+    @Req() req: any,
   ) {
-    return this.ticketsService.assign(id, assigneeId);
+    return this.ticketsService.assign(id, assigneeId, req.user);
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.ticketsService.remove(id);
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.ticketsService.remove(id, req.user);
   }
 }

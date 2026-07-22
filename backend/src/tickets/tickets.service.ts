@@ -52,7 +52,7 @@ export class TicketsService {
     return ticket;
   }
 
-  async create(data: any): Promise<Ticket> {
+  async create(data: any, currentUser?: any): Promise<Ticket> {
     try {
       let creatorId = data.creatorId;
       if (creatorId) {
@@ -92,6 +92,18 @@ export class TicketsService {
           asset: true,
         },
       });
+
+      // Log audit for ticket creation
+      await this.prisma.auditLog.create({
+        data: {
+          action: 'CREATION',
+          entityType: 'TICKET',
+          entityId: ticket.id,
+          newData: JSON.parse(JSON.stringify(ticket)),
+          performedBy: currentUser?.email || (ticket.creator ? ticket.creator.email : 'Système'),
+          tenantId: ticket.tenantId,
+        }
+      }).catch(() => {});
 
       // Notify assignee if assigned on creation
       if (ticket.assigneeId && ticket.assignee) {
@@ -159,6 +171,19 @@ ${this.generateTicketTableHtml(ticket)}
         include: { assignee: true, creator: true, asset: true },
       });
 
+      // Log audit for ticket update
+      await this.prisma.auditLog.create({
+        data: {
+          action: 'MODIFICATION',
+          entityType: 'TICKET',
+          entityId: id,
+          oldData: currentTicket ? JSON.parse(JSON.stringify(currentTicket)) : undefined,
+          newData: JSON.parse(JSON.stringify(updatedTicket)),
+          performedBy: currentUser?.email || 'Système',
+          tenantId: updatedTicket.tenantId,
+        }
+      }).catch(() => {});
+
       // Notify new assignee if changed
       if (prismaData.assigneeId && currentTicket.assigneeId !== prismaData.assigneeId && updatedTicket.assignee) {
         const subject = `Nouveau ticket assigné : ${updatedTicket.title}`;
@@ -180,14 +205,34 @@ ${this.generateTicketTableHtml(updatedTicket)}
     }
   }
 
-  async remove(id: string): Promise<Ticket> {
+  async remove(id: string, currentUser?: any): Promise<Ticket> {
     try {
+      const ticketToDelete = await this.prisma.ticket.findUnique({
+        where: { id },
+      });
+
       await this.prisma.ticketComment.deleteMany({
         where: { ticketId: id },
       });
-      return await this.prisma.ticket.delete({
+
+      const deletedTicket = await this.prisma.ticket.delete({
         where: { id },
       });
+
+      if (ticketToDelete) {
+        await this.prisma.auditLog.create({
+          data: {
+            action: 'SUPPRESSION',
+            entityType: 'TICKET',
+            entityId: id,
+            oldData: JSON.parse(JSON.stringify(ticketToDelete)),
+            performedBy: currentUser?.email || 'Admin',
+            tenantId: ticketToDelete.tenantId,
+          }
+        }).catch(() => {});
+      }
+
+      return deletedTicket;
     } catch (error: any) {
       if (error.code === 'P2025') {
         throw new NotFoundException(`Ticket introuvable.`);
@@ -197,6 +242,10 @@ ${this.generateTicketTableHtml(updatedTicket)}
   }
 
   async updateStatus(id: string, status: string, currentUser?: any): Promise<Ticket> {
+    const currentTicket = await this.prisma.ticket.findUnique({
+      where: { id },
+    });
+
     let finalStatus = status;
     if (currentUser && currentUser.role !== 'ADMIN') {
       if (status === 'RESOLVED') {
@@ -205,13 +254,30 @@ ${this.generateTicketTableHtml(updatedTicket)}
         finalStatus = 'PENDING_CLOSED';
       }
     }
-    return this.prisma.ticket.update({
+
+    const updatedTicket = await this.prisma.ticket.update({
       where: { id },
       data: { status: finalStatus },
     });
+
+    if (currentTicket) {
+      await this.prisma.auditLog.create({
+        data: {
+          action: 'STATUT_CHANGE',
+          entityType: 'TICKET',
+          entityId: id,
+          oldData: { status: currentTicket.status },
+          newData: { status: finalStatus },
+          performedBy: currentUser?.email || 'Système',
+          tenantId: currentTicket.tenantId,
+        }
+      }).catch(() => {});
+    }
+
+    return updatedTicket;
   }
 
-  async assign(id: string, assigneeId: string): Promise<Ticket> {
+  async assign(id: string, assigneeId: string, currentUser?: any): Promise<Ticket> {
     const currentTicket = await this.prisma.ticket.findUnique({
       where: { id },
       include: { assignee: true }
@@ -229,6 +295,21 @@ ${this.generateTicketTableHtml(updatedTicket)}
       },
       include: { assignee: true, creator: true, asset: true }
     });
+
+    // Log audit for assignment
+    if (currentTicket) {
+      await this.prisma.auditLog.create({
+        data: {
+          action: 'ASSIGNATION',
+          entityType: 'TICKET',
+          entityId: id,
+          oldData: { assigneeId: currentTicket.assigneeId },
+          newData: { assigneeId },
+          performedBy: currentUser?.email || 'Système',
+          tenantId: currentTicket.tenantId,
+        }
+      }).catch(() => {});
+    }
 
     // Notify new assignee if changed and exists
     if (assigneeId && currentTicket.assigneeId !== assigneeId && updatedTicket.assignee) {

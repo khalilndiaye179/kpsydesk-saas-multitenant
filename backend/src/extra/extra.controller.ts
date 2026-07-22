@@ -91,15 +91,8 @@ export class ExtraController {
       throw new ForbiddenException("Accès refusé : privilèges insuffisants.");
     }
 
-    if (entity.toLowerCase() === 'audit-logs' && id.toLowerCase() === 'clear') {
-      if (!isAdmin) {
-        throw new ForbiddenException("Accès refusé : administration requise.");
-      }
-      return this.service.clearAuditLogs();
-    }
-
-    if ((entity === 'audit-logs' || entity === 'depreciations') && !isAdmin) {
-      throw new ForbiddenException("Accès refusé : administration requise.");
+    if (entity.toLowerCase() === 'audit-logs') {
+      throw new ForbiddenException("Accès refusé : Le journal d'audit est inaltérable. Il ne peut être ni purgé ni supprimé pour des raisons de traçabilité et d'audit légal.");
     }
 
     return this.service.remove(entity, id, performedBy);

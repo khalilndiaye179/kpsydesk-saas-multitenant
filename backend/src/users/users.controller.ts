@@ -37,8 +37,8 @@ export class UsersController {
 
   @Post()
   @Roles(Role.ADMIN)
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  create(@Body() createUserDto: CreateUserDto, @Req() req: any) {
+    return this.usersService.create(createUserDto, req.user);
   }
 
   @Put(':id/role')
@@ -46,8 +46,9 @@ export class UsersController {
   updateRole(
     @Param('id') id: string,
     @Body('role') role: Role,
+    @Req() req: any,
   ) {
-    return this.usersService.updateRole(id, role);
+    return this.usersService.updateRole(id, role, req.user);
   }
 
   @Put(':id')
@@ -63,18 +64,18 @@ export class UsersController {
     if ('mfaEnabled' in data) {
       delete (data as any).mfaEnabled;
     }
-    return this.usersService.update(id, data);
+    return this.usersService.update(id, data, req.user);
   }
 
   @Post(':id/reset-mfa')
   @Roles(Role.ADMIN)
-  resetMfa(@Param('id') id: string) {
-    return this.usersService.resetMfa(id);
+  resetMfa(@Param('id') id: string, @Req() req: any) {
+    return this.usersService.resetMfa(id, req.user);
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.usersService.remove(id, req.user);
   }
 }
