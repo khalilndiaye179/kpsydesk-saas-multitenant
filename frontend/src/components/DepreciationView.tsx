@@ -29,18 +29,65 @@ const computeDepreciation = (record: DepreciationRecord) => {
   let vnc = 0;
   let pctAmorti = 0;
 
+  // Règle 1 : La base amortissable est : Coût initial - Valeur Résiduelle
+  const baseAmortissable = Math.max(0, record.initialCost - record.residualFloor);
+
   if (record.method === 'Degressive') {
-    // Méthode dégressive : taux = 1/durée × coeff dégressive (2x)
-    const tauxDegressif = (1 / record.durationYears) * 2;
-    let val = record.initialCost;
-    for (let y = 0; y < Math.floor(yearsElapsed); y++) {
-      val = val * (1 - tauxDegressif);
+    // Règle 2 : Coefficient dégressif légal SYSCOHADA :
+    // - 2 ans à 4 ans : 1.5
+    // - 5 ans à 6 ans : 2.0
+    // - Plus de 6 ans : 2.5
+    let coef = 1.0;
+    if (record.durationYears <= 4) {
+      coef = 1.5;
+    } else if (record.durationYears <= 6) {
+      coef = 2.0;
+    } else {
+      coef = 2.5;
     }
-    vnc = Math.max(record.residualFloor, val);
+
+    const tauxLinearInitial = 1 / record.durationYears;
+    const tauxDegressif = tauxLinearInitial * coef;
+
+    let amortiCumule = 0;
+    const fullYearsElapsed = Math.floor(yearsElapsed);
+    const partialYear = yearsElapsed - fullYearsElapsed;
+
+    // Règle 3 : Calcul dégressif annuel avec bascule vers le linéaire restant
+    for (let y = 0; y < record.durationYears; y++) {
+      const remainingYears = record.durationYears - y;
+      const tauxLinearRemaining = 1 / remainingYears;
+
+      let currentTaux = tauxDegressif;
+      if (tauxLinearRemaining > tauxDegressif) {
+        currentTaux = tauxLinearRemaining;
+      }
+
+      // Dotation annuelle théorique sur la valeur comptable résiduelle
+      const baseVncAnnuelle = Math.max(0, record.initialCost - amortiCumule);
+      const dotation = baseVncAnnuelle * currentTaux;
+
+      // Si nous sommes dans l'année en cours d'évaluation
+      if (yearsElapsed >= y && yearsElapsed < y + 1) {
+        const dotationPro = dotation * partialYear;
+        const totalA = amortiCumule + dotationPro;
+        vnc = Math.max(record.residualFloor, record.initialCost - totalA);
+        break;
+      }
+
+      amortiCumule += dotation;
+      if (y === record.durationYears - 1) {
+        vnc = record.residualFloor;
+      }
+    }
+
+    if (yearsElapsed >= record.durationYears) {
+      vnc = record.residualFloor;
+    }
   } else {
     // Méthode linéaire (défaut)
-    const dotationAnnuelle = record.initialCost / record.durationYears;
-    const totalAmorti = Math.min(dotationAnnuelle * yearsElapsed, record.initialCost);
+    const dotationAnnuelle = baseAmortissable / record.durationYears;
+    const totalAmorti = Math.min(dotationAnnuelle * yearsElapsed, baseAmortissable);
     vnc = Math.max(record.residualFloor, record.initialCost - totalAmorti);
   }
 
@@ -667,6 +714,7 @@ export const DepreciationView: React.FC = () => {
                 <div>
                   <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem' }}>Durée d'amortissement (années) *</label>
                   <select value={formFields.durationYears} onChange={e => setFormFields({ ...formFields, durationYears: Number(e.target.value) })} style={inputStyle}>
+                    <option value={2}>2 ans (tablettes / smartphones / accessoires)</option>
                     <option value={3}>3 ans (périphériques)</option>
                     <option value={5}>5 ans (PC portables / de bureau)</option>
                     <option value={7}>7 ans (équipements réseau)</option>
