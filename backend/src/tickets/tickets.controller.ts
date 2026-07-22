@@ -52,7 +52,7 @@ export class TicketsController {
     if (req.user.role === Role.USER && ticket.creatorId !== req.user.userId) {
       throw new ForbiddenException("Vous n'avez pas l'autorisation de modifier ce ticket.");
     }
-    return this.ticketsService.update(id, data);
+    return this.ticketsService.update(id, data, req.user);
   }
 
   @Put(':id/status')
@@ -60,8 +60,9 @@ export class TicketsController {
   updateStatus(
     @Param('id') id: string,
     @Body('status') status: string,
+    @Req() req: any,
   ) {
-    return this.ticketsService.updateStatus(id, status);
+    return this.ticketsService.updateStatus(id, status, req.user);
   }
 
   @Put(':id/assign')

@@ -127,7 +127,7 @@ ${this.generateTicketTableHtml(ticket)}
     }
   }
 
-  async update(id: string, data: any): Promise<Ticket> {
+  async update(id: string, data: any, currentUser?: any): Promise<Ticket> {
     const { id: dataId, creatorId, ...prismaData } = data;
     try {
       const currentTicket = await this.prisma.ticket.findUnique({
@@ -142,6 +142,15 @@ ${this.generateTicketTableHtml(ticket)}
       // If assignee is changing, automatically set status to IN_PROGRESS
       if (prismaData.assigneeId && currentTicket.assigneeId !== prismaData.assigneeId) {
         prismaData.status = 'IN_PROGRESS';
+      }
+
+      // Intercept status changes for non-admins to prevent direct resolution/closure
+      if (prismaData.status && currentUser && currentUser.role !== 'ADMIN') {
+        if (prismaData.status === 'RESOLVED') {
+          prismaData.status = 'PENDING_RESOLVED';
+        } else if (prismaData.status === 'CLOSED') {
+          prismaData.status = 'PENDING_CLOSED';
+        }
       }
 
       const updatedTicket = await this.prisma.ticket.update({
@@ -187,10 +196,18 @@ ${this.generateTicketTableHtml(updatedTicket)}
     }
   }
 
-  async updateStatus(id: string, status: string): Promise<Ticket> {
+  async updateStatus(id: string, status: string, currentUser?: any): Promise<Ticket> {
+    let finalStatus = status;
+    if (currentUser && currentUser.role !== 'ADMIN') {
+      if (status === 'RESOLVED') {
+        finalStatus = 'PENDING_RESOLVED';
+      } else if (status === 'CLOSED') {
+        finalStatus = 'PENDING_CLOSED';
+      }
+    }
     return this.prisma.ticket.update({
       where: { id },
-      data: { status },
+      data: { status: finalStatus },
     });
   }
 

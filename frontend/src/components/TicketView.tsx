@@ -206,6 +206,17 @@ export const TicketView: React.FC = () => {
     }
   };
 
+  const handleValidateStatus = async (id: string, currentPendingStatus: string) => {
+    const finalStatus = currentPendingStatus === 'PENDING_RESOLVED' ? 'RESOLVED' : 'CLOSED';
+    try {
+      await api.put(`/tickets/${id}/status`, { status: finalStatus });
+      fetchTickets();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Erreur inconnue";
+      alert("Erreur lors de la validation : " + msg);
+    }
+  };
+
   const exportToExcel = () => {
     const headers = ["N° Ticket", "Sujet", "Description", "Demandeur", "Équipement", "Assigné à", "Priorité", "Statut", "Date de création"];
     
@@ -453,13 +464,28 @@ export const TicketView: React.FC = () => {
                       </span>
                     </td>
                     <td>
-                      <span className={`status-badge ${t.status.toLowerCase()}`}>
-                        {t.status}
+                      <span className={`status-badge ${
+                        t.status === 'PENDING_RESOLVED' || t.status === 'PENDING_CLOSED' ? 'danger' : t.status.toLowerCase()
+                      }`}>
+                        {t.status === 'PENDING_RESOLVED' ? 'Attente Résolution' : 
+                         t.status === 'PENDING_CLOSED' ? 'Attente Clôture' : 
+                         t.status === 'RESOLVED' ? 'Résolu' : 
+                         t.status === 'CLOSED' ? 'Clos' : t.status}
                       </span>
                     </td>
                     <td>{new Date(t.createdAt).toLocaleDateString()}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
+                        {isAdmin && (t.status === 'PENDING_RESOLVED' || t.status === 'PENDING_CLOSED') && (
+                          <button 
+                            className="btn-icon" 
+                            style={{ borderColor: 'var(--success)', color: 'var(--success)' }} 
+                            onClick={() => handleValidateStatus(t.id, t.status)}
+                            title="Valider la résolution/clôture"
+                          >
+                            <i className="ph ph-check-circle" style={{ fontSize: '1.1rem' }}></i>
+                          </button>
+                        )}
                         <button className="btn-icon" onClick={() => openEditModal(t)}>
                           <i className="ph ph-pencil-simple"></i>
                         </button>
@@ -522,7 +548,13 @@ export const TicketView: React.FC = () => {
                     {isUser ? (
                       <input 
                         type="text" 
-                        value={formFields.status} 
+                        value={
+                          formFields.status === 'PENDING_RESOLVED' ? 'Attente Résolution' : 
+                          formFields.status === 'PENDING_CLOSED' ? 'Attente Clôture' : 
+                          formFields.status === 'RESOLVED' ? 'Résolu' : 
+                          formFields.status === 'CLOSED' ? 'Clos' : 
+                          formFields.status === 'OPEN' ? 'Ouvert' : 'En cours'
+                        } 
                         disabled 
                         style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', borderRadius: '6px' }}
                       />
@@ -534,6 +566,8 @@ export const TicketView: React.FC = () => {
                       >
                         <option value="OPEN">Ouvert</option>
                         <option value="IN_PROGRESS">En cours</option>
+                        {formFields.status === 'PENDING_RESOLVED' && <option value="PENDING_RESOLVED">Attente Résolution</option>}
+                        {formFields.status === 'PENDING_CLOSED' && <option value="PENDING_CLOSED">Attente Clôture</option>}
                         <option value="RESOLVED">Résolu</option>
                         <option value="CLOSED">Clos</option>
                       </select>
