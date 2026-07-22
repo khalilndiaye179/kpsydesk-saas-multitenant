@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Ticket } from '@prisma/client';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class TicketsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService
+  ) {}
 
   async findAll(): Promise<Ticket[]> {
     return this.prisma.ticket.findMany({
@@ -128,12 +132,37 @@ export class TicketsService {
   }
 
   async assign(id: string, assigneeId: string): Promise<Ticket> {
-    return this.prisma.ticket.update({
+    const currentTicket = await this.prisma.ticket.findUnique({
+      where: { id },
+      include: { assignee: true }
+    });
+
+    if (!currentTicket) {
+      throw new NotFoundException(`Ticket avec l'ID ${id} introuvable`);
+    }
+
+    const updatedTicket = await this.prisma.ticket.update({
       where: { id },
       data: { 
         assigneeId,
         status: 'IN_PROGRESS'
       },
+      include: { assignee: true }
     });
+
+    // Notify new assignee if changed and exists
+    if (assigneeId && currentTicket.assigneeId !== assigneeId && updatedTicket.assignee) {
+      const subject = `Nouveau ticket assigné : ${updatedTicket.title}`;
+      const text = `Bonjour ${updatedTicket.assignee.firstName},\n\nLe ticket "${updatedTicket.title}" (Priorité: ${updatedTicket.priority}) vous a été assigné.\n\nDescription :\n${updatedTicket.description}\n\nRendez-vous sur l'application pour le traiter.`;
+      const html = `<p>Bonjour ${updatedTicket.assignee.firstName},</p>
+<p>Le ticket <b>"${updatedTicket.title}"</b> (Priorité: ${updatedTicket.priority}) vous a été assigné.</p>
+<p><b>Description :</b><br/>${updatedTicket.description}</p>
+<p><a href="https://app.kpsyinformatique.com/">Accéder à l'espace de support</a></p>`;
+
+      // Envoi asynchrone non-bloquant
+      this.mailService.sendMail(updatedTicket.assignee.email, subject, text, html).catch(() => {});
+    }
+
+    return updatedTicket;
   }
 }
