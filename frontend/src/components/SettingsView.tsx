@@ -359,7 +359,7 @@ export const SettingsView: React.FC = () => {
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center' }}>
             <a 
-              href={`${(import.meta as any).env?.VITE_API_URL || `http://${window.location.hostname}:3010`}/api/assets/agent/download`}
+              href={`${(import.meta as any).env?.VITE_API_URL || ''}/api/assets/agent/download`}
               download="KPsyITAgent.msi"
               className="btn-primary" 
               style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
@@ -373,7 +373,7 @@ export const SettingsView: React.FC = () => {
           </div>
           <div style={{ marginTop: '1rem', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.8rem' }}>
             <code style={{ color: 'var(--text-primary)' }}>
-              msiexec /i KPsyITAgent.msi SERVERURL="http://{window.location.hostname}:3010" TENANTID="{localStorage.getItem('tenant_subdomain') || 'votre-tenant'}" /qn
+              msiexec /i KPsyITAgent.msi SERVERURL="{window.location.origin}" TENANTID="{localStorage.getItem('tenant_subdomain') || 'votre-tenant'}" /qn
             </code>
             <p style={{ margin: '5px 0 0 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
               Commande d'installation silencieuse pour déploiement de masse (GPO, SCCM, etc.)
