@@ -44,7 +44,10 @@ export function SuperAdminRecoveryFlow({ onBack }: Props) {
       if (otp === '------') {
         setError(message);
       } else {
-        setOtpReceived(otp);
+        if (otp !== 'sent') {
+          setOtpReceived(otp);
+          setOtpInput(otp); // Pre-fill in development/sandbox
+        }
         setInfo(message);
         setStep('otp');
       }

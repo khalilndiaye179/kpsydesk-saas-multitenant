@@ -35,6 +35,12 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS}
       # Multi-tenant : sous-domaine par défaut en dev (utiliser X-Tenant-ID header)
       DEFAULT_LEGACY_SUBDOMAIN: ${DEFAULT_LEGACY_SUBDOMAIN:-legacy}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME}
     volumes:
       - itam_uploads:/app/uploads
     depends_on:

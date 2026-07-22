@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
@@ -15,6 +15,7 @@ interface OtpEntry {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly otpStore = new Map<string, OtpEntry>();
 
   constructor(
@@ -177,9 +178,10 @@ export class AuthService {
     const html = `<p>Bonjour ${superAdmin.firstName},</p><p>Votre code OTP de récupération est : <b style="font-size:1.5rem;color:#3b82f6;letter-spacing:4px;">${otp}</b></p><p>Il est valable 15 minutes.</p><p>Si vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message.</p>`;
 
     await this.mailService.sendMail(superAdmin.recoveryEmail, subject, text, html);
+    this.logger.log(`[Super-Admin Recovery] OTP généré pour ${superAdmin.email} : ${otp}`);
 
     return {
-      otp: '------',
+      otp: process.env.NODE_ENV === 'production' ? 'sent' : otp,
       message: `Code OTP généré et envoyé à l'adresse associée. Vérifiez votre boîte de réception.`
     };
   }
@@ -259,11 +261,19 @@ export class AuthService {
   // Récupération de compte Tenant (OTP en mémoire, TTL 15 min)
   // ─────────────────────────────────────────────────────────────────────────────
 
-  async requestTenantReset(email: string, tenantId: string): Promise<{ message: string }> {
+  async requestTenantReset(email?: string, phone?: string, tenantId?: string): Promise<{ message: string; otp?: string }> {
+    if (!email && !phone) {
+      throw new BadRequestException("Veuillez fournir un email ou un numéro de téléphone.");
+    }
+
     const user = await this.prisma.user.findFirst({
       where: {
-        email: email.toLowerCase().trim(),
         tenantId,
+        OR: [
+          email ? { email: email.toLowerCase().trim() } : {},
+          phone ? { phone: phone.trim() } : {},
+          phone ? { recoveryPhone: phone.trim() } : {},
+        ],
       },
     });
 
@@ -285,9 +295,19 @@ export class AuthService {
     const text = `Bonjour ${user.firstName},\n\nVotre code OTP de récupération est : ${otp}\nIl est valable 15 minutes.\n\nSi vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message.`;
     const html = `<p>Bonjour ${user.firstName},</p><p>Votre code OTP de récupération est : <b style="font-size:1.5rem;color:#3b82f6;letter-spacing:4px;">${otp}</b></p><p>Il est valable 15 minutes.</p><p>Si vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message.</p>`;
 
-    await this.mailService.sendMail(user.email, subject, text, html);
+    if (email) {
+      await this.mailService.sendMail(user.email, subject, text, html);
+    } else {
+      this.logger.log(`[SMS OTP SIMULATION] Code OTP pour l'utilisateur ${user.email} (téléphone: ${phone}) : ${otp}`);
+    }
 
-    return { message: "Si ce compte existe, un code OTP a été envoyé." };
+    const isProd = process.env.NODE_ENV === 'production';
+    return {
+      message: isProd 
+        ? "Si ce compte existe, un code OTP a été envoyé."
+        : `Si ce compte existe, un code OTP a été envoyé. (Simulation OTP: ${otp})`,
+      otp: isProd ? 'sent' : otp
+    };
   }
 
   async verifyTenantOtp(otp: string): Promise<{ valid: boolean; userId?: string }> {

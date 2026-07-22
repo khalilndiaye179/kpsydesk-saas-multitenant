@@ -37,11 +37,25 @@ export function RecoveryFlow({ onBack, onSuccess, onError }: RecoveryFlowProps) 
           headers: { 'X-Tenant-ID': tenantSlugInput.trim().toLowerCase() }
         });
 
-        onSuccess(response.data.message || "Si ce compte existe, un code OTP a été envoyé.");
+        const { otp, message } = response.data;
+        if (otp && otp !== 'sent') {
+          setOtpCode(otp); // Pre-fill in dev
+        }
+        onSuccess(message || "Si ce compte existe, un code OTP a été envoyé.");
         setStep('verify');
       } else {
         // OTP par SMS
-        onSuccess("Code OTP envoyé par SMS : 123456 (Simulation).");
+        const response = await api.post('/auth/forgot-password', {
+          phone: phoneInput,
+        }, {
+          headers: { 'X-Tenant-ID': tenantSlugInput.trim().toLowerCase() }
+        });
+
+        const { otp, message } = response.data;
+        if (otp && otp !== 'sent') {
+          setOtpCode(otp); // Pre-fill in dev
+        }
+        onSuccess(message || "Si ce compte existe, un code OTP a été envoyé par SMS.");
         setStep('verify');
       }
     } catch (err: any) {

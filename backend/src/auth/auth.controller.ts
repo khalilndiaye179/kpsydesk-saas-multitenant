@@ -89,13 +89,13 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(
-    @Body() body: { email: string },
+    @Body() body: { email?: string; phone?: string },
     @Req() req: { tenantId?: string },
   ) {
     if (!req.tenantId) {
       throw new BadRequestException("Tenant non spécifié.");
     }
-    return this.authService.requestTenantReset(body.email, req.tenantId);
+    return this.authService.requestTenantReset(body.email, body.phone, req.tenantId);
   }
 
   @Public()
