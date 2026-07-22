@@ -115,7 +115,7 @@ ${this.generateTicketTableHtml(ticket)}
 <p>Un technicien va le prendre en charge dans les plus brefs délais.</p>
 <p style="margin-top: 20px;"><a href="https://app.kpsyinformatique.com/" style="background-color: #10b981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Accéder à votre espace client</a></p>`;
 
-        this.mailService.sendMail(ticket.creator.email, creatorSubject, creatorText, creatorHtml).catch(() => {});
+        this.mailService.sendMail(ticket.creator.email, creatorSubject, creatorText, html).catch(() => {});
       }
 
       return ticket;
