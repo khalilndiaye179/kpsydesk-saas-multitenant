@@ -98,6 +98,7 @@ function App() {
   const [tenantStatus, setTenantStatus] = useState<string>('ACTIVE');
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('ACTIVE');
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<string | null>(null);
+  const [trialCountdownStr, setTrialCountdownStr] = useState<string>('');
 
   const fetchMaintenanceAlerts = useCallback(async () => {
     try {
@@ -240,6 +241,38 @@ function App() {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Live countdown timer for Trial mode
+  useEffect(() => {
+    if (!isAuthenticated || subscriptionStatus !== 'TRIALING' || !subscriptionEndDate) {
+      setTrialCountdownStr('');
+      return;
+    }
+
+    const updateTimer = () => {
+      const end = new Date(subscriptionEndDate).getTime();
+      const now = Date.now();
+      const diff = end - now;
+
+      if (diff <= 0) {
+        setTrialCountdownStr("00h 00m 00s");
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      const daysText = days > 0 ? `${days}j ` : '';
+      const pad = (num: number) => String(num).padStart(2, '0');
+      setTrialCountdownStr(`${daysText}${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, subscriptionStatus, subscriptionEndDate]);
 
   // Handle Login submission
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -1471,15 +1504,39 @@ function App() {
 
         {/* Trial Banner */}
         {subscriptionStatus === 'TRIALING' && trialDaysLeft > 0 && (
-          <div style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '10px 20px', color: '#fff', textAlign: 'center', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(245,158,11,0.2)' }}>
-            <i className="ph-fill ph-clock"></i>
-            Vous disposez d'une version d'essai. Il vous reste {trialDaysLeft} jour{trialDaysLeft > 1 ? 's' : ''}.
+          <div style={{
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '10px 20px',
+            color: '#fff', textAlign: 'center', fontWeight: 600, fontSize: '0.9rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+            boxShadow: '0 2px 8px rgba(245,158,11,0.2)'
+          }}>
+            <i className="ph-fill ph-clock" style={{ fontSize: '1.1rem' }}></i>
+            <span>Vous utilisez actuellement la <strong>Version d'Essai</strong> (KPSyDesk Trial)</span>
+            <span style={{
+              background: 'rgba(255, 255, 255, 0.2)', padding: '3px 10px',
+              borderRadius: '50px', fontSize: '0.85rem', fontWeight: 700,
+              fontFamily: 'monospace', letterSpacing: '0.5px'
+            }}>
+              ⏳ {trialCountdownStr || `${trialDaysLeft}j`}
+            </span>
           </div>
         )}
         {subscriptionStatus === 'TRIALING' && isGracePeriod && (
-          <div style={{ background: 'linear-gradient(135deg, #ef4444, #dc2626)', padding: '10px 20px', color: '#fff', textAlign: 'center', fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(239,68,68,0.2)' }}>
-            <i className="ph-fill ph-warning"></i>
-            Votre essai a expiré. Période de grâce avant verrouillage de votre compte ({trialDaysLeft + 2} jour{trialDaysLeft + 2 > 1 ? 's' : ''} restant{trialDaysLeft + 2 > 1 ? 's' : ''}).
+          <div style={{
+            background: 'linear-gradient(135deg, #ef4444, #dc2626)', padding: '10px 20px',
+            color: '#fff', textAlign: 'center', fontWeight: 600, fontSize: '0.9rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+            boxShadow: '0 2px 8px rgba(239,68,68,0.2)'
+          }}>
+            <i className="ph-fill ph-warning" style={{ fontSize: '1.1rem' }}></i>
+            <span>Votre période d'essai a expiré ! Période de grâce restante avant suspension :</span>
+            <span style={{
+              background: 'rgba(255, 255, 255, 0.2)', padding: '3px 10px',
+              borderRadius: '50px', fontSize: '0.85rem', fontWeight: 700,
+              fontFamily: 'monospace', letterSpacing: '0.5px'
+            }}>
+              ⚠️ {trialCountdownStr || `${trialDaysLeft + 2}j`}
+            </span>
           </div>
         )}
 
