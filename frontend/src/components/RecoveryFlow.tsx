@@ -31,18 +31,14 @@ export function RecoveryFlow({ onBack, onSuccess, onError }: RecoveryFlowProps) 
 
     try {
       if (method === 'email') {
-        // Simulation / intégration Edge function request-password-reset
-        // Nous configurons le header tenant pour router vers le bon espace
-        const response = await api.post('/auth/login', {
+        const response = await api.post('/auth/forgot-password', {
           email: emailInput,
-          password: '____CHECK_EMAIL_ONLY____', // Requête interceptée ou validée par le BaaS
         }, {
           headers: { 'X-Tenant-ID': tenantSlugInput.trim().toLowerCase() }
-        }).catch(err => err.response);
+        });
 
-        // Anti-énumération : réponse générique de succès systématique
-        onSuccess("Si ce compte existe, un lien a été envoyé.");
-        setStep('reset');
+        onSuccess(response.data.message || "Si ce compte existe, un code OTP a été envoyé.");
+        setStep('verify');
       } else {
         // OTP par SMS
         onSuccess("Code OTP envoyé par SMS : 123456 (Simulation).");
@@ -56,13 +52,19 @@ export function RecoveryFlow({ onBack, onSuccess, onError }: RecoveryFlowProps) 
   };
 
   // 2. Valider le code OTP
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (otpCode === '123456') {
-      onSuccess("Code OTP vérifié.");
+    onError('');
+    setLoading(true);
+
+    try {
+      await api.post('/auth/verify-reset-otp', { otp: otpCode });
+      onSuccess("Code OTP vérifié. Vous pouvez maintenant choisir un nouveau mot de passe.");
       setStep('reset');
-    } else {
-      onError("Code de vérification incorrect. Utilisez 123456 pour ce test.");
+    } catch (err: any) {
+      onError(err.response?.data?.message || "Code de vérification incorrect ou expiré.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -83,7 +85,12 @@ export function RecoveryFlow({ onBack, onSuccess, onError }: RecoveryFlowProps) 
 
     setLoading(true);
     try {
-      // Simulation / intégration de la réinitialisation de mot de passe en base
+      await api.post('/auth/reset-password', {
+        otp: otpCode,
+        newPassword
+      }, {
+        headers: { 'X-Tenant-ID': tenantSlugInput.trim().toLowerCase() }
+      });
       onSuccess("Mot de passe mis à jour avec succès ! Connectez-vous avec vos nouveaux identifiants.");
       onBack();
     } catch (err: any) {
@@ -209,9 +216,10 @@ export function RecoveryFlow({ onBack, onSuccess, onError }: RecoveryFlowProps) 
           <button
             type="submit"
             className="btn-submit-gradient"
+            disabled={loading}
             style={{ marginTop: '10px' }}
           >
-            Vérifier le code OTP
+            {loading ? "Vérification..." : "Vérifier le code OTP"}
           </button>
         </form>
       )}
