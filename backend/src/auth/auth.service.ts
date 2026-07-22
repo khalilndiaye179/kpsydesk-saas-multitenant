@@ -256,6 +256,80 @@ export class AuthService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // Récupération de compte Tenant (OTP en mémoire, TTL 15 min)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  async requestTenantReset(email: string, tenantId: string): Promise<{ message: string }> {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        email: email.toLowerCase().trim(),
+        tenantId,
+      },
+    });
+
+    // Anti-énumération
+    if (!user) {
+      return { message: "Si ce compte existe, un code OTP a été envoyé." };
+    }
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+
+    for (const [key, entry] of this.otpStore.entries()) {
+      if (entry.userId === user.id) this.otpStore.delete(key);
+    }
+
+    this.otpStore.set(otp, { code: otp, userId: user.id, expiresAt });
+
+    const subject = "Récupération de mot de passe (KPSyDesk)";
+    const text = `Bonjour ${user.firstName},\n\nVotre code OTP de récupération est : ${otp}\nIl est valable 15 minutes.\n\nSi vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message.`;
+    const html = `<p>Bonjour ${user.firstName},</p><p>Votre code OTP de récupération est : <b style="font-size:1.5rem;color:#3b82f6;letter-spacing:4px;">${otp}</b></p><p>Il est valable 15 minutes.</p><p>Si vous n'êtes pas à l'origine de cette demande, veuillez ignorer ce message.</p>`;
+
+    await this.mailService.sendMail(user.email, subject, text, html);
+
+    return { message: "Si ce compte existe, un code OTP a été envoyé." };
+  }
+
+  async verifyTenantOtp(otp: string): Promise<{ valid: boolean; userId?: string }> {
+    this._cleanExpiredOtps();
+    const entry = this.otpStore.get(otp);
+    if (!entry || entry.expiresAt < Date.now()) {
+      return { valid: false };
+    }
+    return { valid: true, userId: entry.userId };
+  }
+
+  async resetTenantPassword(otp: string, newPassword: string, tenantId: string): Promise<void> {
+    this._cleanExpiredOtps();
+    const entry = this.otpStore.get(otp);
+
+    if (!entry || entry.expiresAt < Date.now()) {
+      throw new BadRequestException("Code OTP invalide ou expiré.");
+    }
+
+    if (newPassword.length < 6) {
+      throw new BadRequestException("Le mot de passe doit contenir au moins 6 caractères.");
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: entry.userId, tenantId }
+    });
+
+    if (!user) {
+      throw new BadRequestException("Action non autorisée.");
+    }
+
+    await this.prisma.user.update({
+      where: { id: entry.userId },
+      data: { password: hashed }
+    });
+
+    this.otpStore.delete(otp);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // MFA (TOTP) Management
   // ─────────────────────────────────────────────────────────────────────────────
 

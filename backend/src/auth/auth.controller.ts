@@ -82,6 +82,48 @@ export class AuthController {
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // Récupération de compte Tenant
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(
+    @Body() body: { email: string },
+    @Req() req: { tenantId?: string },
+  ) {
+    if (!req.tenantId) {
+      throw new BadRequestException("Tenant non spécifié.");
+    }
+    return this.authService.requestTenantReset(body.email, req.tenantId);
+  }
+
+  @Public()
+  @Post('verify-reset-otp')
+  @HttpCode(HttpStatus.OK)
+  async verifyResetOtp(@Body() body: VerifyOtpDto) {
+    const result = await this.authService.verifyTenantOtp(body.otp);
+    if (!result.valid) {
+      throw new UnauthorizedException('Code OTP invalide ou expiré.');
+    }
+    return { valid: true, message: 'Code OTP valide.' };
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(
+    @Body() body: ResetPasswordDto,
+    @Req() req: { tenantId?: string },
+  ) {
+    if (!req.tenantId) {
+      throw new BadRequestException("Tenant non spécifié.");
+    }
+    await this.authService.resetTenantPassword(body.otp, body.newPassword, req.tenantId);
+    return { message: 'Mot de passe réinitialisé avec succès.' };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // Récupération de compte Super-Admin (routes publiques)
   // ─────────────────────────────────────────────────────────────────────────────
 
