@@ -15,6 +15,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthService } from '../auth/auth.service';
+import { MailService } from '../mail/mail.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantStatus } from '@prisma/client';
 import {
@@ -47,7 +49,11 @@ import * as bcrypt from 'bcryptjs';
 @Controller('admin-tenants')
 @UseGuards(JwtAuthGuard)
 export class AdminTenantsController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authService: AuthService,
+    private readonly mailService: MailService
+  ) {}
 
   /**
    * Vérifie les droits d'accès à la Console SaaS.
@@ -1273,5 +1279,43 @@ export class AdminTenantsController {
       message: `${validTenantIds.length} locataire(s) ont été purgés avec succès.`,
       purgedIds: validTenantIds 
     };
+  }
+
+  /**
+   * Réinitialise le mot de passe d'un abonné sans procédure de récupération self-service.
+   */
+  @Post('reset-no-recovery')
+  async resetNoRecovery(
+    @Body() body: { targetUserId: string; reason: string },
+    @Req() req: any
+  ) {
+    this._checkConsoleAccess(req.user);
+    
+    const user = await this.prisma.user.findUnique({
+      where: { id: body.targetUserId },
+      include: { tenant: true }
+    });
+    if (!user) {
+      throw new NotFoundException("Utilisateur introuvable.");
+    }
+
+    // Générer et enregistrer l'OTP
+    const otp = await this.authService.generateAndStoreOtp(user.id);
+    
+    // Envoyer l'email avec le code OTP de récupération
+    const subject = "[KPSyDesk] Réinitialisation de sécurité de votre compte";
+    const text = `Bonjour ${user.firstName},\n\nLe Super-Administrateur SaaS a initié une procédure de réinitialisation de votre mot de passe (Motif : ${body.reason}).\n\nVotre code OTP de sécurité est : ${otp}\nIl est valable 15 minutes.\n\nUtilisez ce code sur la page de récupération pour définir votre nouveau mot de passe.`;
+    const html = `<p>Bonjour <b>${user.firstName}</b>,</p>
+<p>Le Super-Administrateur SaaS a initié une procédure de réinitialisation de votre mot de passe suite à votre demande (Motif : <i>${body.reason}</i>).</p>
+<p>Votre code OTP de récupération est : <b style="font-size:1.5rem;color:#d97706;letter-spacing:4px;">${otp}</b></p>
+<p>Il est valable 15 minutes.</p>
+<p>Rendez-vous sur la page de récupération de mot de passe de votre tenant pour finaliser l'opération.</p>`;
+
+    await this.mailService.sendMail(user.email, subject, text, html);
+
+    // Log SaaS action
+    this._logAction(req.user, 'RESET_NO_RECOVERY', 'User', user.id, { reason: body.reason });
+
+    return { message: "Lien de réinitialisation envoyé avec succès." };
   }
 }

@@ -460,6 +460,16 @@ export class AuthService {
     return plain === stored;
   }
 
+  async generateAndStoreOtp(userId: string): Promise<string> {
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+    for (const [key, entry] of this.otpStore.entries()) {
+      if (entry.userId === userId) this.otpStore.delete(key);
+    }
+    this.otpStore.set(otp, { code: otp, userId, expiresAt });
+    return otp;
+  }
+
   /** Supprime les OTP expirés du store */
   private _cleanExpiredOtps(): void {
     const now = Date.now();

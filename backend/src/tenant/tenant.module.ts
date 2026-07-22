@@ -6,11 +6,12 @@ import { AdminTenantsController } from './admin-tenants.controller';
 import { TenantGuard } from './tenant.guard';
 import { QuotaGuard } from './quota.guard';
 import { PrismaModule } from '../prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
 
 import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [TenantsController, SubscriptionsController, AdminTenantsController],
   providers: [TenantsService, TenantGuard, QuotaGuard, SubscriptionLifecycleService],
   exports: [TenantsService, TenantGuard, QuotaGuard, SubscriptionLifecycleService],
