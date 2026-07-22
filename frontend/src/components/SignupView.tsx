@@ -318,14 +318,14 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
                     position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                     fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap'
                   }}>
-                    .kpsy.com
+                    .kpsyinformatique.com
                   </span>
                 </div>
                 <div style={{ marginTop: '6px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {subdomainStatus === 'checking' && <><i className="ph ph-circle-notch" style={{ animation: 'spin 1s linear infinite' }} /> Vérification…</>}
                   {subdomainStatus === 'available' && <><i className="ph-bold ph-check-circle" style={{ color: '#22c55e' }} /> <span style={{ color: '#22c55e' }}>Disponible !</span></>}
                   {subdomainStatus === 'taken' && <><i className="ph-bold ph-x-circle" style={{ color: '#ef4444' }} /> <span style={{ color: '#ef4444' }}>Déjà utilisé</span></>}
-                  {subdomainStatus === 'idle' && subdomain && <span style={{ color: 'var(--text-muted)' }}>Votre URL : <strong style={{ color: 'var(--accent-blue)' }}>{subdomain}.kpsy.com</strong></span>}
+                  {subdomainStatus === 'idle' && subdomain && <span style={{ color: 'var(--text-muted)' }}>Votre URL : <strong style={{ color: 'var(--accent-blue)' }}>{subdomain}.kpsyinformatique.com</strong></span>}
                 </div>
               </div>
 
@@ -543,9 +543,9 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
               }}>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>📋 Récapitulatif</div>
                 <div><strong>Entreprise :</strong> {companyName}</div>
-                <div><strong>URL :</strong> {subdomain}.inventaire-parc.com</div>
+                <div><strong>URL :</strong> {subdomain}.kpsyinformatique.com</div>
                 <div><strong>Plan :</strong> {selectedPlan}</div>
-                <div style={{ color: '#22c55e', fontWeight: 600 }}><i className="ph ph-clock" /> 14 jours d'essai gratuit inclus</div>
+                <div style={{ color: '#22c55e', fontWeight: 600 }}><i className="ph ph-clock" /> 7 jours d'essai gratuit inclus</div>
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>

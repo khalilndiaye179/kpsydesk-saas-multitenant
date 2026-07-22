@@ -64,7 +64,7 @@ export class TenantsService {
     // 3. Vérifier unicité du sous-domaine
     const existing = await this.prisma.tenant.findFirst({ where: { subdomain } });
     if (existing) {
-      throw new ConflictException(`Le sous-domaine "${subdomain}.kpsy.com" est déjà utilisé.`);
+      throw new ConflictException(`Le sous-domaine "${subdomain}.kpsyinformatique.com" est déjà utilisé.`);
     }
 
     // 4. Récupérer le plan choisi

@@ -255,7 +255,7 @@ export function SubscriptionView() {
         <div>
           <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800 }}>Mon Abonnement</h2>
           <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            {info.tenant.name} · {info.tenant.subdomain}.inventaire-parc.com
+            {info.tenant.name} · {info.tenant.subdomain}.kpsyinformatique.com
           </p>
         </div>
       </div>
@@ -466,7 +466,7 @@ export function SubscriptionView() {
           </div>
           {[
             { label: 'Nom', value: info.tenant.name },
-            { label: 'Sous-domaine', value: `${info.tenant.subdomain}.inventaire-parc.com` },
+            { label: 'Sous-domaine', value: `${info.tenant.subdomain}.kpsyinformatique.com` },
             { label: 'Statut', value: info.tenant.status },
             { label: 'Membre depuis', value: new Intl.DateTimeFormat('fr-FR').format(new Date(info.tenant.createdAt)) },
           ].map(({ label, value }) => (

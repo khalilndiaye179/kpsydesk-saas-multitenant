@@ -1997,7 +1997,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                           {t.name}
                         </td>
                         <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                          <code>{t.subdomain}.inventaire-parc.com</code>
+                          <code>{t.subdomain}.kpsyinformatique.com</code>
                         </td>
                         <td>
                           <span style={{ background: `${planColor}15`, color: planColor, border: `1px solid ${planColor}40`, borderRadius: '6px', padding: '3px 10px', fontSize: '0.75rem', fontWeight: 700 }}>
@@ -2259,7 +2259,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
               <div style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px 16px', fontSize: '0.82rem' }}>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>🔗 URL Webhook automatique</div>
                 <code style={{ color: 'var(--accent-blue)', wordBreak: 'break-all' }}>
-                  http://api.inventaire-parc.com/api/subscriptions/webhook/{selectedProviderCode.toLowerCase()}
+                  https://api.kpsyinformatique.com/api/subscriptions/webhook/{selectedProviderCode.toLowerCase()}
                 </code>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                   Copiez cette URL de notification dans le tableau de bord de votre intégrateur pour valider les paiements en direct.
@@ -2513,7 +2513,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                     >
                       <option value="">-- Client non inscrit --</option>
                       {tenants.map(t => (
-                        <option key={t.id} value={t.id}>{t.name} ({t.subdomain}.kpsy.com)</option>
+                        <option key={t.id} value={t.id}>{t.name} ({t.subdomain}.kpsyinformatique.com)</option>
                       ))}
                     </select>
                   </div>
@@ -3038,7 +3038,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                     <div>
                       <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, color: '#1d4ed8' }}>K'PSY INFORMATIQUE</h2>
                       <p style={{ margin: '4px 0', fontSize: '0.85rem', color: '#555' }}>Prestations Systèmes & ITAM SaaS</p>
-                      <p style={{ margin: '2px 0', fontSize: '0.8rem', color: '#777' }}>Dakar, Sénégal · support@kpsy.com</p>
+                      <p style={{ margin: '2px 0', fontSize: '0.8rem', color: '#777' }}>Dakar, Sénégal · kpsydesk.support@kpsyinformatique.com</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <h1 style={{ fontSize: '1.8rem', fontWeight: 900, margin: 0, color: '#333' }}>DEVIS</h1>
@@ -3061,7 +3061,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                         {generatedQuote.tenant?.name || generatedQuote.clientName || 'Client Prospect'}
                       </p>
                       {generatedQuote.tenant && (
-                        <p style={{ margin: '2px 0', fontSize: '0.85rem', color: '#475569' }}>Espace SaaS : {generatedQuote.tenant.subdomain}.kpsy.com</p>
+                        <p style={{ margin: '2px 0', fontSize: '0.85rem', color: '#475569' }}>Espace SaaS : {generatedQuote.tenant.subdomain}.kpsyinformatique.com</p>
                       )}
                       {generatedQuote.clientEmail && (
                         <p style={{ margin: '2px 0', fontSize: '0.85rem', color: '#475569' }}>E-mail : {generatedQuote.clientEmail}</p>
@@ -3820,7 +3820,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                   🏢 {selectedTenantProfile.name}
                 </h3>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: '8px' }}>
-                  {selectedTenantProfile.subdomain}.inventaire-parc.com
+                  {selectedTenantProfile.subdomain}.kpsyinformatique.com
                 </span>
               </div>
               <button onClick={() => setSelectedTenantProfile(null)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>
