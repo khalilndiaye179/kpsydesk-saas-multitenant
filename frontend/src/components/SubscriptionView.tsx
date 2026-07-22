@@ -675,13 +675,20 @@ export function SubscriptionView() {
                   </div>
                   Les passerelles de paiement en ligne ne sont pas configurées ou activées sur la plateforme.
                   Pour souscrire à ce plan, vous pouvez effectuer un paiement par <strong>chèque</strong> ou <strong>virement bancaire</strong> en contactant directement le propriétaire de la plateforme :
-                  <div style={{ marginTop: '12px', padding: '10px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <div style={{ marginTop: '12px', padding: '10px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="ph ph-user-gear" style={{ color: 'var(--primary)' }} />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Admin :</span>
+                      <a href="mailto:khalil.ndiaye@kpsyinformatique.com" style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600 }}>khalil.ndiaye@kpsyinformatique.com</a>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <i className="ph ph-envelope" style={{ color: 'var(--primary)' }} />
-                      <a href="mailto:support@kpsyinformatique.com" style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600 }}>support@kpsyinformatique.com</a>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Support :</span>
+                      <a href="mailto:kpsydesk.support@kpsyinformatique.com" style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600 }}>kpsydesk.support@kpsyinformatique.com</a>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <i className="ph ph-phone" style={{ color: 'var(--primary)' }} />
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Téléphone :</span>
                       <a href="tel:+221778034756" style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600 }}>+221 77 803 47 56</a>
                     </div>
                   </div>
