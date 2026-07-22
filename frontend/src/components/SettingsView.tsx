@@ -408,7 +408,7 @@ export const SettingsView: React.FC = () => {
             </div>
             <div style={{ marginTop: '1rem', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.8rem' }}>
               <code style={{ color: 'var(--text-primary)', wordBreak: 'break-all' }}>
-                sudo mkdir -p "/Library/Application Support/KPsyITAgent" && echo '{"ServerUrl":"{window.location.origin}","TenantId":"{localStorage.getItem('tenant_subdomain') || 'votre-tenant'}"}' | sudo tee "/Library/Application Support/KPsyITAgent/config.json"
+                {`sudo mkdir -p "/Library/Application Support/KPsyITAgent" && echo '{"ServerUrl":"${window.location.origin}","TenantId":"${localStorage.getItem('tenant_subdomain') || 'votre-tenant'}"}' | sudo tee "/Library/Application Support/KPsyITAgent/config.json"`}
               </code>
               <p style={{ margin: '5px 0 0 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
                 Pré-configurer le serveur et le tenant ID avant l'exécution du démon macOS
