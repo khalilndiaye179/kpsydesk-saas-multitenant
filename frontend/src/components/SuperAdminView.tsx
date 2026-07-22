@@ -329,6 +329,14 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
   const [newQuotaAssets, setNewQuotaAssets] = useState<number>(0);
   const [savingQuota, setSavingQuota] = useState(false);
 
+  // States pour l'affectation manuelle de plan
+  const [isPlanAssignModalOpen, setIsPlanAssignModalOpen] = useState(false);
+  const [assignPlanTenant, setAssignPlanTenant] = useState<TenantStats | null>(null);
+  const [selectedAssignPlanId, setSelectedAssignPlanId] = useState('');
+  const [assignBillingInterval, setAssignBillingInterval] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
+  const [assignDurationMonths, setAssignDurationMonths] = useState<number>(1);
+  const [assigningPlan, setAssigningPlan] = useState(false);
+
   // States pour la configuration Mobile Money
   const [providers, setProviders] = useState<PaymentProviderConfig[]>([]);
   const [selectedProviderCode, setSelectedProviderCode] = useState<string>('WAVE');
@@ -523,6 +531,27 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
       alert("Erreur lors de l'enregistrement du quota : " + (err.response?.data?.message || err.message));
     } finally {
       setSavingQuota(false);
+    }
+  };
+
+  const handleAssignPlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assignPlanTenant) return;
+    setAssigningPlan(true);
+    try {
+      await api.put(`/admin-tenants/assign-plan/${assignPlanTenant.id}`, {
+        planId: selectedAssignPlanId,
+        billingInterval: assignBillingInterval,
+        durationMonths: Number(assignDurationMonths)
+      });
+      setIsPlanAssignModalOpen(false);
+      setAssignPlanTenant(null);
+      loadData();
+      alert("✓ Plan affecté manuellement avec succès !");
+    } catch (err: any) {
+      alert("Erreur lors de l'affectation du plan : " + (err.response?.data?.message || err.message));
+    } finally {
+      setAssigningPlan(false);
     }
   };
 
@@ -2026,6 +2055,23 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                               }}
                             >
                               <i className="ph ph-key" /> Licences
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                setAssignPlanTenant(t);
+                                setSelectedAssignPlanId(plans.filter(p => p.name !== 'Legacy')[0]?.id || '');
+                                setAssignBillingInterval('MONTHLY');
+                                setAssignDurationMonths(1);
+                                setIsPlanAssignModalOpen(true);
+                              }}
+                              style={{
+                                background: 'var(--bg-tertiary)', color: '#f59e0b', border: '1px solid var(--border-color)',
+                                borderRadius: '6px', padding: '5px 12px', fontSize: '0.78rem', fontWeight: 600,
+                                cursor: 'pointer', transition: 'all 0.2s', display: 'inline-flex', alignItems: 'center', gap: '4px'
+                              }}
+                            >
+                              <i className="ph ph-crown" /> Affecter Plan
                             </button>
 
                             <button
@@ -3537,6 +3583,132 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                   }}
                 >
                   {savingQuota ? 'Enregistrement...' : '✓ Mettre à jour'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL AFFECTATION MANUELLE DE PLAN */}
+      {isPlanAssignModalOpen && assignPlanTenant && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{
+            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+            borderRadius: '16px', padding: '24px', width: '420px', maxWidth: '90%',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+          }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '8px', color: 'var(--text-primary)' }}>
+              👑 Affectation Manuelle de Plan
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '20px' }}>
+              Forcer un plan tarifaire pour <strong>{assignPlanTenant.name}</strong> suite à un paiement hors-ligne (chèque ou virement).
+            </p>
+
+            <form onSubmit={handleAssignPlan} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                  Sélectionner le plan
+                </label>
+                <select
+                  value={selectedAssignPlanId}
+                  onChange={e => setSelectedAssignPlanId(e.target.value)}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: '8px',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)', outline: 'none'
+                  }}
+                  required
+                >
+                  {plans.filter(p => p.name !== 'Legacy').map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.price.toLocaleString()} XOF/mois · {p.quotaAssets} actifs)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                  Période de facturation
+                </label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <label style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                    background: assignBillingInterval === 'MONTHLY' ? 'rgba(99,102,241,0.15)' : 'var(--bg-tertiary)',
+                    cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)'
+                  }}>
+                    <input
+                      type="radio"
+                      name="assignInterval"
+                      checked={assignBillingInterval === 'MONTHLY'}
+                      onChange={() => { setAssignBillingInterval('MONTHLY'); setAssignDurationMonths(1); }}
+                    />
+                    Mensuel
+                  </label>
+                  <label style={{
+                    flex: 1, display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                    background: assignBillingInterval === 'YEARLY' ? 'rgba(99,102,241,0.15)' : 'var(--bg-tertiary)',
+                    cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-primary)'
+                  }}>
+                    <input
+                      type="radio"
+                      name="assignInterval"
+                      checked={assignBillingInterval === 'YEARLY'}
+                      onChange={() => { setAssignBillingInterval('YEARLY'); setAssignDurationMonths(12); }}
+                    />
+                    Annuel
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>
+                  Durée de l'activation (mois)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={assignDurationMonths}
+                  onChange={e => setAssignDurationMonths(Number(e.target.value))}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: '8px',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)',
+                    color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box'
+                  }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => { setIsPlanAssignModalOpen(false); setAssignPlanTenant(null); }}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '8px',
+                    border: '1px solid var(--border-color)', background: 'transparent',
+                    color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 600
+                  }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={assigningPlan}
+                  style={{
+                    flex: 2, padding: '10px', borderRadius: '8px',
+                    border: 'none', background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    color: 'white', cursor: 'pointer', fontWeight: 700
+                  }}
+                >
+                  {assigningPlan ? 'Affectation...' : '✓ Affecter le plan'}
                 </button>
               </div>
             </form>

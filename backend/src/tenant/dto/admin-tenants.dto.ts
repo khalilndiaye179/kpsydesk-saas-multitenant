@@ -294,3 +294,17 @@ export class SuperAdminUpdateUserDto {
   @IsOptional()
   entryDate?: string | Date;
 }
+
+export class AssignPlanDto {
+  @IsString()
+  @IsNotEmpty()
+  planId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  billingInterval: string;
+
+  @IsNumber()
+  @IsOptional()
+  durationMonths?: number;
+}

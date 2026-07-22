@@ -666,11 +666,25 @@ export function SubscriptionView() {
               </div>
               {gateways.length === 0 ? (
                 <div style={{
-                  padding: '16px', borderRadius: '10px', border: '1px dashed var(--border-color)',
-                  color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.85rem'
+                  padding: '20px', borderRadius: '12px', border: '1px dashed #ef4444',
+                  background: 'rgba(239,68,68,0.08)', color: 'var(--text-primary)', textAlign: 'left', fontSize: '0.85rem'
                 }}>
-                  <i className="ph ph-warning" style={{ marginRight: '6px', color: '#f59e0b' }} />
-                  Aucune passerelle disponible. Contactez l'administrateur.
+                  <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', marginBottom: '8px' }}>
+                    <i className="ph-fill ph-warning" style={{ fontSize: '1.2rem' }} />
+                    Paiements automatisés indisponibles
+                  </div>
+                  Les passerelles de paiement en ligne ne sont pas configurées ou activées sur la plateforme.
+                  Pour souscrire à ce plan, vous pouvez effectuer un paiement par <strong>chèque</strong> ou <strong>virement bancaire</strong> en contactant directement le propriétaire de la plateforme :
+                  <div style={{ marginTop: '12px', padding: '10px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <i className="ph ph-envelope" style={{ color: 'var(--primary)' }} />
+                      <a href="mailto:support@kpsyinformatique.com" style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600 }}>support@kpsyinformatique.com</a>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="ph ph-phone" style={{ color: 'var(--primary)' }} />
+                      <a href="tel:+221778034756" style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 600 }}>+221 77 803 47 56</a>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

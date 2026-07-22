@@ -32,7 +32,8 @@ import {
   TestInvoiceGenerationDto,
   GenerateInvoicesPeriodDto,
   SuperAdminCreateUserDto,
-  SuperAdminUpdateUserDto
+  SuperAdminUpdateUserDto,
+  AssignPlanDto
 } from './dto/admin-tenants.dto';
 
 import * as bcrypt from 'bcryptjs';
@@ -1328,5 +1329,73 @@ export class AdminTenantsController {
     this._logAction(req.user, 'RESET_NO_RECOVERY', 'User', user.id, { reason: body.reason });
 
     return { message: "Lien de réinitialisation envoyé avec succès." };
+  }
+
+  /**
+   * Affecte manuellement un plan à un locataire (SaaS Super Admin)
+   */
+  @Put('assign-plan/:id')
+  async assignPlan(
+    @Param('id') id: string,
+    @Body() body: AssignPlanDto,
+    @Req() req: { user: { role: string; systemRole?: string; email: string } }
+  ) {
+    this._checkConsoleAccess(req.user, ['SuperAdmin']);
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id },
+      include: { plan: true }
+    });
+    if (!tenant) {
+      throw new NotFoundException("Locataire introuvable.");
+    }
+
+    const plan = await this.prisma.plan.findUnique({
+      where: { id: body.planId }
+    });
+    if (!plan) {
+      throw new NotFoundException("Plan introuvable.");
+    }
+
+    // Calculer la date de fin d'activation
+    const endDate = new Date();
+    const months = body.durationMonths || (body.billingInterval === 'YEARLY' ? 12 : 1);
+    endDate.setMonth(endDate.getMonth() + months);
+
+    // Mettre à jour le plan du tenant et son statut
+    await this.prisma.tenant.update({
+      where: { id },
+      data: {
+        planId: plan.id,
+        status: 'ACTIVE'
+      }
+    });
+
+    // Annuler les abonnements actifs précédents
+    await this.prisma.subscription.updateMany({
+      where: { tenantId: id, status: { in: ['ACTIVE', 'TRIALING', 'PAST_DUE'] } },
+      data: { status: 'CANCELLED', endDate: new Date() }
+    });
+
+    // Créer le nouvel abonnement actif affecté manuellement
+    const newSub = await this.prisma.subscription.create({
+      data: {
+        tenantId: id,
+        planId: plan.id,
+        status: 'ACTIVE',
+        billingInterval: body.billingInterval,
+        startDate: new Date(),
+        endDate: endDate,
+        quotaAssets: plan.quotaAssets,
+      }
+    });
+
+    // Logger l'action dans le journal d'audit global
+    this._logAction(req.user, 'MANUAL_ASSIGN_PLAN', 'Tenant', id, { planId: plan.id, billingInterval: body.billingInterval, durationMonths: months });
+
+    return {
+      message: `Le plan "${plan.name}" a été affecté manuellement au locataire "${tenant.name}" avec succès.`,
+      subscription: newSub
+    };
   }
 }
