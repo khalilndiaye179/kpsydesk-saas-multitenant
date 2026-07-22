@@ -202,14 +202,40 @@ export function RecoveryFlow({ onBack, onSuccess, onError }: RecoveryFlowProps) 
           >
             {loading ? "Envoi..." : "Obtenir l'accès"}
           </button>
+          
+          <div style={{ textAlign: 'center', marginTop: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setStep('verify')}
+              style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              J'ai déjà un code OTP de réinitialisation
+            </button>
+          </div>
         </form>
       )}
 
       {step === 'verify' && (
         <form onSubmit={handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 10px', textAlign: 'center' }}>
-            Veuillez entrer le code à 6 chiffres reçu par SMS.
+            Veuillez renseigner le sous-domaine de votre entreprise (tenant) et saisir le code OTP reçu par e-mail ou SMS.
           </p>
+          
+          <div className="login-field-wrapper">
+            <label className="login-field-label">Identifiant entreprise (tenant)</label>
+            <div className="login-input-container">
+              <i className="ph ph-buildings"></i>
+              <input
+                type="text"
+                className="login-input-field"
+                placeholder="ex: ladin, alamine"
+                value={tenantSlugInput}
+                onChange={e => setTenantSlugInput(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
           <div className="login-field-wrapper">
             <label className="login-field-label">Code OTP de vérification</label>
             <div className="login-input-container">
