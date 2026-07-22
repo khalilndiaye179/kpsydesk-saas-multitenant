@@ -64,6 +64,8 @@ export const DepreciationView: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [filterAlert, setFilterAlert] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<DepreciationRecord | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -149,9 +151,16 @@ export const DepreciationView: React.FC = () => {
         (filterAlert === 'warning' && r.pctAmorti >= 80 && r.pctAmorti < 100) ||
         (filterAlert === 'info' && r.pctAmorti >= 50 && r.pctAmorti < 80) ||
         (filterAlert === 'ok' && r.pctAmorti < 50);
-      return matchSearch && matchAlert;
+
+      const purchaseTime = r.purchaseDate ? new Date(r.purchaseDate).getTime() : 0;
+      const start = filterStartDate ? new Date(filterStartDate).setHours(0,0,0,0) : null;
+      const end = filterEndDate ? new Date(filterEndDate).setHours(23,59,59,999) : null;
+      const matchStart = !start || purchaseTime >= start;
+      const matchEnd = !end || purchaseTime <= end;
+
+      return matchSearch && matchAlert && matchStart && matchEnd;
     });
-  }, [enrichedRecords, searchTerm, filterAlert]);
+  }, [enrichedRecords, searchTerm, filterAlert, filterStartDate, filterEndDate]);
 
   // Alertes critiques à afficher en bandeau
   const criticalAlerts = enrichedRecords.filter(r => r.pctAmorti >= 80);
@@ -231,6 +240,109 @@ export const DepreciationView: React.FC = () => {
         alert('Erreur lors de la suppression : ' + msg);
       }
     }
+  };
+
+  const exportToExcel = () => {
+    const headers = ["Code Actif", "Désignation", "Date Achat", "Coût Initial", "Durée", "Méthode", "VNC Actuelle", "% Amorti", "Statut"];
+    
+    const rows = filtered.map(r => [
+      r.assetCode,
+      r.assetName,
+      new Date(r.purchaseDate).toLocaleDateString('fr-FR'),
+      r.initialCost.toString(),
+      `${r.durationYears} ans`,
+      r.method === 'Degressive' ? 'Dégressive' : 'Linéaire',
+      r.vnc.toString(),
+      r.pctAmorti.toFixed(1) + '%',
+      r.alert.label
+    ]);
+    
+    const csvContent = "\uFEFF" + [headers.join(";"), ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(";"))].join("\n");
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `amortissements_export_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Veuillez autoriser les fenêtres surgissantes (popups) pour pouvoir exporter en PDF.");
+      return;
+    }
+    
+    const rowsHtml = filtered.map(r => `
+      <tr>
+        <td style="font-family: monospace; font-weight: bold; color: #7c3aed;">${r.assetCode}</td>
+        <td><b>${r.assetName}</b></td>
+        <td>${new Date(r.purchaseDate).toLocaleDateString('fr-FR')}</td>
+        <td>${fmt(r.initialCost)}</td>
+        <td style="text-align: center;">${r.durationYears} ans</td>
+        <td>${r.method === 'Degressive' ? 'Dégressive' : 'Linéaire'}</td>
+        <td><b>${fmt(r.vnc)}</b></td>
+        <td><b>${fmtPct(r.pctAmorti)}</b></td>
+        <td><span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; background: ${r.alert.bg}; color: ${r.alert.color};">${r.alert.label}</span></td>
+      </tr>
+    `).join('');
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Export Amortissements - KPSyDesk ITAM</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #1f2937; line-height: 1.5; }
+            h1 { color: #111827; margin-bottom: 5px; font-size: 24px; font-weight: 700; }
+            p.meta { color: #6b7280; margin-bottom: 25px; font-size: 13px; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #e5e7eb; padding: 12px 10px; text-align: left; font-size: 11px; vertical-align: top; }
+            th { background-color: #f9fafb; color: #374151; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+            tr:nth-child(even) { background-color: #fafafa; }
+            @media print {
+              body { padding: 0; }
+              @page { size: A4 landscape; margin: 1.5cm; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Rapport d'Amortissement & Cycle de Vie des Actifs IT</h1>
+          <p class="meta">
+            Rapport généré le ${new Date().toLocaleDateString()} à ${new Date().toLocaleTimeString()}<br/>
+            Filtres : Alerte : ${filterAlert || 'Toutes'}
+            ${filterStartDate || filterEndDate ? ` | Période d'acquisition : ${filterStartDate || 'Début'} au ${filterEndDate || 'Fin'}` : ''}
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Code Actif</th>
+                <th>Désignation</th>
+                <th>Date Achat</th>
+                <th>Coût Initial</th>
+                <th>Durée</th>
+                <th>Méthode</th>
+                <th>VNC Actuelle</th>
+                <th>% Amorti</th>
+                <th>Statut / Alerte</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   // Calcul prévisuel en temps réel dans le formulaire
@@ -323,7 +435,7 @@ export const DepreciationView: React.FC = () => {
       {/* ── Tableau principal ─────────────────────────────────────────────────── */}
       <div className="module-container">
         {/* Filtres */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '15px', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.25rem 0.75rem', flex: 1, minWidth: '180px' }}>
             <i className="ph ph-magnifying-glass" style={{ color: 'var(--text-muted)' }} />
             <input type="text" placeholder="Rechercher un actif..." value={searchTerm}
@@ -338,6 +450,53 @@ export const DepreciationView: React.FC = () => {
             <option value="info">🟡 À surveiller (≥ 50%)</option>
             <option value="ok">🟢 En cours</option>
           </select>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Acquisition du</span>
+            <input 
+              type="date" 
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.4rem 0.5rem', color: 'white', fontSize: '0.85rem' }}
+            />
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>au</span>
+            <input 
+              type="date" 
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.4rem 0.5rem', color: 'white', fontSize: '0.85rem' }}
+            />
+            {(filterStartDate || filterEndDate) && (
+              <button 
+                type="button" 
+                onClick={() => { setFilterStartDate(''); setFilterEndDate(''); }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--danger)', fontSize: '0.85rem', cursor: 'pointer', padding: '0.2rem' }}
+              >
+                Effacer
+              </button>
+            )}
+          </div>
+
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+            <button 
+              type="button"
+              onClick={exportToExcel}
+              className="btn-icon" 
+              style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', cursor: 'pointer' }}
+              title="Exporter vers Excel"
+            >
+              <i className="ph ph-file-xls" style={{ color: '#10b981' }}></i> Excel
+            </button>
+            <button 
+              type="button"
+              onClick={exportToPDF}
+              className="btn-icon" 
+              style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', cursor: 'pointer' }}
+              title="Exporter au format PDF / Imprimer"
+            >
+              <i className="ph ph-file-pdf" style={{ color: '#ef4444' }}></i> PDF
+            </button>
+          </div>
         </div>
 
         <div className="table-responsive">
