@@ -28,13 +28,17 @@ interface Ticket {
   assigneeId?: string;
   assignee?: User;
   assetId?: string;
+  asset?: any;
   comments?: TicketComment[];
 }
+
+const getTicketNumber = (t: Ticket) => '#' + t.id.substring(0, 8).toUpperCase();
 
 export const TicketView: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [techs, setTechs] = useState<User[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [assets, setAssets] = useState<any[]>([]);
 
   const session = localStorage.getItem('currentUser');
   const currentUser = session ? JSON.parse(session) : null;
@@ -44,6 +48,8 @@ export const TicketView: React.FC = () => {
   // Search & Filters
   const [filterPriority, setFilterPriority] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -68,6 +74,14 @@ export const TicketView: React.FC = () => {
     } catch (err) {
       console.warn('API error fetching tickets.', err);
       setTickets([]);
+    }
+
+    try {
+      const assetsRes = await api.get('/assets');
+      setAssets(assetsRes.data || []);
+    } catch (err) {
+      console.warn('API error fetching assets.', err);
+      setAssets([]);
     }
 
     try {
@@ -142,18 +156,39 @@ export const TicketView: React.FC = () => {
       if (editingTicket && editingTicket.id !== '1') {
         await api.put(`/tickets/${editingTicket.id}`, dataToSend);
         
-        // Simuler les notifications si assignation modifiée
+        // Notification email factice (la vraie est gérée en tâche de fond par le backend)
         if (formFields.assigneeId && formFields.assigneeId !== editingTicket.assigneeId) {
           if (formFields.techEmail) {
             alert(`Email de notification envoyé au technicien à : ${formFields.techEmail}`);
-          }
-          if (formFields.techWhatsapp) {
-            alert(`Notification WhatsApp envoyée au technicien à : ${formFields.techWhatsapp}`);
           }
         }
       } else {
         await api.post('/tickets', dataToSend);
       }
+
+      // Option A : Notification WhatsApp interactive par lien direct
+      if (formFields.techWhatsapp) {
+        const cleanPhone = formFields.techWhatsapp.replace(/[^0-9]/g, '');
+        if (cleanPhone) {
+          const priorityLabel = 
+            formFields.priority === 'CRITICAL' ? '⚠️ Critique' : 
+            formFields.priority === 'HIGH' ? '🔥 Haute' : 
+            formFields.priority === 'MEDIUM' ? 'Moyenne' : 'Basse';
+            
+          const messageText = `*KPSyDesk ITAM - Notification d'Incident*\n\n` +
+            `Bonjour,\n` +
+            `Un ticket d'incident vous a été assigné :\n\n` +
+            `• *Sujet* : ${formFields.title}\n` +
+            `• *Description* : ${formFields.description}\n` +
+            `• *Priorité* : ${priorityLabel}\n` +
+            `• *Statut* : En cours\n\n` +
+            `Merci de vous connecter sur https://app.kpsyinformatique.com/ pour le prendre en charge.`;
+
+          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
+          window.open(whatsappUrl, '_blank');
+        }
+      }
+
       setIsModalOpen(false);
       fetchTickets();
     } catch (err: any) { const msg = err.response?.data?.message || err.message || "Erreur inconnue"; alert("Erreur lors de la sauvegarde du ticket : " + msg); }
@@ -168,6 +203,108 @@ export const TicketView: React.FC = () => {
     }
   };
 
+  const exportToExcel = () => {
+    const headers = ["N° Ticket", "Sujet", "Description", "Demandeur", "Équipement", "Assigné à", "Priorité", "Statut", "Date de création"];
+    
+    const rows = filteredTickets.map(t => [
+      getTicketNumber(t),
+      t.title,
+      t.description.replace(/\n/g, ' '),
+      t.creator ? `${t.creator.firstName} ${t.creator.lastName}` : 'Anonyme',
+      t.asset ? `[${t.asset.inventoryCode}] ${t.asset.name}` : '-',
+      t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : 'Non assigné',
+      t.priority,
+      t.status,
+      new Date(t.createdAt).toLocaleDateString()
+    ]);
+    
+    // Combine with UTF-8 BOM for Excel native French compatibility
+    const csvContent = "\uFEFF" + [headers.join(";"), ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(";"))].join("\n");
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `tickets_export_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert("Veuillez autoriser les fenêtres surgissantes (popups) pour pouvoir exporter en PDF.");
+      return;
+    }
+    
+    const rowsHtml = filteredTickets.map(t => `
+      <tr>
+        <td style="font-family: monospace; font-weight: bold; color: #6366f1;">${getTicketNumber(t)}</td>
+        <td><b>${t.title}</b><br/><small style="color: #666;">${t.description}</small></td>
+        <td>${t.creator ? `${t.creator.firstName} ${t.creator.lastName}` : 'Anonyme'}</td>
+        <td>${t.asset ? `[${t.asset.inventoryCode}] ${t.asset.name}` : '-'}</td>
+        <td>${t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : 'Non assigné'}</td>
+        <td><span style="font-weight: bold; color: ${getPriorityColor(t.priority).startsWith('var') ? '#4b5563' : getPriorityColor(t.priority)};">${t.priority}</span></td>
+        <td><span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; background: #e5e7eb; color: #374151;">${t.status}</span></td>
+        <td>${new Date(t.createdAt).toLocaleDateString()}</td>
+      </tr>
+    `).join('');
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Export Incidents - KPSyDesk ITAM</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; color: #1f2937; line-height: 1.5; }
+            h1 { color: #111827; margin-bottom: 5px; font-size: 24px; font-weight: 700; }
+            p.meta { color: #6b7280; margin-bottom: 25px; font-size: 13px; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #e5e7eb; padding: 12px 10px; text-align: left; font-size: 11px; vertical-align: top; }
+            th { background-color: #f9fafb; color: #374151; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+            tr:nth-child(even) { background-color: #fafafa; }
+            @media print {
+              body { padding: 0; }
+              @page { size: A4 landscape; margin: 1.5cm; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Suivi des incidents et demandes d'assistance</h1>
+          <p class="meta">
+            Rapport généré le ${new Date().toLocaleDateString()} à ${new Date().toLocaleTimeString()}<br/>
+            Filtres : Statut : ${filterStatus || 'Tous'} | Priorité : ${filterPriority || 'Toutes'}
+            ${filterStartDate || filterEndDate ? ` | Période : ${filterStartDate || 'Début'} au ${filterEndDate || 'Fin'}` : ''}
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>N° Ticket</th>
+                <th>Sujet & Description</th>
+                <th>Demandeur</th>
+                <th>Équipement</th>
+                <th>Assigné à</th>
+                <th>Priorité</th>
+                <th>Statut</th>
+                <th>Créé le</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   const getPriorityColor = (p: string) => {
     switch (p.toUpperCase()) {
       case 'CRITICAL': return 'var(--danger)';
@@ -180,7 +317,15 @@ export const TicketView: React.FC = () => {
   const filteredTickets = tickets.filter(t => {
     const matchesPriority = filterPriority === '' || t.priority === filterPriority;
     const matchesStatus = filterStatus === '' || t.status === filterStatus;
-    return matchesPriority && matchesStatus;
+    
+    const ticketDate = new Date(t.createdAt).setHours(0,0,0,0);
+    const start = filterStartDate ? new Date(filterStartDate).setHours(0,0,0,0) : null;
+    const end = filterEndDate ? new Date(filterEndDate).setHours(23,59,59,999) : null;
+    
+    const matchesStart = !start || ticketDate >= start;
+    const matchesEnd = !end || ticketDate <= end;
+    
+    return matchesPriority && matchesStatus && matchesStart && matchesEnd;
   });
 
   return (
@@ -219,12 +364,59 @@ export const TicketView: React.FC = () => {
             <option value="RESOLVED">Résolu</option>
             <option value="CLOSED">Clos</option>
           </select>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Période du</span>
+            <input 
+              type="date" 
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.4rem 0.5rem', color: 'white', fontSize: '0.85rem' }}
+            />
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>au</span>
+            <input 
+              type="date" 
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.4rem 0.5rem', color: 'white', fontSize: '0.85rem' }}
+            />
+            {(filterStartDate || filterEndDate) && (
+              <button 
+                type="button" 
+                onClick={() => { setFilterStartDate(''); setFilterEndDate(''); }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--danger)', fontSize: '0.85rem', cursor: 'pointer', padding: '0.2rem' }}
+                title="Réinitialiser les dates"
+              >
+                Effacer
+              </button>
+            )}
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+            <button 
+              type="button"
+              onClick={exportToExcel}
+              className="btn-icon" 
+              style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', cursor: 'pointer' }}
+              title="Exporter vers Excel"
+            >
+              <i className="ph ph-file-xls" style={{ color: '#10b981' }}></i> Excel
+            </button>
+            <button 
+              type="button"
+              onClick={exportToPDF}
+              className="btn-icon" 
+              style={{ padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', cursor: 'pointer' }}
+              title="Exporter au format PDF / Imprimer"
+            >
+              <i className="ph ph-file-pdf" style={{ color: '#ef4444' }}></i> PDF
+            </button>
+          </div>
         </div>
 
         <div className="table-responsive">
           <table className="data-table">
             <thead>
               <tr>
+                <th>N° Ticket</th>
                 <th>Sujet</th>
                 <th>Demandeur</th>
                 <th>Équipement</th>
@@ -238,17 +430,18 @@ export const TicketView: React.FC = () => {
             <tbody>
               {filteredTickets.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun ticket trouvé</td>
+                  <td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun ticket trouvé</td>
                 </tr>
               ) : (
                 filteredTickets.map(t => (
                   <tr key={t.id}>
+                    <td style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--accent-primary)' }}>{getTicketNumber(t)}</td>
                     <td>
                       <strong>{t.title}</strong>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.description}</div>
                     </td>
                     <td>{t.creator ? `${t.creator.firstName} ${t.creator.lastName}` : 'Anonyme'}</td>
-                    <td>{t.assetId || '-'}</td>
+                    <td>{t.asset ? `[${t.asset.inventoryCode}] ${t.asset.name}` : '-'}</td>
                     <td>{t.assignee ? `${t.assignee.firstName} ${t.assignee.lastName}` : 'Non assigné'}</td>
                     <td>
                       <span style={{ color: getPriorityColor(t.priority), fontWeight: 'bold' }}>
@@ -342,6 +535,19 @@ export const TicketView: React.FC = () => {
                       </select>
                     )}
                   </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px' }}>Équipement associé (Actif)</label>
+                  <select 
+                    value={formFields.assetId} 
+                    onChange={e => setFormFields({...formFields, assetId: e.target.value})} 
+                    style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
+                  >
+                    <option value="">Aucun équipement</option>
+                    {assets.map(a => (
+                      <option key={a.id} value={a.id}>{`[${a.inventoryCode}] ${a.name}`}</option>
+                    ))}
+                  </select>
                 </div>
                 {!isUser && (
                   <div>
