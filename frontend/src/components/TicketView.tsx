@@ -32,7 +32,10 @@ interface Ticket {
   comments?: TicketComment[];
 }
 
-const getTicketNumber = (t: Ticket) => '#' + t.id.substring(0, 8).toUpperCase();
+const getTicketNumber = (t: Ticket) => {
+  if (!t || !t.id) return '#N/A';
+  return '#' + t.id.substring(0, Math.min(8, t.id.length)).toUpperCase();
+};
 
 export const TicketView: React.FC = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -318,7 +321,8 @@ export const TicketView: React.FC = () => {
     const matchesPriority = filterPriority === '' || t.priority === filterPriority;
     const matchesStatus = filterStatus === '' || t.status === filterStatus;
     
-    const ticketDate = new Date(t.createdAt).setHours(0,0,0,0);
+    const tDate = t.createdAt ? new Date(t.createdAt) : null;
+    const ticketDate = tDate && !isNaN(tDate.getTime()) ? tDate.setHours(0,0,0,0) : 0;
     const start = filterStartDate ? new Date(filterStartDate).setHours(0,0,0,0) : null;
     const end = filterEndDate ? new Date(filterEndDate).setHours(23,59,59,999) : null;
     
