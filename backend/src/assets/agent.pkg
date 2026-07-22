@@ -1,0 +1,2 @@
+KPsyITAgent macOS Package Placeholder
+Veuillez compiler le véritable agent à l'aide des scripts fournis dans /agent-installer/mac/ depuis un ordinateur macOS et copier le fichier KPsyITAgent_macOS.pkg généré ici sous le nom agent.pkg pour le distribuer à vos abonnés.

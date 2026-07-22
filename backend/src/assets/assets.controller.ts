@@ -85,6 +85,36 @@ export class AssetsController {
     return res.sendFile(foundPath);
   }
 
+  /**
+   * Téléchargement de l'agent macOS — public.
+   */
+  @Get('agent/download-mac')
+  @Public() // Bypass JwtAuthGuard, TenantGuard et RolesGuard
+  downloadAgentMac(@Res() res: Response) {
+    const searchPaths = [
+      path.join(process.cwd(), 'src', 'assets', 'agent.pkg'),
+      path.join(process.cwd(), 'dist', 'src', 'assets', 'agent.pkg'),
+      path.join(process.cwd(), 'dist', 'assets', 'agent.pkg'),
+      path.join(__dirname, 'agent.pkg')
+    ];
+
+    let foundPath = '';
+    for (const p of searchPaths) {
+      if (fs.existsSync(p)) {
+        foundPath = p;
+        break;
+      }
+    }
+
+    if (!foundPath) {
+      return res.status(404).send("Le fichier d'installation de l'agent macOS (agent.pkg) n'a pas encore été généré sur le serveur.");
+    }
+
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', 'attachment; filename=KPsyITAgent_macOS.pkg');
+    return res.sendFile(foundPath);
+  }
+
   @Post()
   @Roles(Role.ADMIN, Role.TECHNICIAN)
   create(@Body() createAssetDto: CreateAssetDto) {

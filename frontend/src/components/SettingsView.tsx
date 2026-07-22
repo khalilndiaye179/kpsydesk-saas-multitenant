@@ -350,35 +350,72 @@ export const SettingsView: React.FC = () => {
       </div>
 
       {isAdmin && (
-        <div className="module-container" style={{ marginBottom: '2rem', maxWidth: '600px' }}>
-          <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <i className="ph ph-shield-check" style={{ color: 'var(--primary)' }}></i> Agent d'Inventaire Windows
-          </h3>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.2rem', lineHeight: '1.4' }}>
-            Installez notre agent d'inventaire léger sur vos ordinateurs Windows pour les enrôler automatiquement. L'agent détecte le processeur, la RAM, les disques durs, l'adresse MAC, l'IP et le système d'exploitation et transmet ces données périodiquement.
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center' }}>
-            <a 
-              href={`${(import.meta as any).env?.VITE_API_URL || ''}/api/assets/agent/download`}
-              download="KPsyITAgent.msi"
-              className="btn-primary" 
-              style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-            >
-              <i className="ph ph-download-simple" style={{ fontSize: '1.2rem' }}></i>
-              Télécharger l'Agent (.msi)
-            </a>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Taille : ~2 Mo | Version 1.0.0
-            </span>
-          </div>
-          <div style={{ marginTop: '1rem', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.8rem' }}>
-            <code style={{ color: 'var(--text-primary)' }}>
-              msiexec /i KPsyITAgent.msi SERVERURL="{window.location.origin}" TENANTID="{localStorage.getItem('tenant_subdomain') || 'votre-tenant'}" /qn
-            </code>
-            <p style={{ margin: '5px 0 0 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-              Commande d'installation silencieuse pour déploiement de masse (GPO, SCCM, etc.)
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '2rem' }}>
+          
+          {/* CARD WINDOWS */}
+          <div className="module-container" style={{ margin: 0 }}>
+            <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="ph ph-windows-logo" style={{ color: 'var(--primary)' }}></i> Agent d'Inventaire Windows
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.2rem', lineHeight: '1.4' }}>
+              Installez notre agent d'inventaire léger sur vos ordinateurs Windows pour les enrôler automatiquement. L'agent détecte le processeur, la RAM, les disques durs, l'adresse MAC, l'IP et le système d'exploitation et transmet ces données périodiquement.
             </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center' }}>
+              <a 
+                href={`${(import.meta as any).env?.VITE_API_URL || ''}/api/assets/agent/download`}
+                download="KPsyITAgent.msi"
+                className="btn-primary" 
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              >
+                <i className="ph ph-download-simple" style={{ fontSize: '1.2rem' }}></i>
+                Télécharger l'Agent (.msi)
+              </a>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Taille : ~2 Mo | Version 1.0.0
+              </span>
+            </div>
+            <div style={{ marginTop: '1rem', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.8rem' }}>
+              <code style={{ color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                msiexec /i KPsyITAgent.msi SERVERURL="{window.location.origin}" TENANTID="{localStorage.getItem('tenant_subdomain') || 'votre-tenant'}" /qn
+              </code>
+              <p style={{ margin: '5px 0 0 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                Commande d'installation silencieuse pour déploiement de masse (GPO, SCCM, etc.)
+              </p>
+            </div>
           </div>
+
+          {/* CARD MACOS */}
+          <div className="module-container" style={{ margin: 0 }}>
+            <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="ph ph-apple-logo" style={{ color: 'var(--primary)' }}></i> Agent d'Inventaire macOS
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.2rem', lineHeight: '1.4' }}>
+              Installez notre agent d'inventaire léger sur vos ordinateurs macOS pour les enrôler automatiquement. L'agent détecte les mêmes informations (processeur, RAM, stockage, MAC, IP, N° de Série) et se met à jour périodiquement.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', alignItems: 'center' }}>
+              <a 
+                href={`${(import.meta as any).env?.VITE_API_URL || ''}/api/assets/agent/download-mac`}
+                download="KPsyITAgent_macOS.pkg"
+                className="btn-primary" 
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              >
+                <i className="ph ph-download-simple" style={{ fontSize: '1.2rem' }}></i>
+                Télécharger l'Agent (.pkg)
+              </a>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Taille : ~2 Mo | Version 1.0.0
+              </span>
+            </div>
+            <div style={{ marginTop: '1rem', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '6px', fontSize: '0.8rem' }}>
+              <code style={{ color: 'var(--text-primary)', wordBreak: 'break-all' }}>
+                sudo mkdir -p "/Library/Application Support/KPsyITAgent" && echo '{"ServerUrl":"{window.location.origin}","TenantId":"{localStorage.getItem('tenant_subdomain') || 'votre-tenant'}"}' | sudo tee "/Library/Application Support/KPsyITAgent/config.json"
+              </code>
+              <p style={{ margin: '5px 0 0 0', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                Pré-configurer le serveur et le tenant ID avant l'exécution du démon macOS
+              </p>
+            </div>
+          </div>
+
         </div>
       )}
 
