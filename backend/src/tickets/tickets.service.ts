@@ -96,11 +96,11 @@ export class TicketsService {
       // Notify assignee if assigned on creation
       if (ticket.assigneeId && ticket.assignee) {
         const subject = `Nouveau ticket assigné : ${ticket.title}`;
-        const text = `Bonjour ${ticket.assignee.firstName},\n\nLe ticket "${ticket.title}" (Priorité: ${ticket.priority || 'MEDIUM'}) vous a été assigné.\n\nDescription :\n${ticket.description}\n\nRendez-vous sur l'application pour le traiter.`;
-        const html = `<p>Bonjour ${ticket.assignee.firstName},</p>
-<p>Le ticket <b>"${ticket.title}"</b> (Priorité: ${ticket.priority || 'MEDIUM'}) vous a été assigné.</p>
-<p><b>Description :</b><br/>${ticket.description}</p>
-<p><a href="https://app.kpsyinformatique.com/">Accéder à l'espace de support</a></p>`;
+        const text = `Bonjour ${ticket.assignee.firstName},\n\nLe ticket suivant vous a été assigné :\n\n${this.generateTicketTableText(ticket)}\n\nRendez-vous sur l'application pour le traiter.`;
+        const html = `<p>Bonjour <b>${ticket.assignee.firstName}</b>,</p>
+<p>Le ticket suivant vous a été assigné :</p>
+${this.generateTicketTableHtml(ticket)}
+<p style="margin-top: 20px;"><a href="https://app.kpsyinformatique.com/" style="background-color: #6366f1; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Accéder à l'espace de support</a></p>`;
 
         this.mailService.sendMail(ticket.assignee.email, subject, text, html).catch(() => {});
       }
@@ -108,13 +108,12 @@ export class TicketsService {
       // Notify creator about the ticket creation
       if (ticket.creator && ticket.creator.email && ticket.creator.email !== 'system@kpsydesk.local') {
         const creatorSubject = `[KPSyDesk] Confirmation d'ouverture de ticket - ${ticket.title}`;
-        const creatorText = `Bonjour ${ticket.creator.firstName},\n\nVotre ticket "${ticket.title}" (Priorité: ${ticket.priority || 'MEDIUM'}) a été créé avec succès.\n\nDescription :\n${ticket.description}\n\nUn technicien va le prendre en charge dans les plus brefs délais.\n\nMerci de votre confiance.`;
-        const creatorHtml = `<p>Bonjour ${ticket.creator.firstName},</p>
-<p>Votre ticket <b>"${ticket.title}"</b> (Priorité: ${ticket.priority || 'MEDIUM'}) a été créé avec succès.</p>
-<p><b>Description :</b><br/>${ticket.description}</p>
+        const creatorText = `Bonjour ${ticket.creator.firstName},\n\nVotre ticket a été créé avec succès :\n\n${this.generateTicketTableText(ticket)}\n\nUn technicien va le prendre en charge dans les plus brefs délais.`;
+        const html = `<p>Bonjour <b>${ticket.creator.firstName}</b>,</p>
+<p>Votre ticket a été créé avec succès :</p>
+${this.generateTicketTableHtml(ticket)}
 <p>Un technicien va le prendre en charge dans les plus brefs délais.</p>
-<p>Merci de votre confiance.</p>
-<p><a href="https://app.kpsyinformatique.com/">Accéder à votre espace client</a></p>`;
+<p style="margin-top: 20px;"><a href="https://app.kpsyinformatique.com/" style="background-color: #10b981; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Accéder à votre espace client</a></p>`;
 
         this.mailService.sendMail(ticket.creator.email, creatorSubject, creatorText, creatorHtml).catch(() => {});
       }
@@ -154,11 +153,11 @@ export class TicketsService {
       // Notify new assignee if changed
       if (prismaData.assigneeId && currentTicket.assigneeId !== prismaData.assigneeId && updatedTicket.assignee) {
         const subject = `Nouveau ticket assigné : ${updatedTicket.title}`;
-        const text = `Bonjour ${updatedTicket.assignee.firstName},\n\nLe ticket "${updatedTicket.title}" (Priorité: ${updatedTicket.priority || 'MEDIUM'}) vous a été assigné.\n\nDescription :\n${updatedTicket.description}\n\nRendez-vous sur l'application pour le traiter.`;
-        const html = `<p>Bonjour ${updatedTicket.assignee.firstName},</p>
-<p>Le ticket <b>"${updatedTicket.title}"</b> (Priorité: ${updatedTicket.priority || 'MEDIUM'}) vous a été assigné.</p>
-<p><b>Description :</b><br/>${updatedTicket.description}</p>
-<p><a href="https://app.kpsyinformatique.com/">Accéder à l'espace de support</a></p>`;
+        const text = `Bonjour ${updatedTicket.assignee.firstName},\n\nLe ticket suivant vous a été assigné :\n\n${this.generateTicketTableText(updatedTicket)}\n\nRendez-vous sur l'application pour le traiter.`;
+        const html = `<p>Bonjour <b>${updatedTicket.assignee.firstName}</b>,</p>
+<p>Le ticket suivant vous a été assigné :</p>
+${this.generateTicketTableHtml(updatedTicket)}
+<p style="margin-top: 20px;"><a href="https://app.kpsyinformatique.com/" style="background-color: #6366f1; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Accéder à l'espace de support</a></p>`;
 
         this.mailService.sendMail(updatedTicket.assignee.email, subject, text, html).catch(() => {});
       }
@@ -211,22 +210,97 @@ export class TicketsService {
         assigneeId,
         status: 'IN_PROGRESS'
       },
-      include: { assignee: true }
+      include: { assignee: true, creator: true, asset: true }
     });
 
     // Notify new assignee if changed and exists
     if (assigneeId && currentTicket.assigneeId !== assigneeId && updatedTicket.assignee) {
       const subject = `Nouveau ticket assigné : ${updatedTicket.title}`;
-      const text = `Bonjour ${updatedTicket.assignee.firstName},\n\nLe ticket "${updatedTicket.title}" (Priorité: ${updatedTicket.priority}) vous a été assigné.\n\nDescription :\n${updatedTicket.description}\n\nRendez-vous sur l'application pour le traiter.`;
-      const html = `<p>Bonjour ${updatedTicket.assignee.firstName},</p>
-<p>Le ticket <b>"${updatedTicket.title}"</b> (Priorité: ${updatedTicket.priority}) vous a été assigné.</p>
-<p><b>Description :</b><br/>${updatedTicket.description}</p>
-<p><a href="https://app.kpsyinformatique.com/">Accéder à l'espace de support</a></p>`;
+      const text = `Bonjour ${updatedTicket.assignee.firstName},\n\nLe ticket suivant vous a été assigné :\n\n${this.generateTicketTableText(updatedTicket)}\n\nRendez-vous sur l'application pour le traiter.`;
+      const html = `<p>Bonjour <b>${updatedTicket.assignee.firstName}</b>,</p>
+<p>Le ticket suivant vous a été assigné :</p>
+${this.generateTicketTableHtml(updatedTicket)}
+<p style="margin-top: 20px;"><a href="https://app.kpsyinformatique.com/" style="background-color: #6366f1; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Accéder à l'espace de support</a></p>`;
 
       // Envoi asynchrone non-bloquant
       this.mailService.sendMail(updatedTicket.assignee.email, subject, text, html).catch(() => {});
     }
 
     return updatedTicket;
+  }
+
+  private generateTicketTableHtml(ticket: any): string {
+    const ticketNo = '#' + ticket.id.substring(0, 8).toUpperCase();
+    const subject = ticket.title;
+    const description = ticket.description;
+    const creatorName = ticket.creator ? `${ticket.creator.firstName} ${ticket.creator.lastName}` : 'Anonyme';
+    const assetName = ticket.asset ? `[${ticket.asset.inventoryCode}] ${ticket.asset.name}` : '-';
+    const assigneeName = ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : 'Non assigné';
+    const priority = ticket.priority;
+    const status = ticket.status;
+    const createdDate = new Date(ticket.createdAt).toLocaleDateString('fr-FR');
+
+    return `
+      <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-family: Arial, sans-serif; font-size: 13px; color: #333;">
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; width: 30%; background: #f9fafb;">N° Ticket</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-family: monospace; font-weight: bold; color: #6366f1;">${ticketNo}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f9fafb;">Sujet</td>
+          <td style="padding: 8px; border: 1px solid #ddd;"><b>${subject}</b></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f9fafb;">Description</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${description}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f9fafb;">Demandeur</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${creatorName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f9fafb;">Équipement</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${assetName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f9fafb;">Assigné à</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${assigneeName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f9fafb;">Priorité</td>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; color: #d97706;">${priority}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f9fafb;">Statut</td>
+          <td style="padding: 8px; border: 1px solid #ddd;"><span style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase;">${status}</span></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold; background: #f9fafb;">Créé le</td>
+          <td style="padding: 8px; border: 1px solid #ddd;">${createdDate}</td>
+        </tr>
+      </table>
+    `;
+  }
+
+  private generateTicketTableText(ticket: any): string {
+    const ticketNo = '#' + ticket.id.substring(0, 8).toUpperCase();
+    const subject = ticket.title;
+    const description = ticket.description;
+    const creatorName = ticket.creator ? `${ticket.creator.firstName} ${ticket.creator.lastName}` : 'Anonyme';
+    const assetName = ticket.asset ? `[${ticket.asset.inventoryCode}] ${ticket.asset.name}` : '-';
+    const assigneeName = ticket.assignee ? `${ticket.assignee.firstName} ${ticket.assignee.lastName}` : 'Non assigné';
+    const priority = ticket.priority;
+    const status = ticket.status;
+    const createdDate = new Date(ticket.createdAt).toLocaleDateString('fr-FR');
+
+    return `• N° Ticket : ${ticketNo}\n` +
+      `• Sujet : ${subject}\n` +
+      `• Description : ${description}\n` +
+      `• Demandeur : ${creatorName}\n` +
+      `• Équipement : ${assetName}\n` +
+      `• Assigné à : ${assigneeName}\n` +
+      `• Priorité : ${priority}\n` +
+      `• Statut : ${status}\n` +
+      `• Créé le : ${createdDate}`;
   }
 }
