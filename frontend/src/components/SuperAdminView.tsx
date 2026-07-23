@@ -1762,25 +1762,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
                               <div style={{ flex: 1, height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', maxWidth: '60px' }}>
                                 <div style={{ width: `${Math.min(t.usagePct, 100)}%`, height: '100%', background: t.usagePct >= 95 ? '#ef4444' : '#f59e0b', borderRadius: '3px' }} />
-                              </div>
-                              <span style={{ fontWeight: 700, color: t.usagePct >= 95 ? '#ef4444' : '#f59e0b', fontSize: '0.85rem' }}>
-                                {t.usagePct}%
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* VISITORS TAB */}
+                              </div      {/* VISITORS TAB */}
       {activeTab === 'visitors' && (userRole === 'SuperAdmin' || userRole === 'Support') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
@@ -1794,94 +1776,144 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
           {visitorStats && (
             <>
               {/* Visitor KPIs */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
                 <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="ph ph-eye" style={{ fontSize: '1.4rem', color: 'white' }} />
+                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className="ph ph-eye" style={{ fontSize: '1.25rem', color: 'white' }} />
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Pages Vues Totales</span>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)' }}>{visitorStats.summary.totalPageViews}</div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Pages Vues Totales</span>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>{visitorStats.summary.totalPageViews}</div>
                   </div>
                 </div>
 
                 <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="ph ph-users" style={{ fontSize: '1.4rem', color: 'white' }} />
+                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className="ph ph-users" style={{ fontSize: '1.25rem', color: 'white' }} />
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Visiteurs Uniques (Cumulé)</span>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)' }}>{visitorStats.summary.totalUniqueVisitors}</div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Visiteurs Uniques (Cumulé)</span>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>{visitorStats.summary.totalUniqueVisitors}</div>
                   </div>
                 </div>
 
                 <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #22c55e, #15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="ph ph-check-square" style={{ fontSize: '1.4rem', color: 'white' }} />
+                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className="ph ph-activity" style={{ fontSize: '1.25rem', color: 'white' }} />
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Pages Vues Aujourd'hui</span>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#22c55e' }}>{visitorStats.summary.pageViewsToday}</div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Moy. Pages / Visiteur</span>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>{visitorStats.summary.avgPageViewsPerVisitor}</div>
                   </div>
                 </div>
 
                 <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <i className="ph ph-user-check" style={{ fontSize: '1.4rem', color: 'white' }} />
+                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #22c55e, #15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className="ph ph-check-square" style={{ fontSize: '1.25rem', color: 'white' }} />
                   </div>
                   <div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Visiteurs Uniques Aujourd'hui</span>
-                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f59e0b' }}>{visitorStats.summary.uniqueVisitorsToday}</div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Vues Aujourd'hui</span>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#22c55e' }}>{visitorStats.summary.pageViewsToday}</div>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className="ph ph-user-check" style={{ fontSize: '1.25rem', color: 'white' }} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Uniques Aujourd'hui</span>
+                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b' }}>{visitorStats.summary.uniqueVisitorsToday}</div>
                   </div>
                 </div>
               </div>
 
-              {/* 30-Day Traffic Chart */}
-              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <i className="ph ph-chart-line" style={{ color: 'var(--primary)' }} /> Trafic des 30 Derniers Jours
-                </h3>
-                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '180px', gap: '6px', paddingTop: '10px', borderBottom: '2px solid var(--border-color)' }}>
-                  {visitorStats.dailyStats.map((day: any, i: number) => {
-                    const maxVal = Math.max(...visitorStats.dailyStats.map((d: any) => d.pageViews), 1);
-                    const pctViews = (day.pageViews / maxVal) * 100;
-                    const pctVisitors = (day.uniqueVisitors / maxVal) * 100;
+              {/* 30-Day Traffic Chart & Split */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', alignItems: 'stretch' }}>
+                {/* Chart */}
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="ph ph-chart-line" style={{ color: 'var(--primary)' }} /> Trafic des 30 Derniers Jours
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '160px', gap: '6px', paddingTop: '10px', borderBottom: '2px solid var(--border-color)' }}>
+                    {visitorStats.dailyStats.map((day: any, i: number) => {
+                      const maxVal = Math.max(...visitorStats.dailyStats.map((d: any) => d.pageViews), 1);
+                      const pctViews = (day.pageViews / maxVal) * 100;
+                      const pctVisitors = (day.uniqueVisitors / maxVal) * 100;
 
+                      return (
+                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', position: 'relative' }} title={`${day.date} : ${day.pageViews} vues, ${day.uniqueVisitors} visiteurs`}>
+                          <div style={{ width: '45%', background: 'linear-gradient(to top, #3b82f6, #60a5fa)', height: `${pctViews}%`, borderRadius: '3px 3px 0 0', minHeight: day.pageViews > 0 ? '3px' : '0px' }} />
+                          <div style={{ width: '30%', background: 'linear-gradient(to top, #8b5cf6, #a78bfa)', height: `${pctVisitors}%`, borderRadius: '3px 3px 0 0', marginLeft: '1px', minHeight: day.uniqueVisitors > 0 ? '3px' : '0px' }} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <span>{visitorStats.dailyStats[0]?.date}</span>
+                    <span>{visitorStats.dailyStats[14]?.date}</span>
+                    <span>{visitorStats.dailyStats[29]?.date}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '20px', marginTop: '10px', justifyContent: 'center', fontSize: '0.82rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '10px', height: '10px', background: '#3b82f6', borderRadius: '3px' }} />
+                      <span style={{ color: 'var(--text-secondary)' }}>Pages Vues</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '10px', height: '10px', background: '#8b5cf6', borderRadius: '3px' }} />
+                      <span style={{ color: 'var(--text-secondary)' }}>Visiteurs Uniques</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Split Public vs App */}
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <i className="ph ph-arrows-split" style={{ color: '#8b5cf6' }} /> Type d'Audience
+                    </h3>
+                    <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Répartition du trafic entre visiteurs externes et utilisateurs connectés.</p>
+                  </div>
+                  
+                  {(() => {
+                    const total = (visitorStats.publicVsApp.public + visitorStats.publicVsApp.app) || 1;
+                    const pctPublic = Math.round((visitorStats.publicVsApp.public / total) * 100);
+                    const pctApp = 100 - pctPublic;
                     return (
-                      <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', position: 'relative' }} title={`${day.date} : ${day.pageViews} vues, ${day.uniqueVisitors} visiteurs uniques`}>
-                        {/* Bar Page Views */}
-                        <div style={{ width: '45%', background: 'linear-gradient(to top, #3b82f6, #60a5fa)', height: `${pctViews}%`, borderRadius: '4px 4px 0 0', minHeight: day.pageViews > 0 ? '4px' : '0px', transition: 'all 0.3s' }} />
-                        {/* Bar Unique Visitors */}
-                        <div style={{ width: '30%', background: 'linear-gradient(to top, #8b5cf6, #a78bfa)', height: `${pctVisitors}%`, borderRadius: '4px 4px 0 0', marginLeft: '2px', minHeight: day.uniqueVisitors > 0 ? '4px' : '0px', transition: 'all 0.3s' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', height: '24px', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                          <div style={{ width: `${pctPublic}%`, background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: pctPublic > 20 ? 'auto' : '0' }}>
+                            {pctPublic > 20 ? `${pctPublic}% Public` : ''}
+                          </div>
+                          <div style={{ width: `${pctApp}%`, background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', color: 'white', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: pctApp > 20 ? 'auto' : '0' }}>
+                            {pctApp > 20 ? `${pctApp}% Interne` : ''}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '6px' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>🌐 Vues Externes (Public)</span>
+                            <strong>{visitorStats.publicVsApp.public}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: 'var(--text-secondary)' }}>🔒 Vues Internes (Espace client)</span>
+                            <strong>{visitorStats.publicVsApp.app}</strong>
+                          </div>
+                        </div>
                       </div>
                     );
-                  })}
-                </div>
-                {/* Labels */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  <span>{visitorStats.dailyStats[0]?.date}</span>
-                  <span>{visitorStats.dailyStats[14]?.date}</span>
-                  <span>{visitorStats.dailyStats[29]?.date}</span>
-                </div>
-                <div style={{ display: 'flex', gap: '20px', marginTop: '15px', justifyContent: 'center', fontSize: '0.85rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '12px', height: '12px', background: '#3b82f6', borderRadius: '3px' }} />
-                    <span style={{ color: 'var(--text-secondary)' }}>Pages Vues</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{ width: '12px', height: '12px', background: '#8b5cf6', borderRadius: '3px' }} />
-                    <span style={{ color: 'var(--text-secondary)' }}>Visiteurs Uniques</span>
-                  </div>
+                  })()}
+                  <div />
                 </div>
               </div>
 
-              {/* Two-Column breakdown */}
+              {/* Two-Column Page & Tenant breakdown */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
                 
                 {/* Top Visited Pages */}
                 <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden' }}>
                   <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <i className="ph ph-file" style={{ fontSize: '1.2rem', color: '#3b82f6' }} />
+                    <i className="ph ph-file-text" style={{ fontSize: '1.2rem', color: '#3b82f6' }} />
                     <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Top 10 Pages les Plus Visitées</h3>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
@@ -1914,7 +1946,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                 <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden' }}>
                   <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <i className="ph ph-buildings" style={{ fontSize: '1.2rem', color: '#8b5cf6' }} />
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Répartition par Locataire</h3>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Trafic par Locataire (Tenant)</h3>
                   </div>
                   <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -1944,8 +1976,39 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
 
               </div>
 
-              {/* Devices and Browsers */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+              {/* Three-Column technical metrics */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', alignItems: 'start' }}>
+                
+                {/* Traffic Origin */}
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="ph ph-link" style={{ color: '#3b82f6' }} /> Provenances (Referrers)
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {visitorStats.topReferrers.length === 0 ? (
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', padding: '10px 0' }}>
+                        Accès directs uniquement (aucun Referrer).
+                      </div>
+                    ) : (
+                      visitorStats.topReferrers.map((r: any, i: number) => {
+                        const total = visitorStats.topReferrers.reduce((acc: number, cur: any) => acc + cur.count, 0) || 1;
+                        const pct = Math.round((r.count / total) * 100);
+                        return (
+                          <div key={i}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                              <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '160px' }} title={r.referrer}>{r.referrer}</span>
+                              <strong>{r.count} ({pct}%)</strong>
+                            </div>
+                            <div style={{ height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ width: `${pct}%`, height: '100%', background: '#3b82f6', borderRadius: '3px' }} />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
                 {/* Browsers */}
                 <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1992,6 +2055,60 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                       );
                     })}
                   </div>
+                </div>
+              </div>
+
+              {/* Real-time Visit Log */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <i className="ph ph-clock-counter-clockwise" style={{ fontSize: '1.2rem', color: 'var(--primary)' }} />
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Journal des Visites en Temps Réel</h3>
+                  </div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'var(--bg-tertiary)', padding: '4px 10px', borderRadius: '8px', fontWeight: 600 }}>
+                    15 dernières pages consultées
+                  </span>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>Date / Heure</th>
+                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>Locataire / Espace</th>
+                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>Chemin (Page)</th>
+                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>Provenance</th>
+                        <th style={{ padding: '12px 20px', fontWeight: 600 }}>Navigateur & Client</th>
+                        <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Adresse IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visitorStats.recentVisits.map((visit: any) => (
+                        <tr key={visit.id} style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.85rem' }}>
+                          <td style={{ padding: '12px 20px', color: 'var(--text-muted)' }}>
+                            {new Date(visit.createdAt).toLocaleTimeString('fr-FR')}
+                          </td>
+                          <td style={{ padding: '12px 20px', fontWeight: 600 }}>
+                            <span style={{
+                              padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', fontWeight: 700,
+                              background: visit.tenantName === 'Portail Public' ? 'rgba(59,130,246,0.1)' : 'rgba(139,92,246,0.1)',
+                              color: visit.tenantName === 'Portail Public' ? '#3b82f6' : '#8b5cf6'
+                            }}>
+                              {visit.tenantName}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 20px', fontFamily: 'monospace', color: 'var(--text-primary)' }}>{visit.path}</td>
+                          <td style={{ padding: '12px 20px', color: 'var(--text-muted)' }} title={visit.referrer}>
+                            {visit.referrer.length > 25 ? `${visit.referrer.substring(0, 25)}...` : visit.referrer}
+                          </td>
+                          <td style={{ padding: '12px 20px', color: 'var(--text-secondary)' }}>
+                            <i className={visit.device === 'Mobile' ? 'ph ph-phone' : 'ph ph-desktop'} style={{ marginRight: '6px' }} />
+                            {visit.browser}
+                          </td>
+                          <td style={{ padding: '12px 20px', textAlign: 'right', fontFamily: 'monospace', color: 'var(--text-muted)' }}>{visit.ip}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </>

@@ -1566,15 +1566,87 @@ export class AdminTenantsController {
     const devices = Object.keys(deviceCounts).map(name => ({ name, count: deviceCounts[name] }));
     const browsers = Object.keys(browserCounts).map(name => ({ name, count: browserCounts[name] }));
 
+    // 9. Pages vues externes (public) vs internes (app)
+    const viewsPublic = await this.prisma.pageView.count({
+      where: { path: { startsWith: '/public' } }
+    });
+    const viewsApp = await this.prisma.pageView.count({
+      where: { path: { startsWith: '/app' } }
+    });
+
+    // 10. Principaux Referrers (Sites d'origine)
+    const referrersRaw = await this.prisma.pageView.groupBy({
+      by: ['referrer'],
+      _count: {
+        referrer: true
+      },
+      where: {
+        referrer: {
+          not: { in: ['', 'null'] }
+        }
+      },
+      orderBy: {
+        _count: {
+          referrer: 'desc'
+        }
+      },
+      take: 10
+    });
+    const topReferrers = referrersRaw
+      .filter(r => r.referrer !== null)
+      .map(r => ({
+        referrer: r.referrer,
+        count: r._count.referrer
+      }));
+
+    // 11. Journal des 15 dernières visites en temps réel
+    const recentVisitsRaw = await this.prisma.pageView.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 15
+    });
+    
+    const recentVisits = recentVisitsRaw.map(v => {
+      const tenantName = v.tenantId ? (tenantMap.get(v.tenantId) || v.tenantId) : 'Portail Public';
+      
+      // Parse User-Agent simple pour affichage
+      const ua = (v.userAgent || '').toLowerCase();
+      let browser = 'Autre';
+      if (ua.includes('firefox')) browser = 'Firefox';
+      else if (ua.includes('chrome') && !ua.includes('chromium')) browser = 'Chrome';
+      else if (ua.includes('safari') && !ua.includes('chrome')) browser = 'Safari';
+      else if (ua.includes('edge')) browser = 'Edge';
+
+      let device = 'Bureau';
+      if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('android')) device = 'Mobile';
+
+      return {
+        id: v.id,
+        createdAt: v.createdAt,
+        path: v.path,
+        ip: v.ip || 'Inconnue',
+        browser,
+        device,
+        referrer: v.referrer || 'Accès Direct',
+        tenantName
+      };
+    });
+
     return {
       summary: {
         totalPageViews,
         totalUniqueVisitors,
         pageViewsToday,
-        uniqueVisitorsToday
+        uniqueVisitorsToday,
+        avgPageViewsPerVisitor: parseFloat((totalPageViews / (totalUniqueVisitors || 1)).toFixed(1))
+      },
+      publicVsApp: {
+        public: viewsPublic,
+        app: viewsApp
       },
       topPages,
       tenantShare,
+      topReferrers,
+      recentVisits,
       dailyStats,
       devices,
       browsers
