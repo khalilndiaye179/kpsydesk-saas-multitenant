@@ -1762,7 +1762,25 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
                               <div style={{ flex: 1, height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', maxWidth: '60px' }}>
                                 <div style={{ width: `${Math.min(t.usagePct, 100)}%`, height: '100%', background: t.usagePct >= 95 ? '#ef4444' : '#f59e0b', borderRadius: '3px' }} />
-                              </div      {/* VISITORS TAB */}
+                              </div>
+                              <span style={{ fontWeight: 700, color: t.usagePct >= 95 ? '#ef4444' : '#f59e0b', fontSize: '0.85rem' }}>
+                                {t.usagePct}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* VISITORS TAB */}
       {activeTab === 'visitors' && (userRole === 'SuperAdmin' || userRole === 'Support') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
