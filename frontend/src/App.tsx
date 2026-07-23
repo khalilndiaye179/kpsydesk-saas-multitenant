@@ -1046,9 +1046,9 @@ function App() {
                   <i className="ph-bold ph-phone"></i>
                   <span>+221 77 803 47 58</span>
                 </a>
-                <a href="tel:+221782813939" className="login-footer-contact-item">
+                <a href="tel:+221762613939" className="login-footer-contact-item">
                   <i className="ph-bold ph-phone"></i>
-                  <span>+221 78 281 39 39</span>
+                  <span>+221 76 261 39 39</span>
                 </a>
                 <a href="mailto:khalil.ndiaye@kpsyinformatique.com" className="login-footer-contact-item">
                   <i className="ph-bold ph-envelope"></i>
