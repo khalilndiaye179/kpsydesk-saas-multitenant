@@ -116,7 +116,7 @@ export function PricingView({ onSignup }: PricingViewProps) {
           Choisissez votre plan
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', maxWidth: '500px', margin: '0 auto 2rem' }}>
-          Gérez votre parc informatique avec la solution KPSyDesk ITAM. Commencez gratuitement pendant 14 jours.
+          Gérez votre parc informatique avec la solution KPSyDesk ITAM. Commencez gratuitement pendant 7 jours.
         </p>
 
         {/* Billing Toggle */}
@@ -287,7 +287,7 @@ export function PricingView({ onSignup }: PricingViewProps) {
                   Commencer l'essai gratuit →
                 </button>
                 <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  14 jours gratuits • Aucune CB requise
+                  7 jours gratuits • Aucune CB requise
                 </div>
               </div>
             </div>

@@ -241,7 +241,7 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
             <i className="ph-bold ph-shield-check" style={{ color: '#22c55e' }} /> Données isolées par entreprise
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <i className="ph-bold ph-clock" style={{ color: '#3b82f6' }} /> 14 jours d'essai gratuit
+            <i className="ph-bold ph-clock" style={{ color: '#3b82f6' }} /> 7 jours d'essai gratuit
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <i className="ph-bold ph-credit-card" style={{ color: '#f59e0b' }} /> Aucune carte bancaire requise
