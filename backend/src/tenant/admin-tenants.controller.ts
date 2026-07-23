@@ -18,6 +18,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { MailService } from '../mail/mail.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Public } from '../auth/public.decorator';
 import { TenantStatus } from '@prisma/client';
 import {
   UpdateTenantStatusDto,
@@ -1396,6 +1397,187 @@ export class AdminTenantsController {
     return {
       message: `Le plan "${plan.name}" a été affecté manuellement au locataire "${tenant.name}" avec succès.`,
       subscription: newSub
+    };
+  }
+
+  /**
+   * Enregistrer une visite / page vue (Public)
+   */
+  @Post('analytics/track')
+  @Public()
+  async trackPageView(
+    @Body() body: { path: string; referrer?: string; tenantId?: string },
+    @Req() req: any
+  ) {
+    const ip = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    await this.prisma.pageView.create({
+      data: {
+        tenantId: body.tenantId || null,
+        ip: Array.isArray(ip) ? ip[0] : (ip as string || null),
+        userAgent: userAgent || null,
+        path: body.path,
+        referrer: body.referrer || null,
+      },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Récupérer toutes les statistiques d'audience pour le tableau de bord SaaS (Super Admin)
+   */
+  @Get('analytics/stats')
+  async getAnalyticsStats(
+    @Req() req: { user: { role: string; systemRole?: string; email: string } }
+  ) {
+    this._checkConsoleAccess(req.user, ['SuperAdmin']);
+
+    // 1. Nombre total de pages vues
+    const totalPageViews = await this.prisma.pageView.count();
+
+    // 2. Visiteurs uniques totaux (basé sur l'IP)
+    const uniqueIPs = await this.prisma.pageView.groupBy({
+      by: ['ip'],
+    });
+    const totalUniqueVisitors = uniqueIPs.length;
+
+    // 3. Pages vues aujourd'hui
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const pageViewsToday = await this.prisma.pageView.count({
+      where: {
+        createdAt: { gte: startOfToday }
+      }
+    });
+
+    // 4. Visiteurs uniques aujourd'hui
+    const uniqueIPsToday = await this.prisma.pageView.groupBy({
+      by: ['ip'],
+      where: {
+        createdAt: { gte: startOfToday }
+      }
+    });
+    const uniqueVisitorsToday = uniqueIPsToday.length;
+
+    // 5. Pages les plus visitées (Top 10)
+    const topPagesRaw = await this.prisma.pageView.groupBy({
+      by: ['path'],
+      _count: {
+        path: true
+      },
+      orderBy: {
+        _count: {
+          path: 'desc'
+        }
+      },
+      take: 10
+    });
+    const topPages = topPagesRaw.map(p => ({
+      path: p.path,
+      count: p._count.path
+    }));
+
+    // 6. Répartition des visiteurs par locataire (Top 10)
+    const tenantShareRaw = await this.prisma.pageView.groupBy({
+      by: ['tenantId'],
+      _count: {
+        tenantId: true
+      },
+      orderBy: {
+        _count: {
+          tenantId: 'desc'
+        }
+      }
+    });
+    
+    // Récupérer les noms des tenants
+    const tenants = await this.prisma.tenant.findMany({
+      select: { id: true, name: true }
+    });
+    const tenantMap = new Map(tenants.map(t => [t.id, t.name]));
+    
+    const tenantShare = tenantShareRaw.map(t => ({
+      tenantName: t.tenantId ? (tenantMap.get(t.tenantId) || t.tenantId) : 'Portail Public / SaaS',
+      count: t._count.tenantId
+    }));
+
+    // 7. Évolution quotidienne (30 derniers jours)
+    const dailyStats = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const start = new Date(date);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(date);
+      end.setHours(23, 59, 59, 999);
+
+      const views = await this.prisma.pageView.count({
+        where: {
+          createdAt: { gte: start, lte: end }
+        }
+      });
+
+      const ips = await this.prisma.pageView.groupBy({
+        by: ['ip'],
+        where: {
+          createdAt: { gte: start, lte: end }
+        }
+      });
+
+      const dayName = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit' }).format(date);
+      dailyStats.push({
+        date: dayName,
+        pageViews: views,
+        uniqueVisitors: ips.length
+      });
+    }
+
+    // 8. Répartition par navigateurs / OS (simplifié à partir du UserAgent)
+    const userAgents = await this.prisma.pageView.findMany({
+      select: { userAgent: true },
+      take: 1000 // Échantillon récent
+    });
+
+    const browserCounts: Record<string, number> = {};
+    const deviceCounts: Record<string, number> = {};
+
+    userAgents.forEach(ua => {
+      const str = (ua.userAgent || '').toLowerCase();
+      
+      // Navigateur
+      let browser = 'Autre';
+      if (str.includes('firefox')) browser = 'Firefox';
+      else if (str.includes('chrome') && !str.includes('chromium')) browser = 'Chrome';
+      else if (str.includes('safari') && !str.includes('chrome')) browser = 'Safari';
+      else if (str.includes('edge')) browser = 'Edge';
+      
+      browserCounts[browser] = (browserCounts[browser] || 0) + 1;
+
+      // Appareil
+      let device = 'Bureau';
+      if (str.includes('iphone') || str.includes('ipad') || str.includes('android')) device = 'Mobile/Tablette';
+      
+      deviceCounts[device] = (deviceCounts[device] || 0) + 1;
+    });
+
+    const devices = Object.keys(deviceCounts).map(name => ({ name, count: deviceCounts[name] }));
+    const browsers = Object.keys(browserCounts).map(name => ({ name, count: browserCounts[name] }));
+
+    return {
+      summary: {
+        totalPageViews,
+        totalUniqueVisitors,
+        pageViewsToday,
+        uniqueVisitorsToday
+      },
+      topPages,
+      tenantShare,
+      dailyStats,
+      devices,
+      browsers
     };
   }
 }

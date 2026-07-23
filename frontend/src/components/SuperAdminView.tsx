@@ -195,8 +195,30 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
   const [advStats, setAdvStats] = useState<AdvancedStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'finance' | 'about' | 'tenants' | 'payment' | 'pricing' | 'compta' | 'stats-av' | 'profile' | 'collaborators' | 'audit'>('finance');
+  const [activeTab, setActiveTab] = useState<'finance' | 'about' | 'tenants' | 'payment' | 'pricing' | 'compta' | 'stats-av' | 'visitors' | 'profile' | 'collaborators' | 'audit'>('finance');
   const [modifyingId, setModifyingId] = useState<string | null>(null);
+
+  // States pour les statistiques visiteurs
+  const [visitorStats, setVisitorStats] = useState<any>(null);
+  const [visitorLoading, setVisitorLoading] = useState(false);
+
+  const fetchVisitorStats = useCallback(async () => {
+    setVisitorLoading(true);
+    try {
+      const res = await api.get('/admin-tenants/analytics/stats', { headers: { 'X-Tenant-ID': 'legacy' } });
+      setVisitorStats(res.data);
+    } catch (err: any) {
+      console.error('Erreur lors du chargement des statistiques visiteurs :', err);
+    } finally {
+      setVisitorLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'visitors') {
+      fetchVisitorStats();
+    }
+  }, [activeTab, fetchVisitorStats]);
 
   // ── Profil Super-Admin & Collaborateurs ──────────────────────────
   const superAdminSession = currentUser || (() => {
@@ -891,13 +913,22 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
             </>
           )}
           {(userRole === 'SuperAdmin' || userRole === 'Support') && (
-            <button 
-              onClick={() => setActiveTab('stats-av')}
-              className={`btn-primary ${activeTab === 'stats-av' ? '' : 'btn-outline'}`}
-              style={{ padding: '8px 16px', borderRadius: '8px', border: activeTab === 'stats-av' ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <i className="ph ph-presentation-chart" /> 📊 Stats Avancées
-            </button>
+            <>
+              <button 
+                onClick={() => setActiveTab('stats-av')}
+                className={`btn-primary ${activeTab === 'stats-av' ? '' : 'btn-outline'}`}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: activeTab === 'stats-av' ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <i className="ph ph-presentation-chart" /> 📊 Stats Avancées
+              </button>
+              <button 
+                onClick={() => setActiveTab('visitors')}
+                className={`btn-primary ${activeTab === 'visitors' ? '' : 'btn-outline'}`}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: activeTab === 'visitors' ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <i className="ph ph-globe" /> 📈 Audience & Visites
+              </button>
+            </>
           )}
           {userRole === 'SuperAdmin' && (
             <button 
@@ -1746,6 +1777,226 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* VISITORS TAB */}
+      {activeTab === 'visitors' && (userRole === 'SuperAdmin' || userRole === 'Support') && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {visitorLoading && !visitorStats && (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <i className="ph ph-circle-notch spin-animation" style={{ fontSize: '2rem', marginBottom: '10px' }} />
+              <div>Chargement des statistiques d'audience en direct...</div>
+            </div>
+          )}
+
+          {visitorStats && (
+            <>
+              {/* Visitor KPIs */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="ph ph-eye" style={{ fontSize: '1.4rem', color: 'white' }} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Pages Vues Totales</span>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)' }}>{visitorStats.summary.totalPageViews}</div>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #8b5cf6, #6d28d9)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="ph ph-users" style={{ fontSize: '1.4rem', color: 'white' }} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Visiteurs Uniques (Cumulé)</span>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--text-primary)' }}>{visitorStats.summary.totalUniqueVisitors}</div>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #22c55e, #15803d)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="ph ph-check-square" style={{ fontSize: '1.4rem', color: 'white' }} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Pages Vues Aujourd'hui</span>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#22c55e' }}>{visitorStats.summary.pageViewsToday}</div>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <i className="ph ph-user-check" style={{ fontSize: '1.4rem', color: 'white' }} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Visiteurs Uniques Aujourd'hui</span>
+                    <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f59e0b' }}>{visitorStats.summary.uniqueVisitorsToday}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 30-Day Traffic Chart */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="ph ph-chart-line" style={{ color: 'var(--primary)' }} /> Trafic des 30 Derniers Jours
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '180px', gap: '6px', paddingTop: '10px', borderBottom: '2px solid var(--border-color)' }}>
+                  {visitorStats.dailyStats.map((day: any, i: number) => {
+                    const maxVal = Math.max(...visitorStats.dailyStats.map((d: any) => d.pageViews), 1);
+                    const pctViews = (day.pageViews / maxVal) * 100;
+                    const pctVisitors = (day.uniqueVisitors / maxVal) * 100;
+
+                    return (
+                      <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', position: 'relative' }} title={`${day.date} : ${day.pageViews} vues, ${day.uniqueVisitors} visiteurs uniques`}>
+                        {/* Bar Page Views */}
+                        <div style={{ width: '45%', background: 'linear-gradient(to top, #3b82f6, #60a5fa)', height: `${pctViews}%`, borderRadius: '4px 4px 0 0', minHeight: day.pageViews > 0 ? '4px' : '0px', transition: 'all 0.3s' }} />
+                        {/* Bar Unique Visitors */}
+                        <div style={{ width: '30%', background: 'linear-gradient(to top, #8b5cf6, #a78bfa)', height: `${pctVisitors}%`, borderRadius: '4px 4px 0 0', marginLeft: '2px', minHeight: day.uniqueVisitors > 0 ? '4px' : '0px', transition: 'all 0.3s' }} />
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Labels */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <span>{visitorStats.dailyStats[0]?.date}</span>
+                  <span>{visitorStats.dailyStats[14]?.date}</span>
+                  <span>{visitorStats.dailyStats[29]?.date}</span>
+                </div>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '15px', justifyContent: 'center', fontSize: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '12px', height: '12px', background: '#3b82f6', borderRadius: '3px' }} />
+                    <span style={{ color: 'var(--text-secondary)' }}>Pages Vues</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '12px', height: '12px', background: '#8b5cf6', borderRadius: '3px' }} />
+                    <span style={{ color: 'var(--text-secondary)' }}>Visiteurs Uniques</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Two-Column breakdown */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+                
+                {/* Top Visited Pages */}
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden' }}>
+                  <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <i className="ph ph-file" style={{ fontSize: '1.2rem', color: '#3b82f6' }} />
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Top 10 Pages les Plus Visitées</h3>
+                  </div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                          <th style={{ padding: '12px 20px', fontWeight: 600 }}>Chemin (Route)</th>
+                          <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Pages Vues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visitorStats.topPages.length === 0 ? (
+                          <tr>
+                            <td colSpan={2} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Aucune visite enregistrée.</td>
+                          </tr>
+                        ) : (
+                          visitorStats.topPages.map((page: any, idx: number) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                              <td style={{ padding: '12px 20px', fontSize: '0.88rem', fontFamily: 'monospace', color: 'var(--text-primary)' }}>{page.path}</td>
+                              <td style={{ padding: '12px 20px', textAlign: 'right', fontWeight: 700, color: '#3b82f6' }}>{page.count}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Visitor Share by Tenant */}
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', overflow: 'hidden' }}>
+                  <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <i className="ph ph-buildings" style={{ fontSize: '1.2rem', color: '#8b5cf6' }} />
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Répartition par Locataire</h3>
+                  </div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--bg-tertiary)', color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                          <th style={{ padding: '12px 20px', fontWeight: 600 }}>Locataire / Espace</th>
+                          <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'right' }}>Pages Vues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visitorStats.tenantShare.length === 0 ? (
+                          <tr>
+                            <td colSpan={2} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Aucun trafic locataire enregistré.</td>
+                          </tr>
+                        ) : (
+                          visitorStats.tenantShare.map((tenant: any, idx: number) => (
+                            <tr key={idx} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                              <td style={{ padding: '12px 20px', fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-primary)' }}>{tenant.tenantName}</td>
+                              <td style={{ padding: '12px 20px', textAlign: 'right', fontWeight: 700, color: '#8b5cf6' }}>{tenant.count}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Devices and Browsers */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+                {/* Browsers */}
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="ph ph-browsers" style={{ color: '#10b981' }} /> Navigateurs Utilisés
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {visitorStats.browsers.map((b: any, i: number) => {
+                      const total = visitorStats.browsers.reduce((acc: number, cur: any) => acc + cur.count, 0) || 1;
+                      const pct = Math.round((b.count / total) * 100);
+                      return (
+                        <div key={i}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                            <span>{b.name}</span>
+                            <strong>{b.count} ({pct}%)</strong>
+                          </div>
+                          <div style={{ height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: '#10b981', borderRadius: '3px' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Devices */}
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <i className="ph ph-devices" style={{ color: '#f59e0b' }} /> Types d'Appareil
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {visitorStats.devices.map((d: any, i: number) => {
+                      const total = visitorStats.devices.reduce((acc: number, cur: any) => acc + cur.count, 0) || 1;
+                      const pct = Math.round((d.count / total) * 100);
+                      return (
+                        <div key={i}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '4px', color: 'var(--text-secondary)' }}>
+                            <span>{d.name}</span>
+                            <strong>{d.count} ({pct}%)</strong>
+                          </div>
+                          <div style={{ height: '6px', background: 'var(--bg-tertiary)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: '#f59e0b', borderRadius: '3px' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
         </div>
       )}
 

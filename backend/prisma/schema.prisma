@@ -519,6 +519,16 @@ model Transaction {
   tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
+model PageView {
+  id        String   @id @default(uuid())
+  tenantId  String?
+  ip        String?
+  userAgent String?
+  path      String
+  referrer  String?
+  createdAt DateTime @default(now())
+}
+
 enum Role {
   USER
   TECHNICIAN

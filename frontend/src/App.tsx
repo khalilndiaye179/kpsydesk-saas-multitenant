@@ -274,6 +274,25 @@ function App() {
     return () => clearInterval(interval);
   }, [isAuthenticated, subscriptionStatus, subscriptionEndDate]);
 
+  // Analytics tracking effect
+  useEffect(() => {
+    const track = async () => {
+      try {
+        const path = isAuthenticated ? `/app/${activeTab}` : `/public/${publicRoute}`;
+        const tenantId = localStorage.getItem('tenant_subdomain') || null;
+        
+        await api.post('/admin-tenants/analytics/track', {
+          path,
+          tenantId,
+          referrer: document.referrer || null
+        });
+      } catch (e) {
+        // Silent catch
+      }
+    };
+    track();
+  }, [activeTab, publicRoute, isAuthenticated]);
+
   // Handle Login submission
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
