@@ -223,6 +223,7 @@ model Ticket {
   status      String
   priority    String
   createdAt   DateTime        @default(now())
+  resolvedAt  DateTime?
   creatorId   String
   assigneeId  String?
   assetId     String?

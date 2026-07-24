@@ -165,6 +165,14 @@ ${this.generateTicketTableHtml(ticket)}
         }
       }
 
+      if (prismaData.status) {
+        if (prismaData.status === 'RESOLVED') {
+          prismaData.resolvedAt = new Date();
+        } else if (['OPEN', 'IN_PROGRESS'].includes(prismaData.status)) {
+          prismaData.resolvedAt = null;
+        }
+      }
+
       const updatedTicket = await this.prisma.ticket.update({
         where: { id },
         data: prismaData,
@@ -255,9 +263,14 @@ ${this.generateTicketTableHtml(updatedTicket)}
       }
     }
 
+    const resolvedAt = finalStatus === 'RESOLVED' ? new Date() : (['OPEN', 'IN_PROGRESS'].includes(finalStatus) ? null : undefined);
+
     const updatedTicket = await this.prisma.ticket.update({
       where: { id },
-      data: { status: finalStatus },
+      data: { 
+        status: finalStatus,
+        resolvedAt
+      },
     });
 
     if (currentTicket) {

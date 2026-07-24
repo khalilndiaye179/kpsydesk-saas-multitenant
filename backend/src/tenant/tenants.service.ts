@@ -556,4 +556,111 @@ export class TenantsService {
       note: "Estimation basée sur les adresses IP distinctes"
     };
   }
+
+  // ============================================================
+  // PERFORMANCE DU SUPPORT IT (TICKETS & SLA)
+  // ============================================================
+
+  async getSupportPerformance(tenantId: string, period?: string) {
+    const now = new Date();
+    let cutoffDate: Date | null = null;
+
+    if (period === '7j') {
+      cutoffDate = new Date();
+      cutoffDate.setDate(now.getDate() - 7);
+    } else if (period === '30j' || !period) {
+      cutoffDate = new Date();
+      cutoffDate.setDate(now.getDate() - 30);
+    } else if (period === '90j') {
+      cutoffDate = new Date();
+      cutoffDate.setDate(now.getDate() - 90);
+    }
+
+    // 1. Liste de tous les techniciens et admins du tenant (staff de support)
+    const supportStaff = await this.prisma.user.findMany({
+      where: {
+        tenantId,
+        role: { in: ['TECHNICIAN', 'ADMIN'] }
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        role: true
+      }
+    });
+
+    // 2. Tickets de la période
+    const periodFilter = cutoffDate ? { createdAt: { gte: cutoffDate } } : {};
+    const tickets = await this.prisma.ticket.findMany({
+      where: {
+        tenantId,
+        ...periodFilter
+      }
+    });
+
+    // 3. Tickets en cours / ouverts (toute période confondue)
+    const openTicketsAllTime = await this.prisma.ticket.findMany({
+      where: {
+        tenantId,
+        status: { in: ['OPEN', 'IN_PROGRESS'] }
+      }
+    });
+
+    // 4. Calcul des métriques par technicien
+    const performance = supportStaff.map(tech => {
+      const periodTickets = tickets.filter(t => t.assigneeId === tech.id);
+      const total = periodTickets.length;
+      
+      const resolvedTickets = periodTickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED');
+      const resolved = resolvedTickets.length;
+
+      const open = openTicketsAllTime.filter(t => t.assigneeId === tech.id).length;
+
+      let totalResolutionHours = 0;
+      let slaOkCount = 0;
+      let slaTotalCount = 0;
+
+      resolvedTickets.forEach(t => {
+        if (t.createdAt && t.resolvedAt) {
+          const diffMs = t.resolvedAt.getTime() - t.createdAt.getTime();
+          const diffHours = diffMs / (1000 * 60 * 60);
+          totalResolutionHours += diffHours;
+
+          // SLA Limits: CRITICAL <= 1.5h, HIGH <= 3h, MEDIUM <= 5.5h, default <= 11h
+          let limitHours = 11;
+          if (t.priority === 'CRITICAL') limitHours = 1.5;
+          else if (t.priority === 'HIGH') limitHours = 3;
+          else if (t.priority === 'MEDIUM') limitHours = 5.5;
+
+          slaTotalCount += 1;
+          if (diffHours <= limitHours) {
+            slaOkCount += 1;
+          }
+        }
+      });
+
+      const avgResolutionTime = resolved > 0 ? parseFloat((totalResolutionHours / resolved).toFixed(1)) : 0;
+      const slaRate = slaTotalCount > 0 ? Math.round((slaOkCount / slaTotalCount) * 100) : 100;
+
+      return {
+        id: tech.id,
+        name: `${tech.firstName} ${tech.lastName}`,
+        email: tech.email,
+        role: tech.role,
+        totalTickets: total,
+        resolvedTickets: resolved,
+        openTickets: open,
+        avgResolutionTime,
+        slaRate,
+        reopenedTickets: "Non disponible (non tracé)"
+      };
+    });
+
+    // Trier par tickets résolus décroissant
+    performance.sort((a, b) => b.resolvedTickets - a.resolvedTickets);
+
+    return performance;
+  }
 }

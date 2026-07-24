@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -87,6 +88,32 @@ export class TenantsController {
       throw new BadRequestException('Tenant ID non fourni.');
     }
     return this.tenantsService.getTenantAnalytics(tenantId);
+  }
+
+  /**
+   * Retourne les indicateurs de performance du support IT pour le tenant courant (isolés strictly).
+   * Requiert : JWT valide + contexte tenant + rôle ADMIN ou TECHNICIAN.
+   */
+  @Get('me/support-performance')
+  @UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.TECHNICIAN)
+  async getSupportPerformance(
+    @Req() req: { tenantId?: string; user?: { id: string; role: string; tenantId?: string } },
+    @Query('period') period?: string
+  ) {
+    const tenantId = req.tenantId ?? req.user?.tenantId;
+    if (!tenantId) {
+      throw new BadRequestException('Tenant ID non fourni.');
+    }
+    
+    const results = await this.tenantsService.getSupportPerformance(tenantId, period);
+    
+    // Un technicien ne doit voir que ses propres statistiques
+    if (req.user?.role === Role.TECHNICIAN) {
+      return results.filter(r => r.id === req.user.id);
+    }
+    
+    return results;
   }
 
   /**
