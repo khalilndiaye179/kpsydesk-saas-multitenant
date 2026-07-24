@@ -1652,4 +1652,32 @@ export class AdminTenantsController {
       browsers
     };
   }
+
+  /**
+   * Déclencher manuellement la purge des visites de plus de 90 jours (Tests et Conformité)
+   */
+  @Post('analytics/purge-test')
+  async triggerPurgeTest(
+    @Req() req: { user: { role: string; systemRole?: string; email: string } }
+  ) {
+    this._checkConsoleAccess(req.user, ['SuperAdmin']);
+    
+    const retentionDays = 90;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+    const deleteResult = await this.prisma.pageView.deleteMany({
+      where: {
+        createdAt: {
+          lt: cutoffDate
+        }
+      }
+    });
+
+    return {
+      success: true,
+      purgedCount: deleteResult.count,
+      message: `Purged entries older than ${cutoffDate.toISOString()}`
+    };
+  }
 }

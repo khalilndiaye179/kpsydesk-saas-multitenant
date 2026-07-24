@@ -12,6 +12,30 @@ export class SubscriptionLifecycleService {
   async handleCron() {
     this.logger.log('Starting daily subscription lifecycle check...');
     await this.processCycles();
+    await this.purgeOldPageViews();
+  }
+
+  async purgeOldPageViews() {
+    const retentionDays = 90;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+    this.logger.log(`Purging PageView entries older than ${retentionDays} days (before ${cutoffDate.toISOString()})...`);
+    
+    try {
+      const deleteResult = await this.prisma.pageView.deleteMany({
+        where: {
+          createdAt: {
+            lt: cutoffDate
+          }
+        }
+      });
+      this.logger.log(`Purged ${deleteResult.count} PageView entries successfully.`);
+      return deleteResult.count;
+    } catch (error) {
+      this.logger.error('Failed to purge old PageView entries:', error);
+      throw error;
+    }
   }
 
   async processCycles() {

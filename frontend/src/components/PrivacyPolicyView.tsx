@@ -42,6 +42,15 @@ export const PrivacyPolicyView: React.FC<PrivacyPolicyViewProps> = ({ onBack }) 
 
             <div>
               <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="ph-duotone ph-chart-bar" style={{ color: 'var(--primary)' }}></i> Mesure d'audience
+              </h2>
+              <p style={{ margin: 0 }}>
+                Nous collectons de manière anonyme certaines données techniques (adresse IP, pages consultées, navigateur utilisé) afin de mesurer la fréquentation de la plateforme et d'améliorer nos services. Ces données ne sont jamais utilisées pour vous identifier individuellement et sont conservées pendant une durée maximale de 90 jours, après quoi elles sont automatiquement supprimées.
+              </p>
+            </div>
+
+            <div>
+              <h2 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <i className="ph-duotone ph-user-list" style={{ color: 'var(--primary)' }}></i> Vos droits
               </h2>
               <p style={{ margin: 0 }}>
