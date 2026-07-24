@@ -501,4 +501,59 @@ export class TenantsService {
       }
     });
   }
+
+  // ============================================================
+  // STATISTIQUES D'AUDIENCE ET VISITEURS (ISOLÉES)
+  // ============================================================
+
+  async getTenantAnalytics(tenantId: string) {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    // 1. Pages vues aujourd'hui pour ce tenant
+    const pageViewsToday = await this.prisma.pageView.count({
+      where: {
+        tenantId,
+        createdAt: { gte: startOfToday }
+      }
+    });
+
+    // 2. Visiteurs uniques aujourd'hui pour ce tenant (basé sur l'IP)
+    const uniqueIPsToday = await this.prisma.pageView.groupBy({
+      by: ['ip'],
+      where: {
+        tenantId,
+        createdAt: { gte: startOfToday }
+      }
+    });
+    const uniqueVisitorsToday = uniqueIPsToday.length;
+
+    // 3. Pages les plus visitées par ce tenant (Top 10)
+    const topPagesRaw = await this.prisma.pageView.groupBy({
+      by: ['path'],
+      _count: {
+        path: true
+      },
+      where: {
+        tenantId
+      },
+      orderBy: {
+        _count: {
+          path: 'desc'
+        }
+      },
+      take: 10
+    });
+    const topPages = topPagesRaw.map(p => ({
+      path: p.path,
+      count: p._count.path
+    }));
+
+    return {
+      pageViewsToday,
+      uniqueVisitorsToday,
+      topPages,
+      note: "Estimation basée sur les adresses IP distinctes"
+    };
+  }
 }

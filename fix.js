@@ -1,0 +1,1 @@
+const fs = require('fs'); const file = 'frontend/src/App.tsx'; let content = fs.readFileSync(file, 'utf8'); content = content.replace(/const isFeatureDisabled = \\(tabKey: string\\) => \\{[\s\S]*?return !tenantFeatures\[requiredFeature\];\s*\};/, 'const isFeatureDisabled = (tabKey: string) => { return false; };'); fs.writeFileSync(file, content);

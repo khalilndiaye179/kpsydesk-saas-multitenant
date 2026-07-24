@@ -20,12 +20,17 @@ export const DashboardView: React.FC = () => {
     users: 0,
     licensesSeats: '0/0',
     contracts: 0,
-    lowStock: 0
+    lowStock: 0,
+    visitorsToday: 0
   });
   const [activities, setActivities] = useState<Activity[]>([]);
   
   const statusChartRef = useRef<any>(null);
   const deptChartRef = useRef<any>(null);
+
+  const currentUserStr = localStorage.getItem('currentUser');
+  const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+  const isAdmin = currentUser?.role === 'ADMIN';
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -69,6 +74,17 @@ export const DashboardView: React.FC = () => {
         const activeContracts = contracts.filter((c: any) => c.status === 'Actif').length;
         const lowStock = consumables.filter((c: any) => c.quantity <= c.alertThreshold).length;
 
+        // Charger les statistiques d'audience si l'utilisateur est admin
+        let visitorsToday = 0;
+        if (currentUser?.role === 'ADMIN') {
+          try {
+            const analyticsRes = await api.get('/tenants/me/analytics/stats');
+            visitorsToday = analyticsRes.data?.uniqueVisitorsToday ?? 0;
+          } catch (analyticsErr) {
+            console.warn('Could not load tenant analytics:', analyticsErr);
+          }
+        }
+
         setStats({ 
           total, 
           active, 
@@ -77,7 +93,8 @@ export const DashboardView: React.FC = () => {
           users: totalUsers,
           licensesSeats,
           contracts: activeContracts,
-          lowStock
+          lowStock,
+          visitorsToday
         });
         setActivities(movements.slice(0, 5));
 
@@ -93,7 +110,8 @@ export const DashboardView: React.FC = () => {
           users: 0,
           licensesSeats: '0/0',
           contracts: 0,
-          lowStock: 0
+          lowStock: 0,
+          visitorsToday: 0
         });
         setActivities([]);
         renderCharts([]);
@@ -266,6 +284,17 @@ export const DashboardView: React.FC = () => {
           <h3>Alertes Stock</h3>
           <p className={`stat-value ${stats.lowStock > 0 ? 'warning' : ''}`}>{stats.lowStock}</p>
         </div>
+        {isAdmin && (
+          <div className="stat-card" style={{ position: 'relative' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              Visiteurs Aujourd'hui
+              <span style={{ cursor: 'pointer', color: 'var(--text-muted)' }} title="Estimation basée sur les adresses IP uniques accédant à cet espace.">
+                <i className="ph ph-info" />
+              </span>
+            </h3>
+            <p className="stat-value info" style={{ color: 'var(--primary)' }}>{stats.visitorsToday}</p>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>

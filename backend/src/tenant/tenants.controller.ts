@@ -21,6 +21,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantGuard } from './tenant.guard';
 import { Public } from '../auth/public.decorator';
 import { CreateTenantDto, UpdateTenantSettingsDto } from './dto/tenants.dto';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { Role } from '@prisma/client';
 
 /**
  * TenantsController — Routes liées à la gestion des tenants.
@@ -67,6 +70,23 @@ export class TenantsController {
   getMyTenant(@Req() req: { user: { tenantId?: string }; tenantId?: string }) {
     const tenantId = req.tenantId ?? req.user?.tenantId;
     return this.tenantsService.getMyTenant(tenantId!);
+  }
+
+  /**
+   * Retourne les statistiques d'audience du tenant courant (isolées strictly).
+   * Requiert : JWT valide + contexte tenant + rôle ADMIN.
+   */
+  @Get('me/analytics/stats')
+  @UseGuards(JwtAuthGuard, TenantGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async getTenantAnalytics(
+    @Req() req: { tenantId?: string; user?: { tenantId?: string } }
+  ) {
+    const tenantId = req.tenantId ?? req.user?.tenantId;
+    if (!tenantId) {
+      throw new BadRequestException('Tenant ID non fourni.');
+    }
+    return this.tenantsService.getTenantAnalytics(tenantId);
   }
 
   /**
