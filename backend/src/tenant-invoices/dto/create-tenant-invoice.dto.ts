@@ -43,7 +43,7 @@ export class CreateTenantInvoiceDto {
   notes?: string;
 
   @IsArray()
-  @ValidateNested({ generosity: true, each: true })
+  @ValidateNested({ each: true })
   @Type(() => CreateTenantInvoiceItemDto)
   items: CreateTenantInvoiceItemDto[];
 }
