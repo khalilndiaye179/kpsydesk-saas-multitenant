@@ -1,0 +1,43 @@
+# ============================================================
+# KPSyDesk ITAM — Dependency Vulnerability Audit (Security)
+# Déclencheurs : Hebdomadaire (Dimanche minuit) + Manuel
+# ============================================================
+
+name: 🔒 Security Dependency Audit
+
+on:
+  schedule:
+    # Lancement automatique tous les dimanches à minuit UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    # Permet de lancer manuellement depuis l'interface GitHub
+
+jobs:
+  npm-audit:
+    name: Audit NPM Dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Récupération du code ──
+      - name: ✅ Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Configuration de Node.js ──
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # ── 3. Audit Sécurité du Backend ──
+      - name: 🛡️ Audit Backend Dependencies
+        run: |
+          cd backend
+          echo "🔍 Lancement de l'audit de sécurité sur le Backend..."
+          npm audit --audit-level=high
+
+      # ── 4. Audit Sécurité du Frontend ──
+      - name: 🛡️ Audit Frontend Dependencies
+        run: |
+          cd frontend
+          echo "🔍 Lancement de l'audit de sécurité sur le Frontend..."
+          npm audit --audit-level=high

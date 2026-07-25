@@ -38,6 +38,10 @@ import {
 } from './dto/admin-tenants.dto';
 
 import * as bcrypt from 'bcryptjs';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execPromise = promisify(exec);
 
 /**
  * AdminTenantsController — Espace de contrôle pour le Super-Administrateur SaaS.
@@ -1678,6 +1682,78 @@ export class AdminTenantsController {
       success: true,
       purgedCount: deleteResult.count,
       message: `Purged entries older than ${cutoffDate.toISOString()}`
+    };
+  }
+
+  /**
+   * Exécuter un audit de sécurité (npm audit) en temps réel sur backend et frontend
+   */
+  @Post('security-audit')
+  async runSecurityAudit(
+    @Req() req: { user: { role: string; systemRole?: string; email: string } }
+  ) {
+    this._checkConsoleAccess(req.user, ['SuperAdmin']);
+
+    let backendAudit: any = {};
+    let frontendAudit: any = {};
+
+    // 1. Audit Backend
+    try {
+      const { stdout } = await execPromise('npm audit --json', { cwd: './backend' });
+      backendAudit = JSON.parse(stdout);
+    } catch (error: any) {
+      if (error.stdout) {
+        try {
+          backendAudit = JSON.parse(error.stdout);
+        } catch (e) {
+          backendAudit = { error: 'Failed to parse backend audit json', details: error.message };
+        }
+      } else {
+        backendAudit = { error: 'Backend audit execution failed', details: error.message };
+      }
+    }
+
+    // 2. Audit Frontend
+    try {
+      const { stdout } = await execPromise('npm audit --json', { cwd: './frontend' });
+      frontendAudit = JSON.parse(stdout);
+    } catch (error: any) {
+      if (error.stdout) {
+        try {
+          frontendAudit = JSON.parse(error.stdout);
+        } catch (e) {
+          frontendAudit = { error: 'Failed to parse frontend audit json', details: error.message };
+        }
+      } else {
+        frontendAudit = { error: 'Frontend audit execution failed', details: error.message };
+      }
+    }
+
+    const formatVulnerabilities = (vulnsObj: any) => {
+      if (!vulnsObj) return [];
+      return Object.keys(vulnsObj).map(key => {
+        const v = vulnsObj[key];
+        return {
+          name: v.name || key,
+          severity: v.severity,
+          range: v.range,
+          via: Array.isArray(v.via) ? v.via.map((item: any) => typeof item === 'object' ? item.name || 'unknown' : item) : [v.via],
+          fixAvailable: v.fixAvailable,
+        };
+      });
+    };
+
+    return {
+      success: true,
+      timestamp: new Date().toISOString(),
+      backend: {
+        metadata: backendAudit['metadata'] || { vulnerabilities: { low: 0, moderate: 0, high: 0, critical: 0, total: 0 } },
+        vulnerabilities: formatVulnerabilities(backendAudit['vulnerabilities']),
+      },
+      frontend: {
+        metadata: frontendAudit['metadata'] || { vulnerabilities: { low: 0, moderate: 0, high: 0, critical: 0, total: 0 } },
+        vulnerabilities: formatVulnerabilities(frontendAudit['vulnerabilities']),
+      }
     };
   }
 }

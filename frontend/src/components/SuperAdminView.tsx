@@ -195,8 +195,12 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
   const [advStats, setAdvStats] = useState<AdvancedStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'finance' | 'about' | 'tenants' | 'payment' | 'pricing' | 'compta' | 'stats-av' | 'visitors' | 'profile' | 'collaborators' | 'audit'>('finance');
+  const [activeTab, setActiveTab] = useState<'finance' | 'about' | 'tenants' | 'payment' | 'pricing' | 'compta' | 'stats-av' | 'visitors' | 'profile' | 'collaborators' | 'audit' | 'security-audit'>('finance');
   const [modifyingId, setModifyingId] = useState<string | null>(null);
+
+  // States pour l'audit de sécurité
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditResult, setAuditResult] = useState<any>(null);
 
   // States pour les statistiques visiteurs
   const [visitorStats, setVisitorStats] = useState<any>(null);
@@ -219,6 +223,80 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
       fetchVisitorStats();
     }
   }, [activeTab, fetchVisitorStats]);
+
+  const runAudit = async () => {
+    setAuditLoading(true);
+    try {
+      const res = await api.post('/admin-tenants/security-audit', {}, { headers: { 'X-Tenant-ID': 'legacy' } });
+      setAuditResult(res.data);
+    } catch (err: any) {
+      alert("Erreur lors de l'exécution de l'audit de sécurité : " + (err.response?.data?.message || err.message));
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  const renderAuditSummary = (data: any) => {
+    if (!data) return null;
+    const meta = data.metadata?.vulnerabilities || { low: 0, moderate: 0, high: 0, critical: 0, total: 0 };
+    const list = data.vulnerabilities || [];
+
+    return (
+      <div>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          <span style={{ flex: 1, textAlign: 'center', background: '#ef444420', color: '#ef4444', padding: '10px', borderRadius: '8px', border: '1px solid #ef444440' }}>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>{meta.critical || 0}</div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 600 }}>Critique</div>
+          </span>
+          <span style={{ flex: 1, textAlign: 'center', background: '#f9731620', color: '#f97316', padding: '10px', borderRadius: '8px', border: '1px solid #f9731640' }}>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>{meta.high || 0}</div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 600 }}>Haute</div>
+          </span>
+          <span style={{ flex: 1, textAlign: 'center', background: '#eab30820', color: '#eab308', padding: '10px', borderRadius: '8px', border: '1px solid #eab30840' }}>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>{meta.moderate || 0}</div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 600 }}>Modérée</div>
+          </span>
+          <span style={{ flex: 1, textAlign: 'center', background: '#3b82f620', color: '#3b82f6', padding: '10px', borderRadius: '8px', border: '1px solid #3b82f640' }}>
+            <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>{meta.low || 0}</div>
+            <div style={{ fontSize: '0.72rem', fontWeight: 600 }}>Basse</div>
+          </span>
+        </div>
+
+        <div style={{ maxHeight: '350px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-tertiary)', padding: '10px' }}>
+          {list.length === 0 ? (
+            <div style={{ color: '#22c55e', textAlign: 'center', padding: '20px', fontWeight: 600 }}>
+              ✓ Aucune vulnérabilité trouvée !
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {list.map((v: any, idx: number) => (
+                <div key={idx} style={{ padding: '10px', borderBottom: idx < list.length - 1 ? '1px solid var(--border-color)' : 'none' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.85rem' }}>{v.name}</strong>
+                    <span style={{
+                      fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px',
+                      background: v.severity === 'critical' ? '#ef4444' : v.severity === 'high' ? '#f97316' : v.severity === 'moderate' ? '#eab308' : '#3b82f6',
+                      color: 'white'
+                    }}>
+                      {v.severity.toUpperCase()}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Version affectée : <code>{v.range}</code>
+                  </div>
+                  {v.fixAvailable && typeof v.fixAvailable === 'object' && (
+                    <div style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: '6px', background: 'rgba(34,197,94,0.1)', padding: '4px 8px', borderRadius: '4px' }}>
+                      💡 Correctif disponible : mettre à jour vers <strong>{v.fixAvailable.name}@{v.fixAvailable.version}</strong>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   // ── Profil Super-Admin & Collaborateurs ──────────────────────────
   const superAdminSession = currentUser || (() => {
@@ -940,13 +1018,22 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
             </button>
           )}
           {userRole === 'SuperAdmin' && (
-            <button 
-              onClick={() => setActiveTab('audit')}
-              className={`btn-primary ${activeTab === 'audit' ? '' : 'btn-outline'}`}
-              style={{ padding: '8px 16px', borderRadius: '8px', border: activeTab === 'audit' ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <i className="ph ph-file-search" /> 🕵️ Journal d'Audit
-            </button>
+            <>
+              <button 
+                onClick={() => setActiveTab('security-audit')}
+                className={`btn-primary ${activeTab === 'security-audit' ? '' : 'btn-outline'}`}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: activeTab === 'security-audit' ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <i className="ph ph-shield-check" /> 🔒 Sécurité & Dépendances
+              </button>
+              <button 
+                onClick={() => setActiveTab('audit')}
+                className={`btn-primary ${activeTab === 'audit' ? '' : 'btn-outline'}`}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: activeTab === 'audit' ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <i className="ph ph-file-search" /> 🕵️ Journal d'Audit
+              </button>
+            </>
           )}
           <button 
             onClick={() => setActiveTab('about')}
@@ -3886,6 +3973,52 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
             </div>
           </div>
 
+        </div>
+      )}
+
+      {activeTab === 'security-audit' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} className="fade-in">
+          {/* Header Card */}
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: '0 0 8px 0', color: 'var(--text-primary)' }}>
+              🔒 Diagnostic de Sécurité & Vulnérabilités NPM
+            </h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0 0 20px 0' }}>
+              Cette option permet de lancer en temps réel un audit de sécurité (`npm audit`) sur les paquets dépendances de la plateforme (Backend NestJS & Frontend React).
+            </p>
+            <button 
+              onClick={runAudit} 
+              disabled={auditLoading}
+              className="btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #4f46e5, #3730a3)', color: 'white', fontWeight: 700, cursor: 'pointer' }}
+            >
+              {auditLoading ? (
+                <><i className="ph ph-circle-notch spin-animation" /> Analyse en cours...</>
+              ) : (
+                <><i className="ph ph-shield-warning" /> Lancer l'analyse de vulnérabilités</>
+              )}
+            </button>
+          </div>
+
+          {auditResult && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              {/* Card Backend */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 15px 0', color: 'var(--text-primary)' }}>
+                  💻 Backend NestJS
+                </h4>
+                {renderAuditSummary(auditResult.backend)}
+              </div>
+
+              {/* Card Frontend */}
+              <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 15px 0', color: 'var(--text-primary)' }}>
+                  🎨 Frontend React
+                </h4>
+                {renderAuditSummary(auditResult.frontend)}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
