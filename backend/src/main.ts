@@ -41,7 +41,6 @@ async function bootstrap() {
   // ── CORS ──────────────────────────────────────────────────────────────
   // En développement  : accepte localhost:3011 (Vite) et toutes les origines locales
   // En production     : liste blanche basée sur CORS_ORIGINS (env var)
-  const isProduction = process.env.NODE_ENV === 'production';
 
   if (isProduction) {
     const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
