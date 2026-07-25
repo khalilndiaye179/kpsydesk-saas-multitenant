@@ -6,6 +6,16 @@ import { join } from 'path';
 import helmet from 'helmet';
 
 async function bootstrap() {
+  // ── Validation Fail-Fast du JWT_SECRET en Production ───────────────────
+  const isProduction = process.env.NODE_ENV === 'production';
+  if (isProduction) {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret || jwtSecret === 'super-secret-key-change-me-in-production' || jwtSecret === 'itam_secret_jwt_key_2026_change_me_in_production') {
+      console.error('FATAL ERROR: JWT_SECRET environment variable is empty or using an insecure default value in production. Application will not start to protect user sessions.');
+      process.exit(1);
+    }
+  }
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.use(helmet({

@@ -76,6 +76,27 @@ services:
       # Port 3011 → Frontend Vite dev server
       - "${FRONTEND_PORT:-3011}:${FRONTEND_PORT:-3011}"
 
+  backup:
+    image: postgres:16-alpine
+    container_name: itam_backup
+    restart: unless-stopped
+    volumes:
+      - postgres_backups:/backups
+      - ./scripts:/scripts
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=${DB_USER:-itam_user}
+      - DB_PASSWORD=${DB_PASSWORD:-itam_password_dev_2026}
+      - DB_NAME=${DB_NAME:-itam_db}
+    entrypoint: >
+      sh -c "
+      echo '0 2 * * * sh /scripts/backup-postgres.sh >> /backups/backup.log 2>&1' > /etc/crontabs/root &&
+      exec crond -f -l 8
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # ---- Services réservés (3013-3015) ----
   # worker:          # Port 3013 — Worker de facturation (futur)
   # notifications:   # Port 3014 — Service de notifications (futur)
@@ -90,6 +111,7 @@ services:
 
 volumes:
   postgres_data:
+  postgres_backups:
   backend_node_modules:
   frontend_node_modules:
   itam_uploads:
