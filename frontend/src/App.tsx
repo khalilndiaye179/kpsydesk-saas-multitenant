@@ -36,6 +36,7 @@ import { SuperAdminView } from './components/SuperAdminView';
 import { RecoveryFlow } from './components/RecoveryFlow';
 import { SuperAdminRecoveryFlow } from './components/SuperAdminRecoveryFlow';
 import { AppLandingView } from './components/AppLandingView';
+import { LeavesView } from './components/LeavesView';
 
 interface UserSession {
   id: string;
@@ -578,6 +579,7 @@ function App() {
       case 'guide':
       case 'about':
       case 'settings':
+      case 'leaves':
         return true; // open to everyone
 
       case 'assets':
@@ -700,6 +702,12 @@ function App() {
       ]
     },
     {
+      title: 'Ressources Humaines',
+      items: [
+        { key: 'leaves', label: 'Gestion des Congés', icon: 'ph-duotone ph-calendar-blank' },
+      ]
+    },
+    {
       title: 'Support & Wiki',
       items: [
         { key: 'kb', label: 'Base de Connaissances', icon: 'ph-duotone ph-book-open' },
@@ -740,6 +748,7 @@ function App() {
       case 'maintenance': return <MaintenanceView />;
       case 'sla': return <SlaView />;
       case 'onboarding': return <OnboardingView />;
+      case 'leaves': return <LeavesView currentUser={currentUser} />;
       case 'kb': return <KbView />;
       case 'guide': return <GuideView />;
       case 'audit': return <AuditView />;

@@ -115,6 +115,7 @@ model Tenant {
   paymentMethods TenantPaymentMethod[]
   tenantInvoices TenantInvoice[]
   tenantInvoiceSequence TenantInvoiceSequence?
+  leaveRequests  LeaveRequest[]
 }
 
 model Subscription {
@@ -180,6 +181,8 @@ model User {
   tickets       Ticket[]    @relation("CreatedTickets")
   department    Department? @relation(fields: [departmentId], references: [id])
   tenant        Tenant?     @relation(fields: [tenantId], references: [id])
+  leaveRequests    LeaveRequest[] @relation("UserLeaveRequests")
+  validatedLeaves  LeaveRequest[] @relation("ValidatorLeaveRequests")
 
   @@unique([email, tenantId])
   @@unique([username, tenantId])
@@ -616,5 +619,24 @@ model TenantInvoiceSequence {
   nextValue Int    @default(1)
   year      Int
   tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model LeaveRequest {
+  id              String   @id @default(uuid())
+  tenantId        String?
+  userId          String
+  type            String   // ex: "PAID", "SICK", "UNPAID", "MATERNITY"
+  startDate       DateTime
+  endDate         DateTime
+  reason          String?
+  status          String   @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  validatorId     String?
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user            User     @relation("UserLeaveRequests", fields: [userId], references: [id], onDelete: Cascade)
+  validator       User?    @relation("ValidatorLeaveRequests", fields: [validatorId], references: [id])
 }
 
