@@ -113,6 +113,8 @@ model Tenant {
   transactions   Transaction[]
   users          User[]
   paymentMethods TenantPaymentMethod[]
+  tenantInvoices TenantInvoice[]
+  tenantInvoiceSequence TenantInvoiceSequence?
 }
 
 model Subscription {
@@ -561,3 +563,58 @@ enum SubscriptionStatus {
   TRIALING
   GRACE_PERIOD
 }
+
+model SubscriptionReminderLog {
+  id             String   @id @default(uuid())
+  subscriptionId String
+  tenantId       String?
+  reminderDays   Int      // 7 (J-7) ou 1 (J-1)
+  sentAt         DateTime @default(now())
+  status         String   // SUCCESS, FAILED
+  errorMessage   String?
+
+  @@unique([subscriptionId, reminderDays])
+}
+
+model TenantInvoice {
+  id            String              @id @default(uuid())
+  invoiceNo     String              // Ex: FAC-2026-0001
+  tenantId      String
+  clientName    String
+  clientEmail   String?
+  clientPhone   String?
+  clientNinea   String?             // NINEA du client
+  clientRc      String?             // RC du client
+  amountHT      Float
+  tvaRate       Float               @default(18.0)
+  tvaAmount     Float
+  amountTTC     Float
+  status        String              @default("DRAFT") // DRAFT, ISSUED, PAID, CANCELLED
+  notes         String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items         TenantInvoiceItem[]
+  
+  @@unique([invoiceNo, tenantId])
+}
+
+model TenantInvoiceItem {
+  id              String        @id @default(uuid())
+  tenantInvoiceId String
+  description     String
+  quantity        Int           @default(1)
+  unitPrice       Float
+  totalPrice      Float
+  invoice         TenantInvoice @relation(fields: [tenantInvoiceId], references: [id], onDelete: Cascade)
+}
+
+model TenantInvoiceSequence {
+  id        String @id @default(uuid())
+  tenantId  String @unique
+  nextValue Int    @default(1)
+  year      Int
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+

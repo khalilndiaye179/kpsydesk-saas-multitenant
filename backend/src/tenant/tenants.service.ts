@@ -613,7 +613,9 @@ export class TenantsService {
       const periodTickets = tickets.filter(t => t.assigneeId === tech.id);
       const total = periodTickets.length;
       
-      const resolvedTickets = periodTickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED');
+      const resolvedTickets = periodTickets.filter(t => 
+        ['RESOLVED', 'CLOSED', 'PENDING_RESOLVED', 'RESOLUTION_CONFIRMED', 'PENDING_CLOSED'].includes(t.status)
+      );
       const resolved = resolvedTickets.length;
 
       const open = openTicketsAllTime.filter(t => t.assigneeId === tech.id).length;

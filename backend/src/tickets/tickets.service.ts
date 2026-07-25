@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Ticket } from '@prisma/client';
 import { MailService } from '../mail/mail.service';
@@ -166,8 +166,10 @@ ${this.generateTicketTableHtml(ticket)}
       }
 
       if (prismaData.status) {
-        if (prismaData.status === 'RESOLVED') {
-          prismaData.resolvedAt = new Date();
+        if (['RESOLVED', 'PENDING_RESOLVED', 'RESOLUTION_CONFIRMED'].includes(prismaData.status)) {
+          if (!currentTicket.resolvedAt) {
+            prismaData.resolvedAt = new Date();
+          }
         } else if (['OPEN', 'IN_PROGRESS'].includes(prismaData.status)) {
           prismaData.resolvedAt = null;
         }
@@ -191,6 +193,11 @@ ${this.generateTicketTableHtml(ticket)}
           tenantId: updatedTicket.tenantId,
         }
       }).catch(() => {});
+
+      // Notify creator if status transitioned to PENDING_RESOLVED
+      if (updatedTicket.status === 'PENDING_RESOLVED' && currentTicket.status !== 'PENDING_RESOLVED') {
+        this.notifyCreatorPendingResolution(updatedTicket);
+      }
 
       // Notify new assignee if changed
       if (prismaData.assigneeId && currentTicket.assigneeId !== prismaData.assigneeId && updatedTicket.assignee) {
@@ -254,6 +261,10 @@ ${this.generateTicketTableHtml(updatedTicket)}
       where: { id },
     });
 
+    if (!currentTicket) {
+      throw new NotFoundException(`Ticket avec l'ID ${id} introuvable.`);
+    }
+
     let finalStatus = status;
     if (currentUser && currentUser.role !== 'ADMIN') {
       if (status === 'RESOLVED') {
@@ -263,7 +274,24 @@ ${this.generateTicketTableHtml(updatedTicket)}
       }
     }
 
-    const resolvedAt = finalStatus === 'RESOLVED' ? new Date() : (['OPEN', 'IN_PROGRESS'].includes(finalStatus) ? null : undefined);
+    // Règle de clôture : On interdit la clôture directe par l'ADMIN si le ticket est en PENDING_RESOLVED 
+    // et a été créé après la date de déploiement (Rétrocompatibilité).
+    if (finalStatus === 'CLOSED' && currentTicket.status === 'PENDING_RESOLVED') {
+      const releaseDate = new Date('2026-07-25T01:30:00Z');
+      if (currentTicket.createdAt >= releaseDate) {
+        throw new BadRequestException("Une confirmation du créateur est requise avant la clôture par l'administrateur.");
+      }
+    }
+
+    // Calcul de resolvedAt
+    let resolvedAt: Date | null | undefined = undefined;
+    if (['RESOLVED', 'PENDING_RESOLVED', 'RESOLUTION_CONFIRMED'].includes(finalStatus)) {
+      if (!currentTicket.resolvedAt) {
+        resolvedAt = new Date();
+      }
+    } else if (['OPEN', 'IN_PROGRESS'].includes(finalStatus)) {
+      resolvedAt = null;
+    }
 
     const updatedTicket = await this.prisma.ticket.update({
       where: { id },
@@ -271,6 +299,7 @@ ${this.generateTicketTableHtml(updatedTicket)}
         status: finalStatus,
         resolvedAt
       },
+      include: { assignee: true, creator: true, asset: true },
     });
 
     if (currentTicket) {
@@ -285,6 +314,11 @@ ${this.generateTicketTableHtml(updatedTicket)}
           tenantId: currentTicket.tenantId,
         }
       }).catch(() => {});
+    }
+
+    // Déclencher la notification au créateur s'il passe à PENDING_RESOLVED
+    if (updatedTicket.status === 'PENDING_RESOLVED' && currentTicket.status !== 'PENDING_RESOLVED') {
+      this.notifyCreatorPendingResolution(updatedTicket);
     }
 
     return updatedTicket;
@@ -338,6 +372,106 @@ ${this.generateTicketTableHtml(updatedTicket)}
     }
 
     return updatedTicket;
+  }
+
+  async confirmResolution(id: string, currentUser: any): Promise<Ticket> {
+    const currentTicket = await this.findOne(id);
+
+    if (currentTicket.status !== 'PENDING_RESOLVED') {
+      throw new BadRequestException("Ce ticket n'est pas en attente de confirmation de résolution.");
+    }
+
+    if (currentUser.role === 'USER' && currentTicket.creatorId !== currentUser.userId) {
+      throw new ForbiddenException("Seul le créateur du ticket peut confirmer sa résolution.");
+    }
+
+    const updatedTicket = await this.prisma.ticket.update({
+      where: { id },
+      data: {
+        status: 'RESOLUTION_CONFIRMED',
+        resolvedAt: currentTicket.resolvedAt || new Date()
+      },
+      include: { assignee: true, creator: true, asset: true }
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'STATUT_CHANGE',
+        entityType: 'TICKET',
+        entityId: id,
+        oldData: { status: currentTicket.status },
+        newData: { status: 'RESOLUTION_CONFIRMED' },
+        performedBy: currentUser?.email || 'Système',
+        tenantId: currentTicket.tenantId,
+      }
+    }).catch(() => {});
+
+    return updatedTicket;
+  }
+
+  async rejectResolution(id: string, commentContent: string, currentUser: any): Promise<Ticket> {
+    if (!commentContent || !commentContent.trim()) {
+      throw new BadRequestException("Un commentaire expliquant pourquoi le problème n'est pas résolu est obligatoire.");
+    }
+
+    const currentTicket = await this.findOne(id);
+
+    if (currentTicket.status !== 'PENDING_RESOLVED') {
+      throw new BadRequestException("Ce ticket n'est pas en attente de confirmation de résolution.");
+    }
+
+    if (currentUser.role === 'USER' && currentTicket.creatorId !== currentUser.userId) {
+      throw new ForbiddenException("Seul le créateur du ticket peut contester sa résolution.");
+    }
+
+    const updatedTicket = await this.prisma.ticket.update({
+      where: { id },
+      data: {
+        status: 'IN_PROGRESS',
+        resolvedAt: null
+      },
+      include: { assignee: true, creator: true, asset: true }
+    });
+
+    // Créer le commentaire explicatif
+    await this.prisma.ticketComment.create({
+      data: {
+        content: commentContent,
+        ticketId: id,
+        authorId: currentUser.userId,
+        tenantId: currentTicket.tenantId
+      }
+    });
+
+    await this.prisma.auditLog.create({
+      data: {
+        action: 'STATUT_CHANGE',
+        entityType: 'TICKET',
+        entityId: id,
+        oldData: { status: currentTicket.status },
+        newData: { status: 'IN_PROGRESS' },
+        performedBy: currentUser?.email || 'Système',
+        tenantId: currentTicket.tenantId,
+      }
+    }).catch(() => {});
+
+    return updatedTicket;
+  }
+
+  private notifyCreatorPendingResolution(ticket: any) {
+    if (!ticket.creator || !ticket.creator.email || ticket.creator.email === 'system@kpsydesk.local') {
+      return;
+    }
+
+    const subject = `[KPSyDesk] Votre ticket est résolu - Action requise : ${ticket.title}`;
+    const text = `Bonjour ${ticket.creator.firstName},\n\nLe technicien a marqué votre ticket comme résolu :\n\n${this.generateTicketTableText(ticket)}\n\nIndiquez sur l'application si vous confirmez la résolution.`;
+    const html = `<p>Bonjour <b>${ticket.creator.firstName}</b>,</p>
+<p>Le technicien a marqué votre ticket comme résolu :</p>
+${this.generateTicketTableHtml(ticket)}
+<p>Indiquez sur l'application si vous confirmez la résolution.</p>
+<p style="margin-top: 20px;"><a href="https://app.kpsyinformatique.com/" style="background-color: #6366f1; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Accéder à votre espace de support</a></p>`;
+
+    this.mailService.sendMail(ticket.creator.email, subject, text, html).catch(() => {});
   }
 
   private generateTicketTableHtml(ticket: any): string {

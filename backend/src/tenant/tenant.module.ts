@@ -9,11 +9,12 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AuthModule } from '../auth/auth.module';
 
 import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
+import { SmsNotificationService } from './sms-notification.service';
 
 @Module({
   imports: [PrismaModule, AuthModule],
   controllers: [TenantsController, SubscriptionsController, AdminTenantsController],
-  providers: [TenantsService, TenantGuard, QuotaGuard, SubscriptionLifecycleService],
-  exports: [TenantsService, TenantGuard, QuotaGuard, SubscriptionLifecycleService],
+  providers: [TenantsService, TenantGuard, QuotaGuard, SubscriptionLifecycleService, SmsNotificationService],
+  exports: [TenantsService, TenantGuard, QuotaGuard, SubscriptionLifecycleService, SmsNotificationService],
 })
 export class TenantModule {}

@@ -80,4 +80,18 @@ export class TicketsController {
   remove(@Param('id') id: string, @Req() req: any) {
     return this.ticketsService.remove(id, req.user);
   }
+
+  @Put(':id/confirm-resolution')
+  async confirmResolution(@Param('id') id: string, @Req() req: any) {
+    return this.ticketsService.confirmResolution(id, req.user);
+  }
+
+  @Put(':id/reject-resolution')
+  async rejectResolution(
+    @Param('id') id: string,
+    @Body('comment') comment: string,
+    @Req() req: any
+  ) {
+    return this.ticketsService.rejectResolution(id, comment, req.user);
+  }
 }
