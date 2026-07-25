@@ -93,6 +93,8 @@ export const AppLandingView: React.FC<AppLandingViewProps> = ({ onAccess }) => {
             e.currentTarget.style.boxShadow = '0 4px 20px rgba(126, 217, 87, 0.4)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
+        >
+          Accéder à mon espace <i className="fas fa-arrow-right"></i>
         </button>
 
         <div style={{ marginTop: '25px' }}>
@@ -128,7 +130,7 @@ export const AppLandingView: React.FC<AppLandingViewProps> = ({ onAccess }) => {
         color: '#9f8ea8',
         fontSize: '0.85rem'
       }}>
-        &copy; 2026 K'PSy Informatique &mdash; Tous droits réservés.
+        © 2026 K'PSy Informatique — Tous droits réservés.
       </div>
     </div>
   );
