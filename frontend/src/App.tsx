@@ -35,6 +35,7 @@ import { SubscriptionView } from './components/SubscriptionView';
 import { SuperAdminView } from './components/SuperAdminView';
 import { RecoveryFlow } from './components/RecoveryFlow';
 import { SuperAdminRecoveryFlow } from './components/SuperAdminRecoveryFlow';
+import { AppLandingView } from './components/AppLandingView';
 
 interface UserSession {
   id: string;
@@ -63,7 +64,28 @@ function App() {
   const [loginError, setLoginError] = useState('');
   const [enteredPassword, setEnteredPassword] = useState(''); // Keep track for first login check
 
-  const [publicRoute, setPublicRoute] = useState<'login' | 'signup' | 'pricing' | 'recovery' | 'superadmin-recovery' | 'privacy'>('login');
+  const [publicRoute, setPublicRoute] = useState<'landing' | 'login' | 'signup' | 'pricing' | 'recovery' | 'superadmin-recovery' | 'privacy'>(() => {
+    // 1. Check for ?skip=true in URL parameter
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('skip') === 'true') {
+      localStorage.setItem('hasSeenLandingScreen', 'true');
+      return 'login';
+    }
+
+    // 2. Check if already authenticated (has active token or session)
+    const token = localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('currentUser');
+    if (token) {
+      return 'login'; // Let session check hook handle auto-login
+    }
+
+    // 3. Check if they have already seen the landing screen
+    const hasSeen = localStorage.getItem('hasSeenLandingScreen') === 'true';
+    if (hasSeen) {
+      return 'login';
+    }
+
+    return 'landing';
+  });
 
   // Security Steps
   const [showMfa, setShowMfa] = useState<boolean>(false);
@@ -745,6 +767,18 @@ function App() {
 
   // Render Login Card
   if (!isAuthenticated) {
+    // Route : Écran d'accueil (Landing)
+    if (publicRoute === 'landing') {
+      return (
+        <AppLandingView 
+          onAccess={() => {
+            localStorage.setItem('hasSeenLandingScreen', 'true');
+            setPublicRoute('login');
+          }} 
+        />
+      );
+    }
+
     // Route : Politique de confidentialité
     if (publicRoute === 'privacy') {
       return <PrivacyPolicyView onBack={() => setPublicRoute('login')} />;
