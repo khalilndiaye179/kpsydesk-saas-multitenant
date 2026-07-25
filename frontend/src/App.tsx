@@ -37,6 +37,7 @@ import { RecoveryFlow } from './components/RecoveryFlow';
 import { SuperAdminRecoveryFlow } from './components/SuperAdminRecoveryFlow';
 import { AppLandingView } from './components/AppLandingView';
 import { LeavesView } from './components/LeavesView';
+import { DgiInvoicesView } from './components/DgiInvoicesView';
 
 interface UserSession {
   id: string;
@@ -207,6 +208,8 @@ function App() {
         kb: true,
         onboarding: true,
         depreciation: true,
+        hr: true,
+        dgi: true,
       });
     } else if (currentUser && isAuthenticated) {
       // Charger les fonctionnalités de l'abonné connecté
@@ -231,6 +234,8 @@ function App() {
             kb: true,
             onboarding: true,
             depreciation: true,
+            hr: true,
+            dgi: true,
           });
         });
     } else {
@@ -610,7 +615,8 @@ function App() {
 
       case 'contract':
       case 'sale':
-        return systemRole === 'Finance';
+      case 'dgi_invoices':
+        return ['ADMIN'].includes(role) || systemRole === 'Finance' || systemRole === 'Admin IT';
 
       case 'audit':
         return ['ADMIN'].includes(role) || systemRole === 'Admin IT' || systemRole === 'Finance';
@@ -655,6 +661,8 @@ function App() {
       purchase: 'financial',
       contract: 'financial',
       sale: 'financial',
+      leaves: 'hr',
+      dgi_invoices: 'dgi',
     };
 
     const requiredFeature = featureMap[tabKey];
@@ -690,6 +698,7 @@ function App() {
         { key: 'contract', label: 'Contrats & Garanties', icon: 'ph-duotone ph-file-text' },
         { key: 'sale', label: 'Vente & Cession', icon: 'ph-duotone ph-hand-coins' },
         { key: 'depreciation', label: 'Amortissement & Cycle de Vie', icon: 'ph-duotone ph-chart-line-down' },
+        { key: 'dgi_invoices', label: 'Factures Client DGI', icon: 'ph-duotone ph-file-invoice' },
       ]
     },
     {
@@ -744,6 +753,7 @@ function App() {
       case 'purchase': return <PurchaseView />;
       case 'contract': return <ContractView />;
       case 'sale': return <SaleView />;
+      case 'dgi_invoices': return <DgiInvoicesView />;
       case 'licenses': return <LicenseView />;
       case 'maintenance': return <MaintenanceView />;
       case 'sla': return <SlaView />;

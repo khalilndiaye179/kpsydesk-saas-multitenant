@@ -3252,6 +3252,8 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                         { key: 'kb', label: 'Base de Connaissances' },
                         { key: 'onboarding', label: 'Onboarding IT' },
                         { key: 'depreciation', label: 'Amortissement & Cycle de Vie' },
+                        { key: 'hr', label: 'Espace RH & Cotisations' },
+                        { key: 'dgi', label: 'Factures Client DGI' },
                       ].map(feat => {
                         const included = !!(editingPlan.featuresIncluded?.[feat.key]);
                         return (
