@@ -26,6 +26,8 @@ import { SettingsView } from './components/SettingsView';
 import { TenantSettingsView } from './components/TenantSettingsView';
 import { DepreciationView } from './components/DepreciationView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
+import { SupportPerformanceView } from './components/SupportPerformanceView';
+import { TenantInvoiceView } from './components/TenantInvoiceView';
 // Multi-tenant views
 import { SignupView } from './components/SignupView';
 import { PricingView } from './components/PricingView';
@@ -589,6 +591,9 @@ function App() {
       case 'audit':
         return ['ADMIN'].includes(role) || systemRole === 'Admin IT' || systemRole === 'Finance';
 
+      case 'support_perf':
+        return ['ADMIN', 'TECHNICIAN'].includes(role);
+
       case 'depreciation':
         return ['TECHNICIAN', 'ADMIN'].includes(role) || systemRole === 'Finance' || systemRole === 'Admin IT';
       
@@ -683,6 +688,8 @@ function App() {
       title: 'Système & Admin',
       items: [
         { key: 'audit', label: 'Traçabilité / Audit', icon: 'ph-duotone ph-list-magnifying-glass' },
+        { key: 'support_perf', label: 'Performance Support', icon: 'ph-duotone ph-chart-bar' },
+        { key: 'tenant_invoices', label: 'Factures Client DGI', icon: 'ph-duotone ph-file-text' },
         { key: 'backup', label: 'Sauvegardes', icon: 'ph-duotone ph-database' },
         { key: 'subscription', label: 'Mon Abonnement', icon: 'ph-duotone ph-crown' },
         { key: 'settings', label: 'Paramètres & Sécurité', icon: 'ph-duotone ph-gear' },
@@ -714,6 +721,8 @@ function App() {
       case 'kb': return <KbView />;
       case 'guide': return <GuideView />;
       case 'audit': return <AuditView />;
+      case 'support_perf': return <SupportPerformanceView />;
+      case 'tenant_invoices': return <TenantInvoiceView />;
       case 'backup': return <BackupView />;
       case 'settings': return <SettingsView />;
       case 'tenant_settings': return <TenantSettingsView />;
@@ -1266,7 +1275,12 @@ function App() {
         <nav className="sidebar-menu">
           {menuSections.map((section, sIdx) => {
             // Filter section items based on permissions (RBAC)
-            const visibleItems = section.items.filter(item => isTabAccessible(item.key));
+            const visibleItems = section.items.filter(item => {
+              if (item.key === 'support_perf') {
+                return currentUser?.role === 'ADMIN';
+              }
+              return isTabAccessible(item.key);
+            });
             
             if (visibleItems.length === 0) return null;
 

@@ -82,7 +82,9 @@ export const SlaView: React.FC = () => {
 
   // Extraction des tickets résolus du sous-ensemble filtré
   const resolvedTickets = React.useMemo(() => {
-    const closed = filteredTickets.filter(t => t.status === 'RESOLVED' || t.status === 'CLOSED');
+    const closed = filteredTickets.filter(t => 
+      ['RESOLVED', 'CLOSED', 'PENDING_RESOLVED', 'RESOLUTION_CONFIRMED', 'PENDING_CLOSED'].includes(t.status)
+    );
     return closed.map(t => {
       const slaInfo = getSlaInfo(t);
       return {
@@ -144,7 +146,7 @@ export const SlaView: React.FC = () => {
       const stat = statsMap[assigneeId];
       stat.total += 1;
 
-      const isResolved = t.status === 'RESOLVED' || t.status === 'CLOSED';
+      const isResolved = ['RESOLVED', 'CLOSED', 'PENDING_RESOLVED', 'RESOLUTION_CONFIRMED', 'PENDING_CLOSED'].includes(t.status);
       if (isResolved) {
         stat.resolved += 1;
         const slaInfo = getSlaInfo(t);

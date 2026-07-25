@@ -217,6 +217,36 @@ export const TicketView: React.FC = () => {
     }
   };
 
+  const handleConfirmResolution = async (id: string) => {
+    try {
+      await api.put(`/tickets/${id}/confirm-resolution`);
+      fetchTickets();
+      alert("Résolution du ticket confirmée avec succès.");
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Erreur inconnue";
+      alert("Erreur lors de la confirmation : " + msg);
+    }
+  };
+
+  const handleRejectResolution = async (id: string) => {
+    const comment = prompt("Veuillez saisir un commentaire expliquant pourquoi le problème n'est pas résolu (obligatoire) :");
+    if (comment === null) return; // Annulé
+
+    if (!comment.trim()) {
+      alert("Le commentaire est obligatoire pour contester la résolution.");
+      return;
+    }
+
+    try {
+      await api.put(`/tickets/${id}/reject-resolution`, { comment });
+      fetchTickets();
+      alert("Résolution contestée. Le ticket repasse en cours d'investigation.");
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || "Erreur inconnue";
+      alert("Erreur lors du refus : " + msg);
+    }
+  };
+
   const exportToExcel = () => {
     const headers = ["N° Ticket", "Sujet", "Description", "Demandeur", "Équipement", "Assigné à", "Priorité", "Statut", "Date de création"];
     
@@ -376,6 +406,9 @@ export const TicketView: React.FC = () => {
             <option value="">Tous les statuts</option>
             <option value="OPEN">Ouvert</option>
             <option value="IN_PROGRESS">En cours</option>
+            <option value="PENDING_RESOLVED">Attente Résolution</option>
+            <option value="RESOLUTION_CONFIRMED">Résolution Confirmée</option>
+            <option value="PENDING_CLOSED">Attente Clôture</option>
             <option value="RESOLVED">Résolu</option>
             <option value="CLOSED">Clos</option>
           </select>
@@ -465,10 +498,12 @@ export const TicketView: React.FC = () => {
                     </td>
                     <td>
                       <span className={`status-badge ${
-                        t.status === 'PENDING_RESOLVED' || t.status === 'PENDING_CLOSED' ? 'danger' : t.status.toLowerCase()
+                        t.status === 'PENDING_RESOLVED' || t.status === 'PENDING_CLOSED' ? 'danger' : 
+                        t.status === 'RESOLUTION_CONFIRMED' ? 'resolved' : t.status.toLowerCase()
                       }`}>
                         {t.status === 'PENDING_RESOLVED' ? 'Attente Résolution' : 
                          t.status === 'PENDING_CLOSED' ? 'Attente Clôture' : 
+                         t.status === 'RESOLUTION_CONFIRMED' ? 'Résolution Confirmée' : 
                          t.status === 'RESOLVED' ? 'Résolu' : 
                          t.status === 'CLOSED' ? 'Clos' : t.status}
                       </span>
@@ -476,16 +511,44 @@ export const TicketView: React.FC = () => {
                     <td>{new Date(t.createdAt).toLocaleDateString()}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        {isAdmin && (t.status === 'PENDING_RESOLVED' || t.status === 'PENDING_CLOSED') && (
+                        {/* Validation Admin : Résolution Confirmée, Attente Clôture, ou Tickets hérités PENDING_RESOLVED */}
+                        {isAdmin && (
+                          t.status === 'RESOLUTION_CONFIRMED' || 
+                          t.status === 'PENDING_CLOSED' || 
+                          (t.status === 'PENDING_RESOLVED' && new Date(t.createdAt) < new Date('2026-07-25T01:30:00Z'))
+                        ) && (
                           <button 
                             className="btn-icon" 
                             style={{ borderColor: 'var(--success)', color: 'var(--success)' }} 
                             onClick={() => handleValidateStatus(t.id, t.status)}
-                            title="Valider la résolution/clôture"
+                            title="Valider la clôture"
                           >
                             <i className="ph ph-check-circle" style={{ fontSize: '1.1rem' }}></i>
                           </button>
                         )}
+
+                        {/* Validation Créateur : Si le ticket est en attente de résolution */}
+                        {t.creatorId === currentUser?.id && t.status === 'PENDING_RESOLVED' && (
+                          <>
+                            <button 
+                              className="btn-icon" 
+                              style={{ borderColor: 'var(--success)', color: 'var(--success)' }} 
+                              onClick={() => handleConfirmResolution(t.id)}
+                              title="Confirmer que le problème est résolu"
+                            >
+                              <i className="ph ph-check" style={{ fontSize: '1.1rem' }}></i>
+                            </button>
+                            <button 
+                              className="btn-icon" 
+                              style={{ borderColor: 'var(--danger)', color: 'var(--danger)' }} 
+                              onClick={() => handleRejectResolution(t.id)}
+                              title="Indiquer que le problème persiste (contester)"
+                            >
+                              <i className="ph ph-x" style={{ fontSize: '1.1rem' }}></i>
+                            </button>
+                          </>
+                        )}
+
                         <button className="btn-icon" onClick={() => openEditModal(t)}>
                           <i className="ph ph-pencil-simple"></i>
                         </button>
@@ -551,6 +614,7 @@ export const TicketView: React.FC = () => {
                         value={
                           formFields.status === 'PENDING_RESOLVED' ? 'Attente Résolution' : 
                           formFields.status === 'PENDING_CLOSED' ? 'Attente Clôture' : 
+                          formFields.status === 'RESOLUTION_CONFIRMED' ? 'Résolution Confirmée' : 
                           formFields.status === 'RESOLVED' ? 'Résolu' : 
                           formFields.status === 'CLOSED' ? 'Clos' : 
                           formFields.status === 'OPEN' ? 'Ouvert' : 'En cours'
@@ -568,6 +632,7 @@ export const TicketView: React.FC = () => {
                         <option value="IN_PROGRESS">En cours</option>
                         {formFields.status === 'PENDING_RESOLVED' && <option value="PENDING_RESOLVED">Attente Résolution</option>}
                         {formFields.status === 'PENDING_CLOSED' && <option value="PENDING_CLOSED">Attente Clôture</option>}
+                        {formFields.status === 'RESOLUTION_CONFIRMED' && <option value="RESOLUTION_CONFIRMED">Résolution Confirmée</option>}
                         <option value="RESOLVED">Résolu</option>
                         <option value="CLOSED">Clos</option>
                       </select>
