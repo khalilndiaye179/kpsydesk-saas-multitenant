@@ -14,6 +14,12 @@ async function bootstrap() {
       console.error('FATAL ERROR: JWT_SECRET environment variable is empty or using an insecure default value in production. Application will not start to protect user sessions.');
       process.exit(1);
     }
+
+    const mfaKey = process.env.MFA_ENCRYPTION_KEY;
+    if (!mfaKey || mfaKey === '0000000000000000000000000000000000000000000000000000000000000000' || mfaKey.length !== 64) {
+      console.error('FATAL ERROR: MFA_ENCRYPTION_KEY environment variable is empty, using the default insecure value, or does not have exactly 64 hexadecimal characters in production. Application will not start to protect TOTP keys.');
+      process.exit(1);
+    }
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);

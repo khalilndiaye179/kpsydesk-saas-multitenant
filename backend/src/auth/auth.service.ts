@@ -5,6 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import * as speakeasy from 'speakeasy';
 import * as qrcode from 'qrcode';
 import { MailService } from '../mail/mail.service';
+import { CryptoService } from '../common/crypto.service';
 
 /** Entrée OTP en mémoire avec TTL de 15 minutes */
 interface OtpEntry {
@@ -22,6 +23,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mailService: MailService,
+    private cryptoService: CryptoService,
   ) {}
 
 
@@ -357,9 +359,11 @@ export class AuthService {
     const secret = speakeasy.generateSecret({ length: 20, name: `KPSyDesk (${email})` });
     const qrCodeDataUrl = await qrcode.toDataURL(secret.otpauth_url || '');
     
+    // Chiffrer le secret TOTP avant l'écriture en base
+    const encryptedSecret = this.cryptoService.encrypt(secret.base32);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaSecret: secret.base32 }
+      data: { mfaSecret: encryptedSecret }
     });
 
     return { secret: secret.base32, qrCodeDataUrl };
@@ -369,8 +373,15 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.mfaSecret) throw new BadRequestException('MFA non initialisé.');
 
+    let decryptedSecret: string;
+    try {
+      decryptedSecret = this.cryptoService.decrypt(user.mfaSecret);
+    } catch (err) {
+      throw new BadRequestException('Secret MFA corrompu ou illisible.');
+    }
+
     const isValid = speakeasy.totp.verify({
-      secret: user.mfaSecret,
+      secret: decryptedSecret,
       encoding: 'base32',
       token,
       window: 1,
@@ -414,8 +425,15 @@ export class AuthService {
       throw new BadRequestException('MFA non activé.');
     }
 
+    let decryptedSecret: string;
+    try {
+      decryptedSecret = this.cryptoService.decrypt(user.mfaSecret);
+    } catch (err) {
+      throw new BadRequestException('Secret MFA corrompu ou illisible.');
+    }
+
     const isTotpValid = speakeasy.totp.verify({
-      secret: user.mfaSecret,
+      secret: decryptedSecret,
       encoding: 'base32',
       token,
       window: 1,
