@@ -15,6 +15,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PaymentModule } from './payment/payment.module';
 import { MailModule } from './mail/mail.module';
 import { TenantInvoicesModule } from './tenant-invoices/tenant-invoices.module';
+import { HealthModule } from './health/health.module';
+
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -49,6 +51,7 @@ import { TenantInvoicesModule } from './tenant-invoices/tenant-invoices.module';
     PaymentModule,
     MailModule,
     TenantInvoicesModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [
