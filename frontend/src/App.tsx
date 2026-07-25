@@ -704,7 +704,7 @@ function App() {
     {
       title: 'Ressources Humaines',
       items: [
-        { key: 'leaves', label: 'Gestion des Congés', icon: 'ph-duotone ph-calendar-blank' },
+        { key: 'leaves', label: 'Espace RH & Cotisations', icon: 'ph-duotone ph-users' },
       ]
     },
     {

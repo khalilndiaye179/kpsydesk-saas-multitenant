@@ -30,6 +30,9 @@ interface User {
   departmentId?: string;
   department?: Department;
   assets?: Asset[];
+  baseSalary?: number;
+  transportAllowance?: number;
+  isExecutive?: boolean;
 }
 
 export const UserView: React.FC = () => {
@@ -66,7 +69,10 @@ export const UserView: React.FC = () => {
     entryDate: '',
     country: 'Sénégal',
     position: '',
-    departmentId: ''
+    departmentId: '',
+    baseSalary: '',
+    transportAllowance: '',
+    isExecutive: false
   });
 
   const [selectedAssetId, setSelectedAssetId] = useState('');
@@ -155,7 +161,10 @@ export const UserView: React.FC = () => {
       entryDate: new Date().toISOString().split('T')[0],
       country: 'Sénégal',
       position: '',
-      departmentId: ''
+      departmentId: '',
+      baseSalary: '',
+      transportAllowance: '',
+      isExecutive: false
     });
     setIsUserModalOpen(true);
   };
@@ -173,7 +182,10 @@ export const UserView: React.FC = () => {
       entryDate: user.entryDate ? user.entryDate.split('T')[0] : '',
       country: user.country || 'Sénégal',
       position: user.position || '',
-      departmentId: user.departmentId || ''
+      departmentId: user.departmentId || '',
+      baseSalary: user.baseSalary !== undefined && user.baseSalary !== null ? String(user.baseSalary) : '',
+      transportAllowance: user.transportAllowance !== undefined && user.transportAllowance !== null ? String(user.transportAllowance) : '',
+      isExecutive: !!user.isExecutive
     });
     setIsUserModalOpen(true);
   };
@@ -191,7 +203,10 @@ export const UserView: React.FC = () => {
       country: formFields.country,
       position: formFields.position,
       departmentId: formFields.departmentId === '' ? null : formFields.departmentId,
-      role: formFields.systemRole.toLowerCase().includes('admin') ? 'ADMIN' : formFields.systemRole.toLowerCase().includes('tech') ? 'TECHNICIAN' : 'USER'
+      role: formFields.systemRole.toLowerCase().includes('admin') ? 'ADMIN' : formFields.systemRole.toLowerCase().includes('tech') ? 'TECHNICIAN' : 'USER',
+      baseSalary: formFields.baseSalary === '' ? null : Number(formFields.baseSalary),
+      transportAllowance: formFields.transportAllowance === '' ? null : Number(formFields.transportAllowance),
+      isExecutive: formFields.isExecutive
     };
 
     if (formFields.password) {
@@ -717,6 +732,36 @@ export const UserView: React.FC = () => {
                       <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem' }}>Salaire de Base (FCFA)</label>
+                  <input 
+                    type="number" 
+                    value={formFields.baseSalary} 
+                    onChange={e => setFormFields({...formFields, baseSalary: e.target.value})} 
+                    style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
+                    placeholder="Ex: 500000"
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem' }}>Indemnité de Transport (FCFA)</label>
+                  <input 
+                    type="number" 
+                    value={formFields.transportAllowance} 
+                    onChange={e => setFormFields({...formFields, transportAllowance: e.target.value})} 
+                    style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
+                    placeholder="Ex: 20000"
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '100%', paddingTop: '20px' }}>
+                  <input 
+                    type="checkbox" 
+                    id="isExecutive"
+                    checked={formFields.isExecutive} 
+                    onChange={e => setFormFields({...formFields, isExecutive: e.target.checked})} 
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--accent-blue)' }}
+                  />
+                  <label htmlFor="isExecutive" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}>Statut Cadre (IPRES Cadres)</label>
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>

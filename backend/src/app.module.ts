@@ -17,6 +17,7 @@ import { MailModule } from './mail/mail.module';
 import { TenantInvoicesModule } from './tenant-invoices/tenant-invoices.module';
 import { HealthModule } from './health/health.module';
 import { LeavesModule } from './leaves/leaves.module';
+import { PayrollModule } from './payroll/payroll.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { LeavesModule } from './leaves/leaves.module';
     TenantInvoicesModule,
     HealthModule,
     LeavesModule,
+    PayrollModule,
   ],
   controllers: [],
   providers: [

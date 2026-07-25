@@ -116,6 +116,7 @@ model Tenant {
   tenantInvoices TenantInvoice[]
   tenantInvoiceSequence TenantInvoiceSequence?
   leaveRequests  LeaveRequest[]
+  hrConfig       Json?
 }
 
 model Subscription {
@@ -183,6 +184,9 @@ model User {
   tenant        Tenant?     @relation(fields: [tenantId], references: [id])
   leaveRequests    LeaveRequest[] @relation("UserLeaveRequests")
   validatedLeaves  LeaveRequest[] @relation("ValidatorLeaveRequests")
+  baseSalary         Float?
+  transportAllowance Float?
+  isExecutive        Boolean        @default(false)
 
   @@unique([email, tenantId])
   @@unique([username, tenantId])
