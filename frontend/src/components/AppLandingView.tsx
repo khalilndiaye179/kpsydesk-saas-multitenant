@@ -93,9 +93,32 @@ export const AppLandingView: React.FC<AppLandingViewProps> = ({ onAccess }) => {
             e.currentTarget.style.boxShadow = '0 4px 20px rgba(126, 217, 87, 0.4)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
-        >
-          Accéder à mon espace <i className="fas fa-arrow-right"></i>
         </button>
+
+        <div style={{ marginTop: '25px' }}>
+          <a 
+            href="https://www.kpsyinformatique.com/" 
+            style={{
+              color: '#d3c4e3',
+              textDecoration: 'none',
+              fontSize: '0.95rem',
+              transition: 'all 0.2s ease',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.color = '#7ED957';
+              e.currentTarget.style.transform = 'translateX(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.color = '#d3c4e3';
+              e.currentTarget.style.transform = 'translateX(0)';
+            }}
+          >
+            <i className="fas fa-arrow-left" style={{ fontSize: '0.85rem' }}></i> Retourner sur le site vitrine
+          </a>
+        </div>
 
       </div>
 
