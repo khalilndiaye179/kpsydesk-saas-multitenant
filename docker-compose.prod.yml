@@ -59,6 +59,7 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_URL: ""
+      VITE_WHATSAPP_SUPPORT_NUMBER: ${VITE_WHATSAPP_SUPPORT_NUMBER}
     depends_on:
       - backend
     ports:

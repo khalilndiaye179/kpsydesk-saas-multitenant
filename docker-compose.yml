@@ -65,6 +65,7 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_URL: ""
+      VITE_WHATSAPP_SUPPORT_NUMBER: ${VITE_WHATSAPP_SUPPORT_NUMBER}
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
