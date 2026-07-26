@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ExtraModule } from './extra/extra.module';
 import { TenantModule } from './tenant/tenant.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { TenantMiddleware } from './tenant/tenant.middleware';
 
 import { ScheduleModule } from '@nestjs/schedule';
@@ -46,6 +47,7 @@ import { PayrollModule } from './payroll/payroll.module';
     PrismaModule,
     AuthModule,
     TenantModule,
+    DashboardModule,
     AssetsModule,
     TicketsModule,
     UsersModule,

@@ -3254,6 +3254,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
                         { key: 'depreciation', label: 'Amortissement & Cycle de Vie' },
                         { key: 'hr', label: 'Espace RH & Cotisations' },
                         { key: 'dgi', label: 'Factures Client DGI' },
+                        { key: 'treasury_dashboard', label: 'Dashboard Trésorerie' },
                       ].map(feat => {
                         const included = !!(editingPlan.featuresIncluded?.[feat.key]);
                         return (

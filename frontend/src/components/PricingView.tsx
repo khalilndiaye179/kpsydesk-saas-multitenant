@@ -21,6 +21,7 @@ const FEATURE_LABELS: Record<string, string> = {
   kb: 'Base de Connaissances',
   onboarding: 'Onboarding IT',
   depreciation: 'Amortissement & Cycle de Vie',
+  treasury_dashboard: 'Dashboard Trésorerie',
 };
 
 const PLAN_ICONS: Record<string, string> = {
