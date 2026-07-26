@@ -1325,6 +1325,12 @@ function App() {
           </button>
         </div>
 
+        {!sidebarCollapsed && (
+          <div style={{ padding: '6px 12px', fontSize: '0.65rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '4px', margin: '8px 16px', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+            DEBUG: {JSON.stringify(tenantFeatures)}
+          </div>
+        )}
+
         <nav className="sidebar-menu">
           {menuSections.map((section, sIdx) => {
             // Filter section items based on permissions (RBAC)
