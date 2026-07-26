@@ -1073,6 +1073,55 @@ function App() {
                   Solution complète de gestion d'actifs informatiques, suivi des inventaires, mouvements de stock et gestion des tickets d'assistance (ITAM & ITSM).
                 </div>
               </div>
+
+              {/* Highlight Promo Box pointing to Site Vitrine */}
+              <a 
+                href="https://kpsyinformatique.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="login-app-box"
+                style={{ 
+                  margin: 0, 
+                  textDecoration: 'none', 
+                  border: '2px solid rgba(139, 92, 246, 0.4)', 
+                  background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(37, 211, 102, 0.05) 100%)', 
+                  boxShadow: '0 8px 24px rgba(139, 92, 246, 0.15)',
+                  transition: 'transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+                  cursor: 'pointer',
+                  display: 'block'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.borderColor = 'var(--success)';
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(37, 211, 102, 0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(139, 92, 246, 0.15)';
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <span style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    width: '32px', 
+                    height: '32px', 
+                    borderRadius: '50%', 
+                    background: 'rgba(37, 211, 102, 0.15)', 
+                    color: 'var(--success)' 
+                  }}>
+                    <i className="ph-fill ph-sparkle" style={{ fontSize: '1.2rem', color: 'var(--success)' }}></i>
+                  </span>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff' }}>
+                    Nos Services & Prestations
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.82rem', color: 'rgba(255, 255, 255, 0.75)', lineHeight: '1.5' }}>
+                  Vous souhaitez en savoir plus sur l'ensemble de nos offres d'infogérance, maintenance et intégration ? <span style={{ color: 'var(--success)', fontWeight: 700, textDecoration: 'underline' }}>Cliquez ici pour visiter notre site vitrine →</span>
+                </div>
+              </a>
             </div>
 
             {/* Right Column: Marketing Text */}
@@ -1146,7 +1195,7 @@ function App() {
             </div>
             <div className="login-location-info">
               <div className="login-location-title">IT Service Desk</div>
-              <div className="login-location-subtitle">Zac Mbao, Dakar, Sénégal</div>
+              <div className="login-location-subtitle">Sicap Foire, Dakar, Sénégal</div>
             </div>
           </div>
 
