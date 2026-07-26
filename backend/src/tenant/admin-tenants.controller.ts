@@ -1157,6 +1157,10 @@ export class AdminTenantsController {
       onboardings: await this.prisma.onboarding.findMany({ where: { tenantId } }),
       sales: await this.prisma.sale.findMany({ where: { tenantId } }),
       kbArticles: await this.prisma.kBArticle.findMany({ where: { tenantId } }),
+      leaveRequests: await this.prisma.leaveRequest.findMany({ where: { tenantId } }),
+      tenantPaymentMethods: await this.prisma.tenantPaymentMethod.findMany({ where: { tenantId } }),
+      tenantInvoices: await this.prisma.tenantInvoice.findMany({ where: { tenantId } }),
+      tenantInvoiceSequences: await this.prisma.tenantInvoiceSequence.findMany({ where: { tenantId } }),
     };
 
     const fs = require('fs');
@@ -1174,36 +1178,9 @@ export class AdminTenantsController {
 
     fs.writeFileSync(backupPath, JSON.stringify(backupData, null, 2));
 
-    // 2. Suppression en cascade
+    // 2. Suppression en cascade complète
     const tId = tenantId;
-    await this.prisma.auditLog.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.transaction.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.invoice.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.quote.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.subscription.deleteMany({ where: { tenantId: tId } });
-    
-    await this.prisma.ticketComment.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.ticket.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.assetHistory.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.movement.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.maintenance.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.depreciation.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.asset.deleteMany({ where: { tenantId: tId } });
-    
-    await this.prisma.consumable.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.license.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.contract.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.purchaseOrder.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.supplier.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.location.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.department.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.onboarding.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.sale.deleteMany({ where: { tenantId: tId } });
-    await this.prisma.kBArticle.deleteMany({ where: { tenantId: tId } });
-    
-    await this.prisma.user.deleteMany({ where: { tenantId: tId } });
-    
-    await this.prisma.tenant.delete({ where: { id: tId } });
+    await this._cascadeDeleteTenantData(tId);
 
     this._logAction(req.user, 'PURGE_MANUELLE_ABONNE', 'Tenant', tId, undefined, { deleted: true, backupPath });
 
@@ -1212,6 +1189,55 @@ export class AdminTenantsController {
       backupFile: backupFilename,
       backupPath
     };
+  }
+
+  /**
+   * Helper privé exécutant la suppression en cascade exhaustive de toutes les entités liées à un tenant
+   */
+  private async _cascadeDeleteTenantData(tId: string) {
+    // 1. Logs, Analytics, Reminders
+    await this.prisma.auditLog.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.transaction.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.invoice.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.quote.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.subscription.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.subscriptionReminderLog.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.pageView.deleteMany({ where: { tenantId: tId } });
+
+    // 2. Paiements & Facturation DGI Tenant
+    await this.prisma.tenantInvoice.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.tenantInvoiceSequence.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.tenantPaymentMethod.deleteMany({ where: { tenantId: tId } });
+
+    // 3. RH & Support
+    await this.prisma.leaveRequest.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.ticketComment.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.ticket.deleteMany({ where: { tenantId: tId } });
+
+    // 4. Actifs, Mouvements, Dépréciations, Maintenances
+    await this.prisma.assetHistory.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.movement.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.maintenance.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.depreciation.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.asset.deleteMany({ where: { tenantId: tId } });
+
+    // 5. Consommables, Licences, Contrats, Achats, Ventes, Connaissances
+    await this.prisma.consumable.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.license.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.contract.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.purchaseOrder.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.supplier.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.onboarding.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.sale.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.kBArticle.deleteMany({ where: { tenantId: tId } });
+
+    // 6. Utilisateurs, Départements, Emplacements
+    await this.prisma.user.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.department.deleteMany({ where: { tenantId: tId } });
+    await this.prisma.location.deleteMany({ where: { tenantId: tId } });
+
+    // 7. Supprimer le Tenant
+    await this.prisma.tenant.delete({ where: { id: tId } });
   }
 
   @Post('purge-inactive')
@@ -1243,37 +1269,9 @@ export class AdminTenantsController {
       return { message: 'Aucun locataire éligible trouvé parmi la sélection.' };
     }
 
-    // Suppression en cascade (ordre respectueux des FK)
+    // Suppression en cascade complète (ordre respectueux des FK)
     for (const tId of validTenantIds) {
-      await this.prisma.auditLog.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.transaction.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.invoice.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.quote.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.subscription.deleteMany({ where: { tenantId: tId } });
-      
-      await this.prisma.ticketComment.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.ticket.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.assetHistory.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.movement.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.maintenance.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.depreciation.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.asset.deleteMany({ where: { tenantId: tId } });
-      
-      await this.prisma.consumable.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.license.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.contract.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.purchaseOrder.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.supplier.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.location.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.department.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.onboarding.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.sale.deleteMany({ where: { tenantId: tId } });
-      await this.prisma.kBArticle.deleteMany({ where: { tenantId: tId } });
-      
-      await this.prisma.user.deleteMany({ where: { tenantId: tId } });
-      
-      await this.prisma.tenant.delete({ where: { id: tId } });
-      
+      await this._cascadeDeleteTenantData(tId);
       this._logAction(req.user, 'PURGE_LOCATAIRE', 'Tenant', tId, undefined, { deleted: true, reason: 'Inactive trial' });
     }
 
