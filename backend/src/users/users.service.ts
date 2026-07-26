@@ -35,12 +35,6 @@ export class UsersService {
   }
 
   async create(data: any, currentUser?: any): Promise<User> {
-    if (data.email?.toLowerCase().trim() === 'admin@entreprise.com') {
-      throw new BadRequestException(
-        'Cette adresse email est réservée par le système et ne peut pas être utilisée pour un utilisateur de tenant.',
-      );
-    }
-
     try {
       const createdUser = await this.prisma.user.create({
         data,
@@ -121,11 +115,6 @@ export class UsersService {
 
   async update(id: string, data: any, currentUser?: any): Promise<User> {
     const { id: dataId, ...prismaData } = data;
-    if (prismaData.email?.toLowerCase().trim() === 'admin@entreprise.com') {
-      throw new BadRequestException(
-        'Cette adresse email est réservée par le système et ne peut pas être utilisée pour un utilisateur de tenant.',
-      );
-    }
 
     if (prismaData.password) {
       prismaData.password = await bcrypt.hash(prismaData.password, 12);

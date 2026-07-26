@@ -138,14 +138,17 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         return next(params);
       }
 
-      // 🛑 Sécurité absolue : masquer le compte Super-Admin pour tous les abonnés
+      // 🛑 Sécurité absolue : masquer les comptes Super-Admin/SaaS pour tous les abonnés
       if (params.model === 'User' && params.action !== 'create' && params.action !== 'createMany') {
         params.args = params.args ?? {};
         params.args.where = params.args.where ?? {};
         params.args.where = {
           ...params.args.where,
           NOT: {
-            email: 'admin@entreprise.com',
+            OR: [
+              { tenantId: null },
+              { systemRole: 'SuperAdmin' }
+            ]
           },
         };
       }
@@ -253,7 +256,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
                 if (targetModel === 'User') {
                   relationObj[relName].where.NOT = {
                     ...relationObj[relName].where.NOT,
-                    email: 'admin@entreprise.com',
+                    OR: [
+                      { tenantId: null },
+                      { systemRole: 'SuperAdmin' }
+                    ]
                   };
                 }
               }

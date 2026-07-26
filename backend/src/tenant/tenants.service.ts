@@ -40,13 +40,6 @@ export class TenantsService {
   async signup(dto: SignupDto) {
     const { companyName, subdomain, adminEmail, adminPassword, adminFirstName, adminLastName, adminPhone, adminCountry, adminPosition, planName } = dto;
 
-    // 0. Interdire l'utilisation de l'email réservé du Super-Admin global
-    if (adminEmail.toLowerCase().trim() === 'admin@entreprise.com') {
-      throw new BadRequestException(
-        'Cette adresse email est réservée par le système et ne peut pas être utilisée pour un espace abonné.',
-      );
-    }
-
     // 1. Validation du sous-domaine — slug pur, format standard SaaS (ex: acme-corp → acme-corp.kpsy.com)
     const subdomainRegex = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
     if (!subdomainRegex.test(subdomain)) {

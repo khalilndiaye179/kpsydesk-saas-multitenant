@@ -74,10 +74,6 @@ export class AdminTenantsController {
       throw new ForbiddenException('Accès refusé. Vous appartenez à un locataire et non à la console SaaS.');
     }
 
-    if (user.email?.toLowerCase() === 'admin@entreprise.com') {
-      return; // L'admin global par défaut a toujours tous les droits
-    }
-
     if (!allowedRoles.includes(user.systemRole || '')) {
       throw new ForbiddenException(`Accès refusé. Nécessite l'un des rôles SaaS suivants : ${allowedRoles.join(', ')}`);
     }
@@ -1047,8 +1043,8 @@ export class AdminTenantsController {
     if (!userToUpdate || userToUpdate.tenantId !== null) {
       throw new NotFoundException('Collaborateur introuvable.');
     }
-    if (userToUpdate.email.toLowerCase() === 'admin@entreprise.com') {
-      throw new ForbiddenException('Impossible de modifier le Super-Admin global.');
+    if (userToUpdate.email.toLowerCase() === req.user.email.toLowerCase()) {
+      throw new ForbiddenException('Impossible de modifier votre propre compte depuis la console.');
     }
 
     const updated = await this.prisma.user.update({
@@ -1078,8 +1074,8 @@ export class AdminTenantsController {
     if (!userToDelete || userToDelete.tenantId !== null) {
       throw new NotFoundException('Collaborateur introuvable.');
     }
-    if (userToDelete.email.toLowerCase() === 'admin@entreprise.com') {
-      throw new ForbiddenException('Impossible de supprimer le Super-Admin global.');
+    if (userToDelete.email.toLowerCase() === req.user.email.toLowerCase()) {
+      throw new ForbiddenException('Impossible de supprimer votre propre compte.');
     }
 
     await this.prisma.user.delete({ where: { id } });
