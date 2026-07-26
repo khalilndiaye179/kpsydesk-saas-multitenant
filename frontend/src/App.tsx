@@ -225,7 +225,8 @@ function App() {
             setSubscriptionEndDate(res.data.subscription.endDate);
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error("Failed to load tenant details:", err);
           // Activer tout par défaut en cas d'erreur de chargement (fallback local)
           setTenantFeatures({
             helpdesk: true,
