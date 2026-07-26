@@ -325,5 +325,29 @@ describe('Isolation Multi-Tenant (E2E)', () => {
       // 201 ou 409 (conflit code) sont acceptables
       expect([201, 409]).toContain(res.status);
     });
+
+    it("TENTATIVE D'INJECTION CROSS-TENANT via extra.controller : créer un département sur Tenant A en passant le tenantId de Tenant B dans le body → neutralisé", async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/departments')
+        .set('Authorization', `Bearer ${userA.token}`)
+        .set('X-Tenant-ID', tenantA.subdomain)
+        .send({
+          name: 'Departement E2E Inject',
+          tenantId: tenantB.id, // Tentative d'injection
+        });
+
+      expect(res.status).toBe(201);
+      const createdId = res.body.id;
+
+      // Vérification directe en base de données que le tenantId attribué est bien celui du contexte (Tenant A) et non celui injecté (Tenant B)
+      const check = await prisma.$queryRaw<[{ tenantId: string }]>`
+        SELECT "tenantId" FROM "Department" WHERE id = ${createdId}
+      `;
+      expect(check[0].tenantId).toBe(tenantA.id);
+      expect(check[0].tenantId).not.toBe(tenantB.id);
+
+      // Nettoyage de la base de données
+      await prisma.$executeRaw`DELETE FROM "Department" WHERE id = ${createdId}`;
+    });
   });
 });

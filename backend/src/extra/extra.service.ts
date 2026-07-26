@@ -164,6 +164,8 @@ export class ExtraService {
   private formatDates(entity: string, data: any): any {
     const copy = { ...data };
     delete copy.id;
+    delete copy.tenantId;
+    delete copy.tenantid;
 
     const dateFields: Record<string, string[]> = {
       licenses: ['expireDate'],
