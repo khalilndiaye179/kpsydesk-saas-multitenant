@@ -26,7 +26,10 @@ log "📥 [1/4] Récupération du code depuis GitHub..."
 git pull origin master
 
 # ── 3. Rebuild Docker ──
-log "🔨 [2/4] Reconstruction des containers..."
+log "🔨 [2/4] Nettoyage et reconstruction des containers..."
+docker stop itam_backend || true
+docker rm -f itam_backend || true
+docker compose down || true
 docker compose up -d --build --remove-orphans
 
 # ── 4. Migrations Prisma ──
