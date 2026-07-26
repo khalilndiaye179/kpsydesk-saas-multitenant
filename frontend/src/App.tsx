@@ -1366,7 +1366,7 @@ function App() {
     );
   }
 
-  const whatsappSupportNumber = import.meta.env.VITE_WHATSAPP_SUPPORT_NUMBER;
+  const whatsappSupportNumber = (import.meta as any).env?.VITE_WHATSAPP_SUPPORT_NUMBER;
 
   const getWhatsappSupportUrl = () => {
     if (!whatsappSupportNumber) return '';
