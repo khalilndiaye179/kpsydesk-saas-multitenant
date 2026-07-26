@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { REQUIRE_FEATURE_KEY } from './require-feature.decorator';
 
@@ -37,14 +38,17 @@ export class FeatureGuard implements CanActivate {
       );
     }
 
-    // Récupérer le tenant, son plan de base, et son abonnement actif
+    // Récupérer le tenant, son plan de base, et son abonnement actif ou en période d'essai
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
       include: {
         plan: true,
         subscriptions: {
-          where: { status: 'ACTIVE' },
+          where: {
+            status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIALING] },
+          },
           include: { plan: true },
+          orderBy: { createdAt: 'desc' },
           take: 1,
         },
       },
@@ -54,11 +58,13 @@ export class FeatureGuard implements CanActivate {
       throw new ForbiddenException('Organisation introuvable.');
     }
 
-    // Récupérer les fonctionnalités activées
+    // Récupérer les fonctionnalités activées (priorité : abonnement actif > plan de base du tenant)
     const activeSubscription = tenant.subscriptions[0];
-    const featuresIncluded = (activeSubscription?.plan?.featuresIncluded || 
-                             tenant.plan?.featuresIncluded || 
-                             {}) as Record<string, any>;
+    const featuresIncluded = (
+      activeSubscription?.plan?.featuresIncluded ||
+      tenant.plan?.featuresIncluded ||
+      {}
+    ) as Record<string, any>;
 
     // Vérifier si la fonctionnalité est explicitement activée (true)
     if (featuresIncluded[featureKey] !== true) {

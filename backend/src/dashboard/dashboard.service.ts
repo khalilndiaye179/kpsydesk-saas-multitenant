@@ -1,8 +1,7 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Response } from 'express';
 import * as PDFDocument from 'pdfkit';
-import * as ExcelJS from 'exceljs';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -162,6 +161,9 @@ export class DashboardService {
    * Génère le rapport d'export Excel
    */
   async exportExcel(res: Response, tenantId: string, startDate?: string, endDate?: string) {
+    // Import dynamique pour éviter un crash si exceljs n'est pas encore installé
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ExcelJS = require('exceljs');
     const summaryData = await this.getTreasurySummary(tenantId, startDate, endDate);
     
     const workbook = new ExcelJS.Workbook();
