@@ -122,6 +122,7 @@ function App() {
 
   // Subscription lifecycle states
   const [tenantStatus, setTenantStatus] = useState<string>('ACTIVE');
+  const [tenantName, setTenantName] = useState<string>('');
   const [subscriptionStatus, setSubscriptionStatus] = useState<string>('ACTIVE');
   const [subscriptionEndDate, setSubscriptionEndDate] = useState<string | null>(null);
   const [trialCountdownStr, setTrialCountdownStr] = useState<string>('');
@@ -219,6 +220,7 @@ function App() {
           setTenantFeatures(feats);
           if (res.data.tenant) {
             setTenantStatus(res.data.tenant.status);
+            setTenantName(res.data.tenant.name || '');
           }
           if (res.data.subscription) {
             setSubscriptionStatus(res.data.subscription.status);
@@ -1311,6 +1313,16 @@ function App() {
     );
   }
 
+  const whatsappSupportNumber = import.meta.env.VITE_WHATSAPP_SUPPORT_NUMBER;
+
+  const getWhatsappSupportUrl = () => {
+    if (!whatsappSupportNumber) return '';
+    const userName = currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() : '';
+    const company = tenantName || localStorage.getItem('tenant_subdomain') || 'Inconnu';
+    const message = `Bonjour, je sollicite l'assistance du support KPSyDesk. Utilisateur : ${userName || 'Inconnu'} (Entreprise : ${company})`;
+    return `https://wa.me/${whatsappSupportNumber.replace(/\s+/g, '')}?text=${encodeURIComponent(message)}`;
+  };
+
   return (
     <div className="app-layout">
       {/* Sidebar Navigation */}
@@ -1631,6 +1643,43 @@ function App() {
         <main className="main-content" style={{ maxWidth: '100%', margin: '0', padding: '2rem' }}>
           {renderActiveView()}
         </main>
+
+        {whatsappSupportNumber && isAuthenticated && currentUser?.email?.toLowerCase() !== 'admin@entreprise.com' && !(currentUser?.systemRole && ['SuperAdmin', 'Finance', 'Support'].includes(currentUser.systemRole) && !currentUser.tenantId) && (
+          <a
+            href={getWhatsappSupportUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              position: 'fixed',
+              bottom: '24px',
+              right: '24px',
+              backgroundColor: '#25D366',
+              color: '#fff',
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(37,211,102,0.4)',
+              zIndex: 9999,
+              cursor: 'pointer',
+              textDecoration: 'none',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.08)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(37,211,102,0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(37,211,102,0.4)';
+            }}
+            title="Besoin d'aide ? Contactez le support sur WhatsApp !"
+          >
+            <i className="ph ph-whatsapp" style={{ fontSize: '2rem' }} />
+          </a>
+        )}
       </div>
     </div>
   );
