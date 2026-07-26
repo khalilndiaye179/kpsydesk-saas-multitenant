@@ -34,7 +34,7 @@ services:
       NODE_ENV: development
       PORT: 3000
       DATABASE_URL: postgresql://${DB_USER:-itam_user}:${DB_PASSWORD:-itam_password_dev_2026}@postgres:5432/${DB_NAME:-itam_db}?schema=public
-      JWT_SECRET: ${JWT_SECRET:-itam_secret_jwt_key_2026_change_me}
+      JWT_SECRET: ${JWT_SECRET:-itam_secret_jwt_key_2026_change_me_in_production}
       CORS_ORIGINS: '*'
       # Multi-tenant : sous-domaine par défaut en dev (utiliser X-Tenant-ID header)
       DEFAULT_LEGACY_SUBDOMAIN: ${DEFAULT_LEGACY_SUBDOMAIN:-legacy}
