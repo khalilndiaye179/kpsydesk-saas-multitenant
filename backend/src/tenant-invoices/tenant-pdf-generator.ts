@@ -1,5 +1,7 @@
 import * as PDFDocument from 'pdfkit';
 import { Response } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export class TenantPdfGenerator {
   /**
@@ -22,14 +24,46 @@ export class TenantPdfGenerator {
     // Stream le PDF directement dans la réponse Express
     doc.pipe(res);
 
-    // En-tête / Logo textuel
-    doc
-      .fillColor('#0f172a') // Slate 900
-      .fontSize(22)
-      .text(invoice.tenant.name.toUpperCase(), 50, 50, { bold: true } as any)
-      .fontSize(10)
-      .fillColor('#64748b') // Slate 500
-      .text('Facture de vente conforme DGI', 50, 75);
+    // En-tête / Logo & Nom
+    let hasLogo = false;
+    let absoluteLogoPath = '';
+
+    if (invoice.tenant?.logoUrl && typeof invoice.tenant.logoUrl === 'string') {
+      const cleanUrl = invoice.tenant.logoUrl.startsWith('/')
+        ? invoice.tenant.logoUrl.substring(1)
+        : invoice.tenant.logoUrl;
+      absoluteLogoPath = path.join(process.cwd(), cleanUrl);
+
+      const ext = path.extname(absoluteLogoPath).toLowerCase();
+      if ((ext === '.png' || ext === '.jpg' || ext === '.jpeg') && fs.existsSync(absoluteLogoPath)) {
+        hasLogo = true;
+      }
+    }
+
+    if (hasLogo) {
+      try {
+        doc.image(absoluteLogoPath, 50, 45, { fit: [100, 45] });
+        doc
+          .fillColor('#0f172a') // Slate 900
+          .fontSize(16)
+          .text(invoice.tenant.name.toUpperCase(), 50, 95, { bold: true } as any)
+          .fontSize(10)
+          .fillColor('#64748b') // Slate 500
+          .text('Facture de vente conforme DGI', 50, 115);
+      } catch (e) {
+        hasLogo = false;
+      }
+    }
+
+    if (!hasLogo) {
+      doc
+        .fillColor('#0f172a') // Slate 900
+        .fontSize(22)
+        .text(invoice.tenant.name.toUpperCase(), 50, 50, { bold: true } as any)
+        .fontSize(10)
+        .fillColor('#64748b') // Slate 500
+        .text('Facture de vente conforme DGI', 50, 75);
+    }
 
     // Infos émetteur (Le Tenant PME)
     doc
