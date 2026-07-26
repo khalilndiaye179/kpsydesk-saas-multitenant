@@ -13,6 +13,7 @@ import {
   BadRequestException,
   Query,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -45,6 +46,11 @@ export class TenantsController {
    * Crée : Tenant + utilisateur Admin + Subscription en période d'essai.
    */
   @Public()
+  @Throttle({
+    short: { limit: 3, ttl: 60000 },
+    medium: { limit: 3, ttl: 60000 },
+    long: { limit: 5, ttl: 60000 }
+  })
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
   async signup(

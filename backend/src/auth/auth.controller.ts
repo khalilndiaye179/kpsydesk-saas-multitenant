@@ -1,4 +1,5 @@
 import { Controller, Post, Get, Patch, Body, Param, UnauthorizedException, Req, HttpCode, HttpStatus, UseGuards, BadRequestException } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { Public } from './public.decorator';
@@ -24,6 +25,11 @@ import { LoginDto, RequestResetDto, VerifyOtpDto, ResetPasswordDto, UpdateProfil
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Throttle({
+    short: { limit: 5, ttl: 60000 },
+    medium: { limit: 5, ttl: 60000 },
+    long: { limit: 10, ttl: 60000 }
+  })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -73,6 +79,11 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({
+    short: { limit: 5, ttl: 60000 },
+    medium: { limit: 5, ttl: 60000 },
+    long: { limit: 10, ttl: 60000 }
+  })
   @Post('mfa/validate')
   @HttpCode(HttpStatus.OK)
   async validateMfaCode(@Body('tempToken') tempToken: string, @Body('token') token: string) {
@@ -86,6 +97,11 @@ export class AuthController {
   // ─────────────────────────────────────────────────────────────────────────────
 
   @Public()
+  @Throttle({
+    short: { limit: 5, ttl: 60000 },
+    medium: { limit: 5, ttl: 60000 },
+    long: { limit: 10, ttl: 60000 }
+  })
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   async forgotPassword(
@@ -99,6 +115,11 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({
+    short: { limit: 5, ttl: 60000 },
+    medium: { limit: 5, ttl: 60000 },
+    long: { limit: 10, ttl: 60000 }
+  })
   @Post('verify-reset-otp')
   @HttpCode(HttpStatus.OK)
   async verifyResetOtp(@Body() body: VerifyOtpDto) {
@@ -110,6 +131,11 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({
+    short: { limit: 5, ttl: 60000 },
+    medium: { limit: 5, ttl: 60000 },
+    long: { limit: 10, ttl: 60000 }
+  })
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(
@@ -133,6 +159,11 @@ export class AuthController {
    * Retourne l'OTP en clair (simulation — en production : envoyer par SMS/email).
    */
   @Public()
+  @Throttle({
+    short: { limit: 5, ttl: 60000 },
+    medium: { limit: 5, ttl: 60000 },
+    long: { limit: 10, ttl: 60000 }
+  })
   @Post('super-admin/request-reset')
   @HttpCode(HttpStatus.OK)
   async superAdminRequestReset(
@@ -146,6 +177,11 @@ export class AuthController {
    * Vérifie la validité d'un OTP (sans le consommer).
    */
   @Public()
+  @Throttle({
+    short: { limit: 5, ttl: 60000 },
+    medium: { limit: 5, ttl: 60000 },
+    long: { limit: 10, ttl: 60000 }
+  })
   @Post('super-admin/verify-otp')
   @HttpCode(HttpStatus.OK)
   async superAdminVerifyOtp(@Body() body: VerifyOtpDto) {
@@ -161,6 +197,11 @@ export class AuthController {
    * Réinitialise le mot de passe du Super-Admin via OTP valide.
    */
   @Public()
+  @Throttle({
+    short: { limit: 5, ttl: 60000 },
+    medium: { limit: 5, ttl: 60000 },
+    long: { limit: 10, ttl: 60000 }
+  })
   @Post('super-admin/reset-password')
   @HttpCode(HttpStatus.OK)
   async superAdminResetPassword(
