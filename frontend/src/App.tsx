@@ -38,6 +38,7 @@ import { SuperAdminRecoveryFlow } from './components/SuperAdminRecoveryFlow';
 import { AppLandingView } from './components/AppLandingView';
 import { LeavesView } from './components/LeavesView';
 import { DgiInvoicesView } from './components/DgiInvoicesView';
+import { TreasuryView } from './components/TreasuryView';
 
 interface UserSession {
   id: string;
@@ -666,6 +667,7 @@ function App() {
       sale: 'financial',
       leaves: 'hr',
       dgi_invoices: 'dgi',
+      treasury: 'treasury_dashboard',
     };
 
     const requiredFeature = featureMap[tabKey];
@@ -700,6 +702,7 @@ function App() {
         { key: 'purchase', label: 'Achats & Fournisseurs', icon: 'ph-duotone ph-shopping-cart' },
         { key: 'contract', label: 'Contrats & Garanties', icon: 'ph-duotone ph-file-text' },
         { key: 'sale', label: 'Vente & Cession', icon: 'ph-duotone ph-hand-coins' },
+        { key: 'treasury', label: 'Dashboard Trésorerie', icon: 'ph-duotone ph-chart-line-up' },
         { key: 'depreciation', label: 'Amortissement & Cycle de Vie', icon: 'ph-duotone ph-chart-line-down' },
         { key: 'dgi_invoices', label: 'Factures Client DGI', icon: 'ph-duotone ph-file-invoice' },
       ]
@@ -756,6 +759,7 @@ function App() {
       case 'purchase': return <PurchaseView />;
       case 'contract': return <ContractView />;
       case 'sale': return <SaleView />;
+      case 'treasury': return <TreasuryView />;
       case 'dgi_invoices': return <DgiInvoicesView />;
       case 'licenses': return <LicenseView />;
       case 'maintenance': return <MaintenanceView />;
