@@ -179,14 +179,6 @@ export class TenantsService {
     `;
 
     const activeSubscription = tenant.subscriptions[0];
-    
-    console.log("=== DIAGNOSTIC PLAN FEATURES ===");
-    console.log("Tenant Name:", tenant.name);
-    console.log("Tenant Status:", tenant.status);
-    console.log("Tenant Plan:", tenant.plan?.name, "Features:", tenant.plan?.featuresIncluded);
-    console.log("Active Subscription Status:", activeSubscription?.status);
-    console.log("Active Subscription Plan:", activeSubscription?.plan?.name, "Features:", activeSubscription?.plan?.featuresIncluded);
-    console.log("================================");
 
     const quotaAssets =
       activeSubscription?.quotaAssets ?? activeSubscription?.plan?.quotaAssets ?? tenant.plan?.quotaAssets ?? 0;
