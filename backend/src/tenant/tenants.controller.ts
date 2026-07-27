@@ -22,7 +22,7 @@ import { TenantsService } from './tenants.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TenantGuard } from './tenant.guard';
 import { Public } from '../auth/public.decorator';
-import { CreateTenantDto, UpdateTenantSettingsDto } from './dto/tenants.dto';
+import { CreateTenantDto, UpdateTenantSettingsDto, VerifySignupDto, ResendCodeDto } from './dto/tenants.dto';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '@prisma/client';
@@ -31,8 +31,11 @@ import { Role } from '@prisma/client';
  * TenantsController — Routes liées à la gestion des tenants.
  *
  * Routes publiques (sans auth) :
- *  POST /api/tenants/signup   → Inscription d'un nouveau tenant
- *  GET  /api/tenants/plans    → Liste des plans disponibles (page Pricing)
+ *  POST /api/tenants/signup                     → Inscription directe (rétro-compatibilité)
+ *  POST /api/tenants/signup/request-verification → Étape 1 : Demande OTP Email + SMS
+ *  POST /api/tenants/signup/verify               → Étape 2 : Vérification OTP et création effectif
+ *  POST /api/tenants/signup/resend-code          → Renvoi des codes OTP
+ *  GET  /api/tenants/plans                      → Liste des plans disponibles (page Pricing)
  *
  * Routes protégées (auth JWT + tenant) :
  *  GET  /api/tenants/me       → Informations et usage du tenant courant
@@ -42,7 +45,52 @@ export class TenantsController {
   constructor(private readonly tenantsService: TenantsService) {}
 
   /**
-   * Inscription publique d'un nouveau tenant.
+   * Demande de vérification d'inscription (génération & envoi OTP Email + SMS).
+   */
+  @Public()
+  @Throttle({
+    short: { limit: 3, ttl: 60000 },
+    medium: { limit: 5, ttl: 60000 },
+    long: { limit: 10, ttl: 60000 }
+  })
+  @Post('signup/request-verification')
+  @HttpCode(HttpStatus.OK)
+  async requestVerification(@Body() body: CreateTenantDto) {
+    return this.tenantsService.requestSignupVerification(body);
+  }
+
+  /**
+   * Vérification des 2 codes OTP (Email + SMS) et création effective du locataire.
+   */
+  @Public()
+  @Throttle({
+    short: { limit: 5, ttl: 60000 },
+    medium: { limit: 10, ttl: 60000 },
+    long: { limit: 20, ttl: 60000 }
+  })
+  @Post('signup/verify')
+  @HttpCode(HttpStatus.CREATED)
+  async verifySignup(@Body() body: VerifySignupDto) {
+    return this.tenantsService.verifySignup(body);
+  }
+
+  /**
+   * Renvoi d'un nouveau couple de codes OTP en cas de non-réception.
+   */
+  @Public()
+  @Throttle({
+    short: { limit: 2, ttl: 60000 },
+    medium: { limit: 4, ttl: 60000 },
+    long: { limit: 8, ttl: 60000 }
+  })
+  @Post('signup/resend-code')
+  @HttpCode(HttpStatus.OK)
+  async resendCode(@Body() body: ResendCodeDto) {
+    return this.tenantsService.resendSignupCode(body);
+  }
+
+  /**
+   * Inscription publique d'un nouveau tenant (Direct / Rétro-compatibilité).
    * Crée : Tenant + utilisateur Admin + Subscription en période d'essai.
    */
   @Public()

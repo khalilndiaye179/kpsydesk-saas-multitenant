@@ -18,6 +18,8 @@ export class UpdateTenantSettingsDto {
   companyTaxId?: string;
 }
 
+export const PHONE_REGEX = /^(\+?[1-9]\d{7,14}|(?:\+221|00221)?\s?(?:7[05678]|33)\d{7})$/;
+
 export class CreateTenantDto {
   @IsString()
   @IsNotEmpty()
@@ -27,7 +29,7 @@ export class CreateTenantDto {
   @IsNotEmpty()
   subdomain: string;
 
-  @IsEmail()
+  @IsEmail({}, { message: 'Adresse email invalide.' })
   @IsNotEmpty()
   adminEmail: string;
 
@@ -48,7 +50,10 @@ export class CreateTenantDto {
   adminLastName: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Le numéro de téléphone est obligatoire.' })
+  @Matches(PHONE_REGEX, {
+    message: 'Le numéro de téléphone est invalide (format international ou Sénégalais requis : ex: +221 77 000 00 00).',
+  })
   adminPhone: string;
 
   @IsString()
@@ -63,3 +68,26 @@ export class CreateTenantDto {
   @IsOptional()
   planName?: string;
 }
+
+export class VerifySignupDto {
+  @IsString()
+  @IsNotEmpty()
+  pendingId: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Le code email à 6 chiffres est obligatoire.' })
+  @Matches(/^\d{6}$/, { message: 'Le code email doit comporter exactement 6 chiffres.' })
+  emailOtp: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'Le code SMS à 6 chiffres est obligatoire.' })
+  @Matches(/^\d{6}$/, { message: 'Le code SMS doit comporter exactement 6 chiffres.' })
+  phoneOtp: string;
+}
+
+export class ResendCodeDto {
+  @IsString()
+  @IsNotEmpty()
+  pendingId: string;
+}
+

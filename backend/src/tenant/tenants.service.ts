@@ -7,6 +7,9 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as bcrypt from 'bcryptjs';
+import { MailService } from '../mail/mail.service';
+import { SmsNotificationService } from './sms-notification.service';
+import { CreateTenantDto, VerifySignupDto, ResendCodeDto } from './dto/tenants.dto';
 
 export interface SignupDto {
   companyName: string;      // Nom de l'entreprise
@@ -30,8 +33,299 @@ export interface SubscriptionUpdateDto {
 export class TenantsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly mailService: MailService,
+    private readonly smsNotificationService: SmsNotificationService,
   ) {}
+
+  // ============================================================
+  // VÉRIFICATION D'INSCRIPTION PAR OTP (EMAIL + SMS)
+  // ============================================================
+
+  async requestSignupVerification(dto: CreateTenantDto) {
+    const { companyName, subdomain, adminEmail, adminPassword, adminFirstName, adminLastName, adminPhone, adminCountry, adminPosition, planName } = dto;
+
+    // 1. Validation du sous-domaine — slug pur (ex: acme-corp)
+    const subdomainRegex = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
+    if (!subdomainRegex.test(subdomain)) {
+      throw new BadRequestException(
+        'Le sous-domaine doit contenir entre 3 et 40 caractères (lettres minuscules, chiffres et tirets).',
+      );
+    }
+
+    // 2. Sous-domaines réservés
+    const reservedSubdomains = ['www', 'api', 'admin', 'legacy', 'app', 'mail', 'support', 'help', 'blog', 'status'];
+    if (reservedSubdomains.includes(subdomain)) {
+      throw new BadRequestException(`Le sous-domaine "${subdomain}" est réservé par le système.`);
+    }
+
+    // 3. Unicité du sous-domaine dans Tenant
+    const existingTenant = await this.prisma.tenant.findFirst({ where: { subdomain: subdomain.toLowerCase() } });
+    if (existingTenant) {
+      throw new ConflictException(`Le sous-domaine "${subdomain}.kpsyinformatique.com" est déjà utilisé.`);
+    }
+
+    // 4. Unicité de l'email admin dans User
+    const existingUser = await this.prisma.user.findFirst({ where: { email: adminEmail.toLowerCase() } });
+    if (existingUser) {
+      throw new ConflictException(`L'adresse email "${adminEmail}" est déjà associée à un compte.`);
+    }
+
+    // 5. Hash immédiat du mot de passe
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
+
+    // 6. Génération des OTP distincts à 6 chiffres
+    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const phoneOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // Valide 15 minutes
+
+    // 7. Nettoyer les anciennes demandes en attente pour cet email ou sous-domaine
+    await this.prisma.pendingSignup.deleteMany({
+      where: {
+        OR: [
+          { subdomain: subdomain.toLowerCase() },
+          { adminEmail: adminEmail.toLowerCase() },
+        ],
+      },
+    });
+
+    // 8. Enregistrer dans PendingSignup
+    const pending = await this.prisma.pendingSignup.create({
+      data: {
+        companyName,
+        subdomain: subdomain.toLowerCase(),
+        adminEmail: adminEmail.toLowerCase(),
+        adminPassword: hashedPassword,
+        adminFirstName,
+        adminLastName,
+        adminPhone,
+        adminCountry,
+        adminPosition,
+        planName,
+        emailOtp,
+        phoneOtp,
+        attempts: 0,
+        expiresAt,
+      },
+    });
+
+    // 9. Envoi de l'OTP par Email
+    const emailSubject = `Code de vérification KPSyDesk — ${companyName}`;
+    const emailText = `Bonjour ${adminFirstName},\n\nVotre code de vérification Email pour finaliser la création de votre espace KPSyDesk est : ${emailOtp}\n\nCe code expire dans 15 minutes.`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+        <h2 style="color: #3b82f6;">Code de vérification KPSyDesk</h2>
+        <p>Bonjour <strong>${adminFirstName}</strong>,</p>
+        <p>Merci pour votre inscription ! Voici votre code de vérification Email :</p>
+        <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #8b5cf6; padding: 15px; background: #f1f5f9; border-radius: 8px; display: inline-block; margin: 15px 0;">
+          ${emailOtp}
+        </div>
+        <p style="font-size: 12px; color: #64748b;">Ce code est valide pendant 15 minutes.</p>
+      </div>
+    `;
+    await this.mailService.sendMail(adminEmail, emailSubject, emailText, emailHtml);
+
+    // 10. Envoi de l'OTP par SMS
+    const smsMessage = `[KPSyDesk] Votre code de vérification SMS pour la création de votre espace est : ${phoneOtp} (Valide 15 min).`;
+    await this.smsNotificationService.sendSms(adminPhone, smsMessage);
+
+    return {
+      success: true,
+      pendingId: pending.id,
+      message: 'Codes de vérification envoyés par email et SMS.',
+      expiresAt: expiresAt.toISOString(),
+    };
+  }
+
+  async verifySignup(dto: VerifySignupDto) {
+    const { pendingId, emailOtp, phoneOtp } = dto;
+
+    const pending = await this.prisma.pendingSignup.findUnique({
+      where: { id: pendingId },
+    });
+
+    if (!pending) {
+      throw new BadRequestException('Demande d\'inscription introuvable ou expirée. Veuillez recommencer.');
+    }
+
+    if (new Date() > pending.expiresAt) {
+      await this.prisma.pendingSignup.delete({ where: { id: pendingId } });
+      throw new BadRequestException('Demande d\'inscription expirée. Veuillez recommencer.');
+    }
+
+    if (pending.attempts >= 5) {
+      await this.prisma.pendingSignup.delete({ where: { id: pendingId } });
+      throw new BadRequestException('Nombre maximal de tentatives dépassé. Veuillez recommencer l\'inscription.');
+    }
+
+    // Vérifier les 2 codes
+    const isEmailValid = pending.emailOtp === emailOtp.trim();
+    const isPhoneValid = pending.phoneOtp === phoneOtp.trim();
+
+    if (!isEmailValid || !isPhoneValid) {
+      const updated = await this.prisma.pendingSignup.update({
+        where: { id: pendingId },
+        data: { attempts: { increment: 1 } },
+      });
+      const remaining = 5 - updated.attempts;
+      throw new BadRequestException(`Code(s) de vérification incorrect(s). Tentatives restantes : ${remaining}.`);
+    }
+
+    // Codes valides → Création effective du Tenant & Admin
+    const signupResult = await this.signupFromPending(pending);
+
+    // Supprimer le PendingSignup
+    await this.prisma.pendingSignup.delete({ where: { id: pendingId } });
+
+    return signupResult;
+  }
+
+  async resendSignupCode(dto: ResendCodeDto) {
+    const pending = await this.prisma.pendingSignup.findUnique({
+      where: { id: dto.pendingId },
+    });
+
+    if (!pending) {
+      throw new BadRequestException('Demande d\'inscription introuvable ou expirée.');
+    }
+
+    if (new Date() > pending.expiresAt) {
+      await this.prisma.pendingSignup.delete({ where: { id: dto.pendingId } });
+      throw new BadRequestException('Demande d\'inscription expirée. Veuillez recommencer.');
+    }
+
+    // Régénérer les codes et réinitialiser la durée d'expiration (15 min)
+    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const phoneOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+    await this.prisma.pendingSignup.update({
+      where: { id: dto.pendingId },
+      data: {
+        emailOtp,
+        phoneOtp,
+        attempts: 0,
+        expiresAt,
+      },
+    });
+
+    // Envoi Email
+    const emailSubject = `Nouveau code de vérification KPSyDesk — ${pending.companyName}`;
+    const emailText = `Bonjour ${pending.adminFirstName},\n\nVoici votre nouveau code de vérification Email : ${emailOtp}\n\nCe code expire dans 15 minutes.`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+        <h2 style="color: #3b82f6;">Nouveau code de vérification KPSyDesk</h2>
+        <p>Bonjour <strong>${pending.adminFirstName}</strong>,</p>
+        <p>Voici votre nouveau code de vérification Email :</p>
+        <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #8b5cf6; padding: 15px; background: #f1f5f9; border-radius: 8px; display: inline-block; margin: 15px 0;">
+          ${emailOtp}
+        </div>
+        <p style="font-size: 12px; color: #64748b;">Ce code est valide pendant 15 minutes.</p>
+      </div>
+    `;
+    await this.mailService.sendMail(pending.adminEmail, emailSubject, emailText, emailHtml);
+
+    // Envoi SMS
+    const smsMessage = `[KPSyDesk] Votre nouveau code de vérification SMS est : ${phoneOtp} (Valide 15 min).`;
+    await this.smsNotificationService.sendSms(pending.adminPhone, smsMessage);
+
+    return {
+      success: true,
+      message: 'Nouveaux codes de vérification envoyés.',
+      expiresAt: expiresAt.toISOString(),
+    };
+  }
+
+  private async signupFromPending(pending: any) {
+    const { companyName, subdomain, adminEmail, adminPassword, adminFirstName, adminLastName, adminPhone, adminCountry, adminPosition, planName } = pending;
+
+    // Récupérer le plan choisi
+    const plan = await this.prisma.plan.findFirst({
+      where: planName
+        ? { name: planName, isPublic: true }
+        : { isPublic: true },
+      orderBy: { price: 'asc' },
+    });
+
+    if (!plan) {
+      throw new NotFoundException('Aucun plan disponible. Contactez le support.');
+    }
+
+    // Créer le Tenant
+    const tenant = await this.prisma.tenant.create({
+      data: {
+        name: companyName,
+        subdomain: subdomain.toLowerCase(),
+        status: 'TRIAL',
+        planId: plan.id,
+      },
+    });
+
+    // Créer l'utilisateur administrateur initial (adminPassword est DÉJÀ hashé !)
+    const adminUser = await this.prisma.user.create({
+      data: {
+        email: adminEmail.toLowerCase(),
+        username: adminEmail.split('@')[0].toLowerCase(),
+        password: adminPassword,
+        firstName: adminFirstName,
+        lastName: adminLastName,
+        phone: adminPhone,
+        country: adminCountry,
+        position: adminPosition,
+        role: 'ADMIN',
+        systemRole: 'Admin IT',
+        status: 'Actif',
+        tenantId: tenant.id,
+      },
+    });
+
+    // Créer la subscription
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 7);
+
+    const subscription = await this.prisma.subscription.create({
+      data: {
+        tenantId: tenant.id,
+        planId: plan.id,
+        status: 'TRIALING',
+        startDate: new Date(),
+        endDate: trialEndDate,
+      },
+    });
+
+    this.eventEmitter.emit('tenant.created', tenant.id);
+
+    return {
+      message: 'Compte locataire créé avec succès.',
+      tenant: {
+        id: tenant.id,
+        name: tenant.name,
+        subdomain: tenant.subdomain,
+        status: tenant.status,
+      },
+      admin: {
+        id: adminUser.id,
+        email: adminUser.email,
+        firstName: adminUser.firstName,
+        lastName: adminUser.lastName,
+      },
+      subscription: {
+        id: subscription.id,
+        status: subscription.status,
+        endDate: subscription.endDate,
+      },
+    };
+  }
+
+  async purgeExpiredPendingSignups() {
+    const result = await this.prisma.pendingSignup.deleteMany({
+      where: {
+        expiresAt: { lt: new Date() },
+      },
+    });
+    return result.count;
+  }
+
 
   // ============================================================
   // INSCRIPTION D'UN NOUVEAU TENANT

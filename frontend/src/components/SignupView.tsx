@@ -17,7 +17,7 @@ interface SignupViewProps {
 }
 
 export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, preselectedPlan }: SignupViewProps) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 2.5 | 3>(1);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,6 +38,13 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
   const [adminPosition, setAdminPosition] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+
+  // OTP Verification states (Step 2.5)
+  const [pendingId, setPendingId] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [resendSuccess, setResendSuccess] = useState('');
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     api.get('/tenants/plans')
@@ -79,10 +86,7 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
     if (!subdomain || subdomain.length < 3) return;
     setSubdomainStatus('checking');
     try {
-      // En production, cet endpoint serait dédié. On utilise le signup en mode dry-run
-      // Pour la démo, on simule
       await new Promise(r => setTimeout(r, 600));
-      // Quelques sous-domaines "pris" pour la démo
       const taken = ['legacy', 'www', 'admin', 'api', 'demo', 'test'];
       setSubdomainStatus(taken.includes(subdomain) ? 'taken' : 'available');
     } catch {
@@ -102,20 +106,22 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
     if (!adminFirstName.trim() || !adminLastName.trim()) { setError('Le prénom et nom sont requis.'); return false; }
     if (!adminPhone.trim() || !adminCountry.trim() || !adminPosition.trim()) { setError('Le téléphone, la zone géographique et le poste sont requis.'); return false; }
     if (!adminEmail || !adminEmail.includes('@')) { setError('Email invalide.'); return false; }
-    if (adminPassword.length < 8) { setError('Le mot de passe doit comporter au moins 8 caractères.'); return false; }
+    if (adminPassword.length < 10) { setError('Le mot de passe doit comporter au moins 10 caractères.'); return false; }
     if (adminPassword !== confirmPassword) { setError('Les mots de passe ne correspondent pas.'); return false; }
     if (!acceptTerms) { setError('Vous devez accepter les conditions d\'utilisation.'); return false; }
     setError(''); return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Demande initiale d'OTP (Étape 2 -> 2.5)
+  const handleRequestVerification = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep2()) return;
     setLoading(true);
     setError('');
+    setResendSuccess('');
 
     try {
-      await api.post('/tenants/signup', {
+      const res = await api.post('/tenants/signup/request-verification', {
         companyName,
         subdomain,
         adminEmail,
@@ -126,6 +132,38 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
         adminCountry,
         adminPosition,
         planName: selectedPlan,
+      });
+
+      setPendingId(res.data.pendingId);
+      setStep(2.5);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erreur lors de l\'envoi des codes de vérification.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Validation des 2 OTP et création réelle (Étape 2.5 -> 3)
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!emailOtp.trim() || emailOtp.trim().length !== 6) {
+      setError('Veuillez saisir le code Email à 6 chiffres.');
+      return;
+    }
+    if (!phoneOtp.trim() || phoneOtp.trim().length !== 6) {
+      setError('Veuillez saisir le code SMS à 6 chiffres.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setResendSuccess('');
+
+    try {
+      await api.post('/tenants/signup/verify', {
+        pendingId,
+        emailOtp: emailOtp.trim(),
+        phoneOtp: phoneOtp.trim(),
       });
 
       setSuccess(true);
@@ -142,9 +180,26 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
 
       setTimeout(() => onSignupSuccess(access_token, user, subdomain), 1500);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors de la création du compte. Vérifiez vos informations.');
+      setError(err.response?.data?.message || 'Code(s) de vérification invalides ou expirés.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Renvoi des codes OTP
+  const handleResendCode = async () => {
+    if (!pendingId) return;
+    setResending(true);
+    setError('');
+    setResendSuccess('');
+
+    try {
+      await api.post('/tenants/signup/resend-code', { pendingId });
+      setResendSuccess('Nouveaux codes envoyés par Email et SMS !');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erreur lors du renvoi des codes.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -210,30 +265,36 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
         <div style={{ padding: '2rem 1.5rem' }}>
           {[
             { num: 1, label: 'Votre entreprise', desc: 'Nom, sous-domaine et plan' },
-            { num: 2, label: 'Compte administrateur', desc: 'Email et mot de passe' },
-          ].map(({ num, label, desc }) => (
-            <div key={num} style={{
-              display: 'flex', alignItems: 'center', gap: '16px',
-              padding: '14px 16px', marginBottom: '12px', borderRadius: '12px',
-              background: step === num ? 'linear-gradient(135deg, #8b5cf620, #3b82f620)' : 'transparent',
-              border: step === num ? '1px solid #8b5cf640' : '1px solid transparent',
-              transition: 'all 0.3s'
-            }}>
-              <div style={{
-                width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                background: step > num ? '#22c55e' : step === num ? 'linear-gradient(135deg, #8b5cf6, #3b82f6)' : 'var(--bg-tertiary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.9rem', fontWeight: 700, color: step >= num ? 'white' : 'var(--text-muted)',
+            { num: 2, label: 'Compte administrateur', desc: 'Coordonnées & mot de passe' },
+            { num: 3, label: 'Vérification', desc: 'Codes OTP Email & SMS' },
+          ].map(({ num, label, desc }) => {
+            const currentStepNum = step === 1 ? 1 : step === 2 ? 2 : step === 2.5 ? 3 : 4;
+            const isCompleted = currentStepNum > num;
+            const isActive = currentStepNum === num;
+            return (
+              <div key={num} style={{
+                display: 'flex', alignItems: 'center', gap: '16px',
+                padding: '14px 16px', marginBottom: '12px', borderRadius: '12px',
+                background: isActive ? 'linear-gradient(135deg, #8b5cf620, #3b82f620)' : 'transparent',
+                border: isActive ? '1px solid #8b5cf640' : '1px solid transparent',
                 transition: 'all 0.3s'
               }}>
-                {step > num ? <i className="ph-bold ph-check" /> : num}
+                <div style={{
+                  width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                  background: isCompleted ? '#22c55e' : isActive ? 'linear-gradient(135deg, #8b5cf6, #3b82f6)' : 'var(--bg-tertiary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.9rem', fontWeight: 700, color: (isCompleted || isActive) ? 'white' : 'var(--text-muted)',
+                  transition: 'all 0.3s'
+                }}>
+                  {isCompleted ? <i className="ph-bold ph-check" /> : num}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: isActive ? 'var(--text-primary)' : 'var(--text-muted)' }}>{label}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{desc}</div>
+                </div>
               </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: step === num ? 'var(--text-primary)' : 'var(--text-muted)' }}>{label}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{desc}</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div style={{ padding: '0 1.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
@@ -260,15 +321,17 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
           {/* Header */}
           <div style={{ marginBottom: '2rem' }}>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-              Étape {step} sur 2
+              Étape {step === 1 ? 1 : step === 2 ? 2 : 3} sur 3
             </div>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-              {step === 1 ? '🏢 Créer votre espace' : '👤 Compte administrateur'}
+              {step === 1 ? '🏢 Créer votre espace' : step === 2 ? '👤 Compte administrateur' : '🔒 Vérification des coordonnées'}
             </h2>
             <p style={{ color: 'var(--text-muted)', margin: '6px 0 0', fontSize: '0.9rem' }}>
               {step === 1
                 ? 'Renseignez les informations de votre entreprise'
-                : 'Ce compte sera l\'administrateur principal de votre espace'}
+                : step === 2
+                ? 'Ce compte sera l\'administrateur principal de votre espace'
+                : 'Saisissez les 2 codes de vérification envoyés par Email et SMS'}
             </p>
           </div>
 
@@ -387,7 +450,7 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
 
           {/* Step 2 */}
           {step === 2 && (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <form onSubmit={handleRequestVerification} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="auth-field">
                   <label style={{ fontWeight: 600 }}>Prénom *</label>
@@ -482,7 +545,7 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
                   <input
                     type={showPass ? 'text' : 'password'}
                     className="login-input-field"
-                    placeholder="Minimum 8 caractères"
+                    placeholder="Minimum 10 caractères"
                     value={adminPassword}
                     onChange={e => setAdminPassword(e.target.value)}
                     required
@@ -503,7 +566,7 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
                       }} />
                     ))}
                     <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>
-                      {adminPassword.length < 6 ? 'Faible' : adminPassword.length < 10 ? 'Moyen' : 'Fort'}
+                      {adminPassword.length < 8 ? 'Faible' : adminPassword.length < 12 ? 'Moyen' : 'Fort'}
                     </span>
                   </div>
                 )}
@@ -567,8 +630,109 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
                   disabled={loading}
                 >
                   {loading ? (
-                    <><i className="ph ph-circle-notch" style={{ animation: 'spin 1s linear infinite', marginRight: '8px' }} />Création en cours…</>
-                  ) : '🚀 Créer mon espace'}
+                    <><i className="ph ph-circle-notch" style={{ animation: 'spin 1s linear infinite', marginRight: '8px' }} />Envoi des codes…</>
+                  ) : '📩 Envoyer les codes de vérification →'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Step 2.5 — OTP Verification */}
+          {step === 2.5 && (
+            <form onSubmit={handleVerify} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.1))',
+                border: '1px solid rgba(139,92,246,0.3)',
+                borderRadius: '12px', padding: '16px', fontSize: '0.85rem'
+              }}>
+                <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="ph-bold ph-shield-check" style={{ color: '#8b5cf6', fontSize: '1.2rem' }} />
+                  Codes de vérification envoyés !
+                </div>
+                <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  📩 <strong>Email :</strong> code envoyé à <strong style={{ color: 'var(--text-primary)' }}>{adminEmail}</strong>
+                </div>
+                <div style={{ color: 'var(--text-muted)' }}>
+                  📱 <strong>SMS :</strong> code envoyé au <strong style={{ color: 'var(--text-primary)' }}>{adminPhone}</strong>
+                </div>
+              </div>
+
+              {resendSuccess && (
+                <div style={{ padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '8px', color: '#22c55e', fontSize: '0.85rem', fontWeight: 600 }}>
+                  <i className="ph ph-check-circle" style={{ marginRight: '6px' }} />
+                  {resendSuccess}
+                </div>
+              )}
+
+              {/* Email OTP Field */}
+              <div className="auth-field">
+                <label style={{ fontWeight: 600 }}>Code de vérification Email (6 chiffres) *</label>
+                <div className="login-input-container">
+                  <i className="ph ph-envelope-simple" />
+                  <input
+                    type="text"
+                    maxLength={6}
+                    className="login-input-field"
+                    placeholder="Ex: 123456"
+                    value={emailOtp}
+                    onChange={e => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    style={{ letterSpacing: '4px', fontSize: '1.1rem', fontWeight: 700 }}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Phone OTP Field */}
+              <div className="auth-field">
+                <label style={{ fontWeight: 600 }}>Code de vérification SMS (6 chiffres) *</label>
+                <div className="login-input-container">
+                  <i className="ph ph-device-mobile" />
+                  <input
+                    type="text"
+                    maxLength={6}
+                    className="login-input-field"
+                    placeholder="Ex: 654321"
+                    value={phoneOtp}
+                    onChange={e => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    style={{ letterSpacing: '4px', fontSize: '1.1rem', fontWeight: 700 }}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Vous n'avez pas reçu les codes ?</span>
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resending}
+                  style={{ background: 'none', border: 'none', color: '#8b5cf6', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  {resending ? 'Envoi en cours…' : '🔄 Renvoyer les codes'}
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => { setStep(2); setError(''); }}
+                  style={{
+                    flex: 1, padding: '12px', borderRadius: '10px',
+                    border: '1px solid var(--border-color)', background: 'transparent',
+                    color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 600
+                  }}
+                >
+                  ← Retour
+                </button>
+                <button
+                  type="submit"
+                  className="btn-submit-gradient"
+                  style={{ flex: 2 }}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <><i className="ph ph-circle-notch" style={{ animation: 'spin 1s linear infinite', marginRight: '8px' }} />Création du compte…</>
+                  ) : '🚀 Valider et créer mon espace'}
                 </button>
               </div>
             </form>

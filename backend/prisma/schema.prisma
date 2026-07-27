@@ -644,3 +644,23 @@ model LeaveRequest {
   validator       User?    @relation("ValidatorLeaveRequests", fields: [validatorId], references: [id])
 }
 
+model PendingSignup {
+  id             String   @id @default(uuid())
+  companyName    String
+  subdomain      String   @unique
+  adminEmail     String
+  adminPassword  String
+  adminFirstName String
+  adminLastName  String
+  adminPhone     String
+  adminCountry   String
+  adminPosition  String
+  planName       String?
+  emailOtp       String
+  phoneOtp       String
+  attempts       Int      @default(0)
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+}
+
+

@@ -17,12 +17,27 @@ export class SubscriptionLifecycleService {
     this.logger.log('Starting daily subscription lifecycle check...');
     await this.processCycles();
     await this.purgeOldPageViews();
+    await this.purgeExpiredPendingSignups();
     
     // Relances automatiques J-7 et J-1 (Livrable A)
     try {
       await this.sendExpirationReminders();
     } catch (reminderError) {
       this.logger.error('Failed to run subscription expiration reminders:', reminderError);
+    }
+  }
+
+  async purgeExpiredPendingSignups() {
+    try {
+      const deleteResult = await this.prisma.pendingSignup.deleteMany({
+        where: {
+          expiresAt: { lt: new Date() }
+        }
+      });
+      this.logger.log(`Purged ${deleteResult.count} expired PendingSignup entries.`);
+      return deleteResult.count;
+    } catch (error) {
+      this.logger.error('Failed to purge expired PendingSignup entries:', error);
     }
   }
 
