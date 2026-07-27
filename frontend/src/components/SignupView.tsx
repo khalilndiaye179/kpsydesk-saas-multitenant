@@ -604,36 +604,62 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
               <div className="auth-field">
                 <label style={{ fontWeight: 600 }}>Recevoir le code de vérification via *</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px' }}>
+                  {/* Email — seul canal actif */}
                   <button
                     type="button"
                     onClick={() => setVerificationChannel('email')}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                       padding: '12px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem',
-                      border: verificationChannel === 'email' ? '2px solid #8b5cf6' : '1px solid var(--border-color)',
-                      background: verificationChannel === 'email' ? 'rgba(139,92,246,0.15)' : 'var(--bg-secondary)',
-                      color: verificationChannel === 'email' ? '#8b5cf6' : 'var(--text-muted)',
+                      border: '2px solid #8b5cf6',
+                      background: 'rgba(139,92,246,0.15)',
+                      color: '#8b5cf6',
                       transition: 'all 0.2s'
                     }}
                   >
                     <i className="ph-bold ph-envelope-simple" style={{ fontSize: '1.1rem' }} />
                     Email ({adminEmail || 'Email'})
                   </button>
+
+                  {/* SMS — désactivé (bientôt disponible) */}
                   <button
                     type="button"
-                    onClick={() => setVerificationChannel('sms')}
+                    disabled
+                    title="L'envoi par SMS n'est pas disponible pour le moment."
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      padding: '12px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem',
-                      border: verificationChannel === 'sms' ? '2px solid #3b82f6' : '1px solid var(--border-color)',
-                      background: verificationChannel === 'sms' ? 'rgba(59,130,246,0.15)' : 'var(--bg-secondary)',
-                      color: verificationChannel === 'sms' ? '#3b82f6' : 'var(--text-muted)',
-                      transition: 'all 0.2s'
+                      padding: '12px', borderRadius: '10px', cursor: 'not-allowed', fontWeight: 600, fontSize: '0.88rem',
+                      border: '1px dashed #cbd5e1',
+                      background: 'var(--bg-secondary)',
+                      color: '#94a3b8',
+                      opacity: 0.55,
+                      position: 'relative',
                     }}
                   >
                     <i className="ph-bold ph-device-mobile" style={{ fontSize: '1.1rem' }} />
-                    SMS ({adminPhone || 'SMS'})
+                    <span>SMS</span>
+                    <span style={{
+                      position: 'absolute', top: '5px', right: '5px',
+                      background: '#f1f5f9', color: '#94a3b8',
+                      fontSize: '0.60rem', fontWeight: 700, padding: '1px 5px',
+                      borderRadius: '99px', border: '1px solid #e2e8f0', letterSpacing: '0.03em',
+                      textTransform: 'uppercase'
+                    }}>Bientôt</span>
                   </button>
+                </div>
+
+                {/* Avertissement email */}
+                <div style={{
+                  marginTop: '10px', padding: '10px 14px',
+                  background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.35)',
+                  borderRadius: '8px', fontSize: '0.81rem', color: '#92400e',
+                  display: 'flex', gap: '8px', alignItems: 'flex-start'
+                }}>
+                  <i className="ph-bold ph-warning" style={{ fontSize: '1rem', color: '#f59e0b', marginTop: '1px', flexShrink: 0 }} />
+                  <span>
+                    <strong>Important :</strong> Le code de vérification sera envoyé à l'adresse email ci-dessus.
+                    Assurez-vous qu'elle est correcte, sans quoi vous ne pourrez pas finaliser la création de votre espace.
+                  </span>
                 </div>
               </div>
 
