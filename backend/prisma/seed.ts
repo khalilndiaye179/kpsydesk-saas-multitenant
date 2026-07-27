@@ -85,7 +85,13 @@ async function main() {
   });
 
   if (existingAdmin) {
-    console.log('   ✅ Super-Admin déjà existant, aucune modification effectuée sur son compte.\n');
+    const defaultPassword = '@Passer123';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 12);
+    await prisma.user.update({
+      where: { id: existingAdmin.id },
+      data: { password: hashedPassword },
+    });
+    console.log('   ✅ Super-Admin déjà existant, mot de passe réinitialisé à @Passer123.\n');
   } else {
     const defaultPassword = '@Passer123';
     const hashedPassword = await bcrypt.hash(defaultPassword, 12);
