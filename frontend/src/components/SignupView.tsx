@@ -38,6 +38,7 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
   const [adminPosition, setAdminPosition] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [isSmsActive, setIsSmsActive] = useState(true);
 
   // OTP Verification states (Step 2.5)
   const [pendingId, setPendingId] = useState('');
@@ -55,6 +56,19 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
           { id: 'pro', name: 'Pro', price: 45000, quotaAssets: 500, quotaUsers: 50 },
           { id: 'enterprise', name: 'Enterprise', price: 120000, quotaAssets: 99999, quotaUsers: 99999 },
         ]);
+      });
+
+    api.get('/tenants/sms-config/status')
+      .then(res => {
+        if (res.data && res.data.isActive !== undefined) {
+          setIsSmsActive(res.data.isActive);
+          if (!res.data.isActive) {
+            setVerificationChannel('email');
+          }
+        }
+      })
+      .catch(() => {
+        setIsSmsActive(true);
       });
   }, []);
 
@@ -624,34 +638,51 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
                   {/* SMS — actif via SMSMobileAPI */}
                   <button
                     type="button"
-                    onClick={() => setVerificationChannel('sms')}
+                    disabled={!isSmsActive}
+                    onClick={() => {
+                      if (isSmsActive) setVerificationChannel('sms');
+                    }}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      padding: '12px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem',
-                      border: verificationChannel === 'sms' ? '2px solid #3b82f6' : '1px solid var(--border-color)',
-                      background: verificationChannel === 'sms' ? 'rgba(59,130,246,0.15)' : 'var(--bg-secondary)',
-                      color: verificationChannel === 'sms' ? '#3b82f6' : 'var(--text-muted)',
+                      padding: '12px', borderRadius: '10px', fontWeight: 600, fontSize: '0.88rem',
+                      border: !isSmsActive
+                        ? '1px dashed var(--border-color)'
+                        : (verificationChannel === 'sms' ? '2px solid #3b82f6' : '1px solid var(--border-color)'),
+                      background: !isSmsActive
+                        ? 'var(--bg-tertiary)'
+                        : (verificationChannel === 'sms' ? 'rgba(59,130,246,0.15)' : 'var(--bg-secondary)'),
+                      color: !isSmsActive
+                        ? 'var(--text-muted)'
+                        : (verificationChannel === 'sms' ? '#3b82f6' : 'var(--text-muted)'),
+                      cursor: isSmsActive ? 'pointer' : 'not-allowed',
+                      opacity: isSmsActive ? 1 : 0.6,
                       transition: 'all 0.2s'
                     }}
                   >
                     <i className="ph-bold ph-device-mobile" style={{ fontSize: '1.1rem' }} />
-                    SMS ({adminPhone || 'Téléphone'})
+                    {isSmsActive ? `SMS (${adminPhone || 'Téléphone'})` : 'SMS (Bientôt disponible)'}
                   </button>
                 </div>
 
                 {/* Avertissement dynamique selon le canal */}
                 <div style={{
                   marginTop: '10px', padding: '10px 14px',
-                  background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.35)',
-                  borderRadius: '8px', fontSize: '0.81rem', color: '#92400e',
+                  background: !isSmsActive && verificationChannel === 'sms' ? 'rgba(59,130,246,0.10)' : 'rgba(251,191,36,0.10)',
+                  border: !isSmsActive && verificationChannel === 'sms' ? '1px solid rgba(59,130,246,0.35)' : '1px solid rgba(251,191,36,0.35)',
+                  borderRadius: '8px', fontSize: '0.81rem',
+                  color: !isSmsActive && verificationChannel === 'sms' ? '#1e3a8a' : '#92400e',
                   display: 'flex', gap: '8px', alignItems: 'flex-start'
                 }}>
-                  <i className="ph-bold ph-warning" style={{ fontSize: '1rem', color: '#f59e0b', marginTop: '1px', flexShrink: 0 }} />
+                  <i className="ph-bold ph-warning" style={{ fontSize: '1rem', color: !isSmsActive && verificationChannel === 'sms' ? '#3b82f6' : '#f59e0b', marginTop: '1px', flexShrink: 0 }} />
                   <span>
-                    {verificationChannel === 'email' ? (
-                      <><strong>Important :</strong> Le code sera envoyé à <strong>{adminEmail || "l'adresse email renseignée"}</strong>. Assurez-vous qu'elle est correcte.</>
+                    {!isSmsActive ? (
+                      <><strong>Option SMS Indisponible :</strong> Le serveur de messagerie OTP par SMS est actuellement désactivé. Cette option sera bientôt disponible.</>
                     ) : (
-                      <><strong>Important :</strong> Le code sera envoyé par SMS au <strong>{adminPhone || "numéro renseigné"}</strong>. Assurez-vous qu'il est au format international (ex: +221771234567).</>
+                      verificationChannel === 'email' ? (
+                        <><strong>Important :</strong> Le code sera envoyé à <strong>{adminEmail || "l'adresse email renseignée"}</strong>. Assurez-vous qu'elle est correcte.</>
+                      ) : (
+                        <><strong>Important :</strong> Le code sera envoyé par SMS au <strong>{adminPhone || "numéro renseigné"}</strong>. Assurez-vous qu'il est au format international (ex: +221771234567).</>
+                      )
                     )}
                   </span>
                 </div>

@@ -447,7 +447,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
   const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'success' | 'failed'>('idle');
 
   // States pour la configuration SMS OTP
-  const [smsConfig, setSmsConfig] = useState({ apiKey: '', accountId: '', accountLicence: '' });
+  const [smsConfig, setSmsConfig] = useState({ apiKey: '', accountId: '', accountLicence: '', isActive: true });
   const [savingSmsConfig, setSavingSmsConfig] = useState(false);
 
   // Purge handlers
@@ -545,6 +545,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
           apiKey: smsConfigRes.data.apiKey || '',
           accountId: smsConfigRes.data.accountId || '',
           accountLicence: smsConfigRes.data.accountLicence || '',
+          isActive: smsConfigRes.data.isActive !== undefined ? smsConfigRes.data.isActive : true,
         });
       }
       
@@ -2845,6 +2846,36 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
           {/* Form */}
           <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
             <form onSubmit={handleSaveSmsConfig} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderRadius: '12px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', marginBottom: '8px' }}>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                    Statut de la Passerelle SMS
+                  </strong>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Activer ou désactiver l'envoi des codes de vérification par SMS
+                  </span>
+                </div>
+                <label className="switch" style={{ position: 'relative', display: 'inline-block', width: '48px', height: '24px' }}>
+                  <input
+                    type="checkbox"
+                    checked={smsConfig.isActive}
+                    onChange={e => setSmsConfig({ ...smsConfig, isActive: e.target.checked })}
+                    style={{ opacity: 0, width: 0, height: 0 }}
+                  />
+                  <span style={{
+                    position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: smsConfig.isActive ? '#22c55e' : '#94a3b8',
+                    transition: '.2s', borderRadius: '24px', display: 'flex', alignItems: 'center', padding: '2px'
+                  }}>
+                    <span style={{
+                      height: '20px', width: '20px', borderRadius: '50%', backgroundColor: 'white',
+                      transition: '.2s', transform: smsConfig.isActive ? 'translateX(24px)' : 'translateX(0px)',
+                      display: 'inline-block'
+                    }} />
+                  </span>
+                </label>
+              </div>
+
               <div>
                 <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   <i className="ph ph-key" style={{ marginRight: '4px' }} /> API KEY SMS OTP Serveur

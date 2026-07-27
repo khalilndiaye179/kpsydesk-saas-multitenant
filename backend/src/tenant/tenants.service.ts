@@ -46,6 +46,15 @@ export class TenantsService {
     const { companyName, subdomain, adminEmail, adminPassword, adminFirstName, adminLastName, adminPhone, adminCountry, adminPosition, planName } = dto;
     const channel = dto.verificationChannel || 'email';
 
+    if (channel === 'sms') {
+      const smsConfig = await this.prisma.smsOtpConfig.findFirst();
+      if (smsConfig && !smsConfig.isActive) {
+        throw new BadRequestException(
+          'La vérification par SMS est temporairement indisponible. Veuillez utiliser la vérification par e-mail.',
+        );
+      }
+    }
+
     // 1. Validation du sous-domaine — slug pur (ex: acme-corp)
     const subdomainRegex = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
     if (!subdomainRegex.test(subdomain)) {
@@ -951,5 +960,12 @@ export class TenantsService {
     performance.sort((a, b) => b.resolvedTickets - a.resolvedTickets);
 
     return performance;
+  }
+
+  async getSmsConfigStatus() {
+    const config = await this.prisma.smsOtpConfig.findFirst();
+    return {
+      isActive: config ? config.isActive : true
+    };
   }
 }

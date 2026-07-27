@@ -321,5 +321,9 @@ export class SaveSmsOtpConfigDto {
   @IsString()
   @IsOptional()
   apiKey?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isActive?: boolean;
 }
 

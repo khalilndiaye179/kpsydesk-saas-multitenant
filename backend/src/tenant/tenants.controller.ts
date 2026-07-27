@@ -117,6 +117,15 @@ export class TenantsController {
   }
 
   /**
+   * Retourne le statut d'activation du serveur OTP SMS.
+   */
+  @Public()
+  @Get('sms-config/status')
+  async getSmsConfigStatus() {
+    return this.tenantsService.getSmsConfigStatus();
+  }
+
+  /**
    * Retourne les informations du tenant courant + usage (actifs, utilisateurs).
    * Requiert : JWT valide + contexte tenant (header X-Tenant-ID ou sous-domaine).
    */

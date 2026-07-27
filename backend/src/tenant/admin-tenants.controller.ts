@@ -1791,6 +1791,7 @@ export class AdminTenantsController {
           apiKey: dto.apiKey,
           accountId: dto.accountId,
           accountLicence: dto.accountLicence,
+          isActive: dto.isActive !== undefined ? dto.isActive : current.isActive,
         }
       });
       await this._logAction(req.user, 'Mise à jour configuration SMS OTP', 'smsOtpConfig', current.id, updated, current);
@@ -1800,6 +1801,7 @@ export class AdminTenantsController {
           apiKey: dto.apiKey,
           accountId: dto.accountId,
           accountLicence: dto.accountLicence,
+          isActive: dto.isActive !== undefined ? dto.isActive : true,
         }
       });
       await this._logAction(req.user, 'Création configuration SMS OTP', 'smsOtpConfig', updated.id, updated);
