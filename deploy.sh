@@ -32,9 +32,10 @@ docker rm -f itam_backend || true
 docker compose down || true
 docker compose up -d --build --remove-orphans
 
-# ── 4. Migrations Prisma ──
-log "🗄️  [3/4] Application des migrations Prisma..."
-docker compose exec -T backend npx prisma migrate deploy || log "⚠️  Aucune migration à appliquer"
+# ── 4. Migrations Prisma / Synchronisation Schema ──
+log "🗄️  [3/4] Synchronisation de la base de données avec Prisma..."
+docker compose exec -T backend npx prisma db push --accept-data-loss
+
 
 # ── 5. Vérification ──
 log "🩺 [4/4] État des services :"

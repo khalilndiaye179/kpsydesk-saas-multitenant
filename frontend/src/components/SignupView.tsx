@@ -138,7 +138,9 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
       setPendingId(res.data.pendingId);
       setStep(2.5);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors de l\'envoi du code de vérification.');
+      const msg = err.response?.data?.message;
+      const displayMsg = Array.isArray(msg) ? msg.join(' ') : (msg || 'Erreur lors de l\'envoi du code de vérification.');
+      setError(displayMsg);
     } finally {
       setLoading(false);
     }
@@ -176,7 +178,9 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
 
       setTimeout(() => onSignupSuccess(access_token, user, subdomain), 1500);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Code de vérification invalide ou expiré.');
+      const msg = err.response?.data?.message;
+      const displayMsg = Array.isArray(msg) ? msg.join(' ') : (msg || 'Code de vérification invalide ou expiré.');
+      setError(displayMsg);
     } finally {
       setLoading(false);
     }
@@ -193,7 +197,9 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
       const res = await api.post('/tenants/signup/resend-code', { pendingId });
       setResendSuccess(res.data.message || 'Nouveau code envoyé !');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors du renvoi du code.');
+      const msg = err.response?.data?.message;
+      const displayMsg = Array.isArray(msg) ? msg.join(' ') : (msg || 'Erreur lors du renvoi du code.');
+      setError(displayMsg);
     } finally {
       setResending(false);
     }
