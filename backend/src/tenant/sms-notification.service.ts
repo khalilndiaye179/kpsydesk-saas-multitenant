@@ -43,7 +43,7 @@ export class SmsNotificationService {
 
       const url = new URL('https://api.smsmobileapi.com/sendsms/');
       url.searchParams.set('apikey', apiKey);
-      url.searchParams.set('warecipient', formattedPhone);
+      url.searchParams.set('recipients', formattedPhone);
       url.searchParams.set('message', message);
 
       const response = await fetch(url.toString());
