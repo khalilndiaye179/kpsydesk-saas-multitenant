@@ -218,8 +218,8 @@ export class TenantsController {
         fileSize: 2 * 1024 * 1024, // 2 MB
       },
       fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/\/(jpg|jpeg|png|svg\+xml|svg)$/)) {
-          return cb(new BadRequestException('Seules les images (JPG, PNG, SVG) sont autorisées.'), false);
+        if (!file.mimetype.match(/\/(jpg|jpeg|png)$/i) && !file.originalname.match(/\.(jpg|jpeg|png)$/i)) {
+          return cb(new BadRequestException('Seules les images (JPG, PNG) sont autorisées.'), false);
         }
         cb(null, true);
       },
@@ -237,9 +237,48 @@ export class TenantsController {
 
     const brandingData: any = { ...body };
     if (file) {
+      const isValid = await this.validateImageMagicBytes(file.path);
+      if (!isValid) {
+        try {
+          fs.unlinkSync(file.path);
+        } catch (e) {
+          // ignore
+        }
+        throw new BadRequestException("Le fichier envoyé est corrompu ou n'est pas une image JPG/PNG valide.");
+      }
       brandingData.logoUrl = `/uploads/tenant-logos/${file.filename}`;
     }
 
     return this.tenantsService.updateBranding(tenantId, brandingData);
+  }
+
+  private async validateImageMagicBytes(filePath: string): Promise<boolean> {
+    let fd: fs.promises.FileHandle | null = null;
+    try {
+      fd = await fs.promises.open(filePath, 'r');
+      const buffer = Buffer.alloc(8);
+      await fd.read(buffer, 0, 8, 0);
+
+      const isPng = buffer[0] === 0x89 &&
+                    buffer[1] === 0x50 &&
+                    buffer[2] === 0x4e &&
+                    buffer[3] === 0x47 &&
+                    buffer[4] === 0x0d &&
+                    buffer[5] === 0x0a &&
+                    buffer[6] === 0x1a &&
+                    buffer[7] === 0x0a;
+
+      const isJpeg = buffer[0] === 0xff &&
+                     buffer[1] === 0xd8 &&
+                     buffer[2] === 0xff;
+
+      return isPng || isJpeg;
+    } catch (error) {
+      return false;
+    } finally {
+      if (fd) {
+        await fd.close();
+      }
+    }
   }
 }
