@@ -1,19 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class SmsNotificationService {
   private readonly logger = new Logger(SmsNotificationService.name);
+
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Envoie un SMS via SMSMobileAPI.
    * Nécessite que l'application SMSMobileAPI soit installée et active sur votre téléphone.
    * Documentation : https://smsmobileapi.com/documentation
    *
-   * Variables d'environnement requises :
-   *   SMS_API_KEY — Clé API disponible dans votre espace SMSMobileAPI
+   * Lit d'abord la configuration depuis la base de données (SmsOtpConfig),
+   * et retombe sur la variable d'environnement SMS_API_KEY si vide.
    */
   async sendSms(to: string, message: string, tenantId?: string): Promise<boolean> {
-    const apiKey = process.env.SMS_API_KEY;
+    // 1. Lire la config depuis la base de données
+    const config = await this.prisma.smsOtpConfig.findFirst().catch(() => null);
+    const apiKey = config?.apiKey || process.env.SMS_API_KEY;
 
     if (!to || to.trim() === '') {
       this.logger.warn(

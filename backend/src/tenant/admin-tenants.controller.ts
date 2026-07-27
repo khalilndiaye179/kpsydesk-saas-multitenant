@@ -34,7 +34,8 @@ import {
   GenerateInvoicesPeriodDto,
   SuperAdminCreateUserDto,
   SuperAdminUpdateUserDto,
-  AssignPlanDto
+  AssignPlanDto,
+  SaveSmsOtpConfigDto
 } from './dto/admin-tenants.dto';
 
 import * as bcrypt from 'bcryptjs';
@@ -1750,4 +1751,61 @@ export class AdminTenantsController {
       }
     };
   }
+
+  /**
+   * Récupère la configuration SMS OTP courante
+   */
+  @Get('sms-config')
+  async getSmsConfig(@Req() req: { user: { role: string; systemRole?: string; email: string } }) {
+    this._checkConsoleAccess(req.user, ['SuperAdmin']);
+    
+    let config = await this.prisma.smsOtpConfig.findFirst();
+    if (!config) {
+      config = await this.prisma.smsOtpConfig.create({
+        data: {
+          apiKey: process.env.SMS_API_KEY || '',
+          accountId: '',
+          accountLicence: '',
+        }
+      });
+    }
+    return config;
+  }
+
+  /**
+   * Enregistre ou met à jour la configuration SMS OTP
+   */
+  @Post('sms-config')
+  async saveSmsConfig(
+    @Req() req: { user: { role: string; systemRole?: string; email: string } },
+    @Body() dto: SaveSmsOtpConfigDto
+  ) {
+    this._checkConsoleAccess(req.user, ['SuperAdmin']);
+
+    const current = await this.prisma.smsOtpConfig.findFirst();
+    let updated;
+    if (current) {
+      updated = await this.prisma.smsOtpConfig.update({
+        where: { id: current.id },
+        data: {
+          apiKey: dto.apiKey,
+          accountId: dto.accountId,
+          accountLicence: dto.accountLicence,
+        }
+      });
+      await this._logAction(req.user, 'Mise à jour configuration SMS OTP', 'smsOtpConfig', current.id, updated, current);
+    } else {
+      updated = await this.prisma.smsOtpConfig.create({
+        data: {
+          apiKey: dto.apiKey,
+          accountId: dto.accountId,
+          accountLicence: dto.accountLicence,
+        }
+      });
+      await this._logAction(req.user, 'Création configuration SMS OTP', 'smsOtpConfig', updated.id, updated);
+    }
+
+    return { success: true, config: updated };
+  }
 }
+

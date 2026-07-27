@@ -195,7 +195,7 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
   const [advStats, setAdvStats] = useState<AdvancedStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'finance' | 'about' | 'tenants' | 'payment' | 'pricing' | 'compta' | 'stats-av' | 'visitors' | 'profile' | 'collaborators' | 'audit' | 'security-audit'>('finance');
+  const [activeTab, setActiveTab] = useState<'finance' | 'about' | 'tenants' | 'payment' | 'pricing' | 'compta' | 'stats-av' | 'visitors' | 'profile' | 'collaborators' | 'audit' | 'security-audit' | 'sms-config'>('finance');
   const [modifyingId, setModifyingId] = useState<string | null>(null);
 
   // States pour l'audit de sécurité
@@ -446,6 +446,10 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
   const [savingGateway, setSavingGateway] = useState(false);
   const [pingStatus, setPingStatus] = useState<'idle' | 'testing' | 'success' | 'failed'>('idle');
 
+  // States pour la configuration SMS OTP
+  const [smsConfig, setSmsConfig] = useState({ apiKey: '', accountId: '', accountLicence: '' });
+  const [savingSmsConfig, setSavingSmsConfig] = useState(false);
+
   // Purge handlers
   const fetchPurgeableTenants = async () => {
     try {
@@ -510,7 +514,8 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
         discountsRes, 
         advStatsRes,
         collabRes,
-        auditLogsRes
+        auditLogsRes,
+        smsConfigRes
       ] = await Promise.all([
         api.get('/admin-tenants/list', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })),
         api.get('/admin-tenants/stats-global', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: null })),
@@ -521,7 +526,8 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
         api.get('/admin-tenants/volume-discounts', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })),
         api.get('/admin-tenants/stats-advanced', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: null })),
         userRole === 'SuperAdmin' ? api.get('/admin-tenants/collaborators/list', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
-        userRole === 'SuperAdmin' ? api.get('/admin-tenants/audit-logs', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] })
+        userRole === 'SuperAdmin' ? api.get('/admin-tenants/audit-logs', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+        userRole === 'SuperAdmin' ? api.get('/admin-tenants/sms-config', { headers: { 'X-Tenant-ID': 'legacy' } }).catch(() => ({ data: null })) : Promise.resolve({ data: null })
       ]);
       
       setTenants(tenantsRes.data || []);
@@ -533,6 +539,14 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
       setQuotes(quotesRes.data || []);
       setVolumeDiscounts(discountsRes.data || []);
       setAuditLogs(auditLogsRes.data || []);
+
+      if (smsConfigRes && smsConfigRes.data) {
+        setSmsConfig({
+          apiKey: smsConfigRes.data.apiKey || '',
+          accountId: smsConfigRes.data.accountId || '',
+          accountLicence: smsConfigRes.data.accountLicence || '',
+        });
+      }
       
       const provList: PaymentProviderConfig[] = gatewayRes.data || [];
       setProviders(provList);
@@ -686,6 +700,20 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
       alert("Erreur lors de la sauvegarde : " + (err.response?.data?.message || err.message));
     } finally {
       setSavingGateway(false);
+    }
+  };
+
+  const handleSaveSmsConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSmsConfig(true);
+    try {
+      await api.post('/admin-tenants/sms-config', smsConfig);
+      alert('✓ Configuration SMS OTP enregistrée avec succès.');
+      loadData();
+    } catch (err: any) {
+      alert("Erreur lors de la sauvegarde de la configuration SMS OTP : " + (err.response?.data?.message || err.message));
+    } finally {
+      setSavingSmsConfig(false);
     }
   };
 
@@ -970,6 +998,15 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
               style={{ padding: '8px 16px', borderRadius: '8px', border: activeTab === 'payment' ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
             >
               <i className="ph ph-credit-card" /> 💳 Intégration Paiement
+            </button>
+          )}
+          {userRole === 'SuperAdmin' && (
+            <button 
+              onClick={() => setActiveTab('sms-config')}
+              className={`btn-primary ${activeTab === 'sms-config' ? '' : 'btn-outline'}`}
+              style={{ padding: '8px 16px', borderRadius: '8px', border: activeTab === 'sms-config' ? 'none' : '1px solid var(--border-color)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <i className="ph ph-chat-centered-dots" /> 📱 Configuration SMS OTP
             </button>
           )}
           {(userRole === 'SuperAdmin' || userRole === 'Finance') && (
@@ -2783,6 +2820,92 @@ export function SuperAdminView({ currentUser }: { currentUser?: any }) {
 
             </form>
           </div>
+        </div>
+      )}
+
+      {/* CONFIGURATION SMS OTP TAB */}
+      {activeTab === 'sms-config' && userRole === 'SuperAdmin' && (
+        <div style={{ maxWidth: '680px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Header */}
+          <div style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(37,99,235,0.1))', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '16px', padding: '24px', display: 'flex', alignItems: 'center', gap: '18px' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <i className="ph-fill ph-chat-centered-dots" style={{ fontSize: '2rem', color: 'white' }} />
+            </div>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                Configuration du Serveur de Messagerie OTP
+              </h2>
+              <p style={{ margin: '3px 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Configurez les clés et identifiants du serveur SMS (SMSMobileAPI) pour la validation des inscriptions.
+              </p>
+            </div>
+          </div>
+
+          {/* Form */}
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+            <form onSubmit={handleSaveSmsConfig} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <i className="ph ph-key" style={{ marginRight: '4px' }} /> API KEY SMS OTP Serveur
+                </label>
+                <input
+                  type="password"
+                  value={smsConfig.apiKey}
+                  onChange={e => setSmsConfig({ ...smsConfig, apiKey: e.target.value })}
+                  placeholder="Saisissez la clé API du serveur SMS"
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <i className="ph ph-user" style={{ marginRight: '4px' }} /> Account ID
+                </label>
+                <input
+                  type="text"
+                  value={smsConfig.accountId}
+                  onChange={e => setSmsConfig({ ...smsConfig, accountId: e.target.value })}
+                  placeholder="Saisissez l'identifiant du compte"
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <i className="ph ph-certificate" style={{ marginRight: '4px' }} /> Account Licence
+                </label>
+                <input
+                  type="text"
+                  value={smsConfig.accountLicence}
+                  onChange={e => setSmsConfig({ ...smsConfig, accountLicence: e.target.value })}
+                  placeholder="Saisissez la licence du compte"
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px' }}>
+                <button
+                  type="submit"
+                  disabled={savingSmsConfig}
+                  style={{ padding: '10px 24px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', opacity: savingSmsConfig ? 0.7 : 1 }}
+                >
+                  <i className="ph ph-floppy-disk" />
+                  {savingSmsConfig ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Info Box */}
+          <div style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '12px', padding: '14px 18px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+            <i className="ph-bold ph-info" style={{ color: '#3b82f6', fontSize: '1.1rem', marginTop: '1px', flexShrink: 0 }} />
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              <strong style={{ color: 'var(--text-primary)' }}>Note sur SMSMobileAPI :</strong><br />
+              Ces paramètres permettent à l'application SaaS d'interagir avec la passerelle SMS pour envoyer les codes OTP à vos utilisateurs. L'application mobile SMSMobileAPI doit être configurée et active sur le téléphone pour que les messages partent.
+            </div>
+          </div>
+
         </div>
       )}
 

@@ -663,4 +663,14 @@ model PendingSignup {
   createdAt           DateTime @default(now())
 }
 
+model SmsOtpConfig {
+  id             String   @id @default(uuid())
+  accountId      String?
+  accountLicence String?
+  apiKey         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+
 

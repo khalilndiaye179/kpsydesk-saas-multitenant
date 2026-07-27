@@ -308,3 +308,18 @@ export class AssignPlanDto {
   @IsOptional()
   durationMonths?: number;
 }
+
+export class SaveSmsOtpConfigDto {
+  @IsString()
+  @IsOptional()
+  accountId?: string;
+
+  @IsString()
+  @IsOptional()
+  accountLicence?: string;
+
+  @IsString()
+  @IsOptional()
+  apiKey?: string;
+}
+
