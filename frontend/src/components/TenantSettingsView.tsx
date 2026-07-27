@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 
+const getLogoUrl = (logoPath: string): string => {
+  if (!logoPath) return '';
+  if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
+    return logoPath;
+  }
+  const apiBaseUrl = (import.meta as any).env?.VITE_API_URL || '';
+  const baseUrl = apiBaseUrl.endsWith('/api') 
+    ? apiBaseUrl.slice(0, -4) 
+    : apiBaseUrl;
+  return `${baseUrl}${logoPath}`;
+};
+
 export const TenantSettingsView: React.FC = () => {
   const [tenant, setTenant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -35,10 +47,7 @@ export const TenantSettingsView: React.FC = () => {
           companyTaxId: res.data.tenant.companyTaxId || '',
         });
         if (res.data.tenant.logoUrl) {
-          // Si le backend est sur un autre port en dev, on utilise VITE_API_URL,
-          // sinon le chemin absolu /uploads/... passera par le proxy ou la même URL
-          const baseUrl = (import.meta as any).env?.VITE_API_URL || '';
-          setLogoPreview(`${baseUrl}${res.data.tenant.logoUrl}`);
+          setLogoPreview(getLogoUrl(res.data.tenant.logoUrl));
         }
       }
       
@@ -113,8 +122,7 @@ export const TenantSettingsView: React.FC = () => {
       alert("Paramètres d'entreprise mis à jour avec succès ! Les documents exportés utiliseront désormais ces informations.");
       
       if (res.data && res.data.logoUrl) {
-        const baseUrl = (import.meta as any).env?.VITE_API_URL || '';
-        setLogoPreview(`${baseUrl}${res.data.logoUrl}`);
+        setLogoPreview(getLogoUrl(res.data.logoUrl));
         setLogoFile(null); // On reset le fichier après upload
       }
       

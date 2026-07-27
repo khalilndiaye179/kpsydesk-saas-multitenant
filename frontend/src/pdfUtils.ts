@@ -1,4 +1,17 @@
 import { api } from './api';
+import axios from 'axios';
+
+function getLogoUrl(logoPath: string): string {
+  if (!logoPath) return '';
+  if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
+    return logoPath;
+  }
+  const apiBaseUrl = (import.meta as any).env?.VITE_API_URL || '';
+  const baseUrl = apiBaseUrl.endsWith('/api') 
+    ? apiBaseUrl.slice(0, -4) 
+    : apiBaseUrl;
+  return `${baseUrl}${logoPath}`;
+}
 
 export async function addBrandingToPdf(doc: any, startY: number, title: string) {
   let tenantName = "Mon Entreprise";
@@ -12,7 +25,8 @@ export async function addBrandingToPdf(doc: any, startY: number, title: string) 
       tenantName = tenant.name;
       if (tenant.logoUrl) {
         try {
-          const imgRes = await api.get(tenant.logoUrl, { responseType: 'blob' });
+          const logoUrl = getLogoUrl(tenant.logoUrl);
+          const imgRes = await axios.get(logoUrl, { responseType: 'blob' });
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result as string);
