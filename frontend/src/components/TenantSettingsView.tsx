@@ -175,7 +175,7 @@ export const TenantSettingsView: React.FC = () => {
               </div>
               <input 
                 type="file" 
-                accept="image/png, image/jpeg, image/svg+xml" 
+                accept="image/png, image/jpeg" 
                 id="logo-upload"
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
@@ -183,7 +183,7 @@ export const TenantSettingsView: React.FC = () => {
               <label htmlFor="logo-upload" className="btn-secondary" style={{ display: 'block', textAlign: 'center', cursor: 'pointer' }}>
                 Choisir une image (Max 2 Mo)
               </label>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>Formats : PNG, JPG, SVG</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '8px', textAlign: 'center' }}>Formats : PNG, JPG</p>
             </div>
 
             {/* Section Coordonnées */}
