@@ -645,22 +645,22 @@ model LeaveRequest {
 }
 
 model PendingSignup {
-  id             String   @id @default(uuid())
-  companyName    String
-  subdomain      String   @unique
-  adminEmail     String
-  adminPassword  String
-  adminFirstName String
-  adminLastName  String
-  adminPhone     String
-  adminCountry   String
-  adminPosition  String
-  planName       String?
-  emailOtp       String
-  phoneOtp       String
-  attempts       Int      @default(0)
-  expiresAt      DateTime
-  createdAt      DateTime @default(now())
+  id                  String   @id @default(uuid())
+  companyName         String
+  subdomain           String   @unique
+  adminEmail          String
+  adminPassword       String
+  adminFirstName      String
+  adminLastName       String
+  adminPhone          String
+  adminCountry        String
+  adminPosition       String
+  planName            String?
+  verificationChannel String   @default("email") // "email" | "sms"
+  otp                 String
+  attempts            Int      @default(0)
+  expiresAt           DateTime
+  createdAt           DateTime @default(now())
 }
 
 

@@ -41,8 +41,8 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
 
   // OTP Verification states (Step 2.5)
   const [pendingId, setPendingId] = useState('');
-  const [emailOtp, setEmailOtp] = useState('');
-  const [phoneOtp, setPhoneOtp] = useState('');
+  const [verificationChannel, setVerificationChannel] = useState<'email' | 'sms'>('email');
+  const [otp, setOtp] = useState('');
   const [resendSuccess, setResendSuccess] = useState('');
   const [resending, setResending] = useState(false);
 
@@ -132,26 +132,23 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
         adminCountry,
         adminPosition,
         planName: selectedPlan,
+        verificationChannel,
       });
 
       setPendingId(res.data.pendingId);
       setStep(2.5);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors de l\'envoi des codes de vérification.');
+      setError(err.response?.data?.message || 'Erreur lors de l\'envoi du code de vérification.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Validation des 2 OTP et création réelle (Étape 2.5 -> 3)
+  // Validation de l'OTP et création réelle (Étape 2.5 -> 3)
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailOtp.trim() || emailOtp.trim().length !== 6) {
-      setError('Veuillez saisir le code Email à 6 chiffres.');
-      return;
-    }
-    if (!phoneOtp.trim() || phoneOtp.trim().length !== 6) {
-      setError('Veuillez saisir le code SMS à 6 chiffres.');
+    if (!otp.trim() || otp.trim().length !== 6) {
+      setError('Veuillez saisir le code de vérification à 6 chiffres.');
       return;
     }
 
@@ -162,8 +159,7 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
     try {
       await api.post('/tenants/signup/verify', {
         pendingId,
-        emailOtp: emailOtp.trim(),
-        phoneOtp: phoneOtp.trim(),
+        otp: otp.trim(),
       });
 
       setSuccess(true);
@@ -180,13 +176,13 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
 
       setTimeout(() => onSignupSuccess(access_token, user, subdomain), 1500);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Code(s) de vérification invalides ou expirés.');
+      setError(err.response?.data?.message || 'Code de vérification invalide ou expiré.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Renvoi des codes OTP
+  // Renvoi du code OTP
   const handleResendCode = async () => {
     if (!pendingId) return;
     setResending(true);
@@ -194,10 +190,10 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
     setResendSuccess('');
 
     try {
-      await api.post('/tenants/signup/resend-code', { pendingId });
-      setResendSuccess('Nouveaux codes envoyés par Email et SMS !');
+      const res = await api.post('/tenants/signup/resend-code', { pendingId });
+      setResendSuccess(res.data.message || 'Nouveau code envoyé !');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erreur lors du renvoi des codes.');
+      setError(err.response?.data?.message || 'Erreur lors du renvoi du code.');
     } finally {
       setResending(false);
     }
@@ -598,6 +594,43 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
                 J'accepte les <span style={{ color: '#8b5cf6', fontWeight: 600 }}>Conditions d'utilisation</span> et la <span style={{ color: '#8b5cf6', fontWeight: 600 }}>Politique de confidentialité</span>
               </label>
 
+              {/* Choix du canal de vérification */}
+              <div className="auth-field">
+                <label style={{ fontWeight: 600 }}>Recevoir le code de vérification via *</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setVerificationChannel('email')}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      padding: '12px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem',
+                      border: verificationChannel === 'email' ? '2px solid #8b5cf6' : '1px solid var(--border-color)',
+                      background: verificationChannel === 'email' ? 'rgba(139,92,246,0.15)' : 'var(--bg-secondary)',
+                      color: verificationChannel === 'email' ? '#8b5cf6' : 'var(--text-muted)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <i className="ph-bold ph-envelope-simple" style={{ fontSize: '1.1rem' }} />
+                    Email ({adminEmail || 'Email'})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVerificationChannel('sms')}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      padding: '12px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem',
+                      border: verificationChannel === 'sms' ? '2px solid #3b82f6' : '1px solid var(--border-color)',
+                      background: verificationChannel === 'sms' ? 'rgba(59,130,246,0.15)' : 'var(--bg-secondary)',
+                      color: verificationChannel === 'sms' ? '#3b82f6' : 'var(--text-muted)',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <i className="ph-bold ph-device-mobile" style={{ fontSize: '1.1rem' }} />
+                    SMS ({adminPhone || 'SMS'})
+                  </button>
+                </div>
+              </div>
+
               {/* Recap */}
               <div style={{
                 background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
@@ -630,8 +663,8 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
                   disabled={loading}
                 >
                   {loading ? (
-                    <><i className="ph ph-circle-notch" style={{ animation: 'spin 1s linear infinite', marginRight: '8px' }} />Envoi des codes…</>
-                  ) : '📩 Envoyer les codes de vérification →'}
+                    <><i className="ph ph-circle-notch" style={{ animation: 'spin 1s linear infinite', marginRight: '8px' }} />Envoi du code…</>
+                  ) : `📩 Envoyer le code ${verificationChannel === 'email' ? 'Email' : 'SMS'} →`}
                 </button>
               </div>
             </form>
@@ -647,14 +680,17 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
               }}>
                 <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <i className="ph-bold ph-shield-check" style={{ color: '#8b5cf6', fontSize: '1.2rem' }} />
-                  Codes de vérification envoyés !
+                  Code de vérification envoyé !
                 </div>
-                <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  📩 <strong>Email :</strong> code envoyé à <strong style={{ color: 'var(--text-primary)' }}>{adminEmail}</strong>
-                </div>
-                <div style={{ color: 'var(--text-muted)' }}>
-                  📱 <strong>SMS :</strong> code envoyé au <strong style={{ color: 'var(--text-primary)' }}>{adminPhone}</strong>
-                </div>
+                {verificationChannel === 'email' ? (
+                  <div style={{ color: 'var(--text-muted)' }}>
+                    📩 Code envoyé par <strong>Email</strong> à <strong style={{ color: 'var(--text-primary)' }}>{adminEmail}</strong>
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--text-muted)' }}>
+                    📱 Code envoyé par <strong>SMS</strong> au <strong style={{ color: 'var(--text-primary)' }}>{adminPhone}</strong>
+                  </div>
+                )}
               </div>
 
               {resendSuccess && (
@@ -664,36 +700,20 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
                 </div>
               )}
 
-              {/* Email OTP Field */}
+              {/* OTP Field */}
               <div className="auth-field">
-                <label style={{ fontWeight: 600 }}>Code de vérification Email (6 chiffres) *</label>
+                <label style={{ fontWeight: 600 }}>
+                  Code de vérification {verificationChannel === 'email' ? 'Email' : 'SMS'} (6 chiffres) *
+                </label>
                 <div className="login-input-container">
-                  <i className="ph ph-envelope-simple" />
+                  <i className={`ph ${verificationChannel === 'email' ? 'ph-envelope-simple' : 'ph-device-mobile'}`} />
                   <input
                     type="text"
                     maxLength={6}
                     className="login-input-field"
                     placeholder="Ex: 123456"
-                    value={emailOtp}
-                    onChange={e => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    style={{ letterSpacing: '4px', fontSize: '1.1rem', fontWeight: 700 }}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Phone OTP Field */}
-              <div className="auth-field">
-                <label style={{ fontWeight: 600 }}>Code de vérification SMS (6 chiffres) *</label>
-                <div className="login-input-container">
-                  <i className="ph ph-device-mobile" />
-                  <input
-                    type="text"
-                    maxLength={6}
-                    className="login-input-field"
-                    placeholder="Ex: 654321"
-                    value={phoneOtp}
-                    onChange={e => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    value={otp}
+                    onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     style={{ letterSpacing: '4px', fontSize: '1.1rem', fontWeight: 700 }}
                     required
                   />
@@ -701,14 +721,14 @@ export function SignupView({ onSignupSuccess, onBackToLogin, onGoToPricing, pres
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Vous n'avez pas reçu les codes ?</span>
+                <span style={{ color: 'var(--text-muted)' }}>Vous n'avez pas reçu le code ?</span>
                 <button
                   type="button"
                   onClick={handleResendCode}
                   disabled={resending}
                   style={{ background: 'none', border: 'none', color: '#8b5cf6', fontWeight: 600, cursor: 'pointer' }}
                 >
-                  {resending ? 'Envoi en cours…' : '🔄 Renvoyer les codes'}
+                  {resending ? 'Envoi en cours…' : '🔄 Renvoyer le code'}
                 </button>
               </div>
 

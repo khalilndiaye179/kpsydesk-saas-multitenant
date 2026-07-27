@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNotEmpty, IsEmail, MinLength, Matches } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsEmail, MinLength, Matches, IsIn } from 'class-validator';
 
 export class UpdateTenantSettingsDto {
   @IsString()
@@ -67,6 +67,12 @@ export class CreateTenantDto {
   @IsString()
   @IsOptional()
   planName?: string;
+
+  /** Canal de vérification choisi par l'utilisateur : "email" ou "sms" (défaut: "email") */
+  @IsString()
+  @IsIn(['email', 'sms'], { message: 'Le canal de vérification doit être "email" ou "sms".' })
+  @IsOptional()
+  verificationChannel?: 'email' | 'sms';
 }
 
 export class VerifySignupDto {
@@ -74,15 +80,11 @@ export class VerifySignupDto {
   @IsNotEmpty()
   pendingId: string;
 
+  /** Code OTP à 6 chiffres (email ou SMS selon le canal choisi) */
   @IsString()
-  @IsNotEmpty({ message: 'Le code email à 6 chiffres est obligatoire.' })
-  @Matches(/^\d{6}$/, { message: 'Le code email doit comporter exactement 6 chiffres.' })
-  emailOtp: string;
-
-  @IsString()
-  @IsNotEmpty({ message: 'Le code SMS à 6 chiffres est obligatoire.' })
-  @Matches(/^\d{6}$/, { message: 'Le code SMS doit comporter exactement 6 chiffres.' })
-  phoneOtp: string;
+  @IsNotEmpty({ message: 'Le code de vérification à 6 chiffres est obligatoire.' })
+  @Matches(/^\d{6}$/, { message: 'Le code de vérification doit comporter exactement 6 chiffres.' })
+  otp: string;
 }
 
 export class ResendCodeDto {
@@ -90,4 +92,3 @@ export class ResendCodeDto {
   @IsNotEmpty()
   pendingId: string;
 }
-

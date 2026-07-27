@@ -39,11 +39,12 @@ export class TenantsService {
   ) {}
 
   // ============================================================
-  // VÉRIFICATION D'INSCRIPTION PAR OTP (EMAIL + SMS)
+  // VÉRIFICATION D'INSCRIPTION PAR OTP (EMAIL ou SMS)
   // ============================================================
 
   async requestSignupVerification(dto: CreateTenantDto) {
     const { companyName, subdomain, adminEmail, adminPassword, adminFirstName, adminLastName, adminPhone, adminCountry, adminPosition, planName } = dto;
+    const channel = dto.verificationChannel || 'email';
 
     // 1. Validation du sous-domaine — slug pur (ex: acme-corp)
     const subdomainRegex = /^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/;
@@ -74,9 +75,8 @@ export class TenantsService {
     // 5. Hash immédiat du mot de passe
     const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
-    // 6. Génération des OTP distincts à 6 chiffres
-    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const phoneOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    // 6. Génération de l'OTP à 6 chiffres
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // Valide 15 minutes
 
     // 7. Nettoyer les anciennes demandes en attente pour cet email ou sous-domaine
@@ -102,43 +102,45 @@ export class TenantsService {
         adminCountry,
         adminPosition,
         planName,
-        emailOtp,
-        phoneOtp,
+        verificationChannel: channel,
+        otp,
         attempts: 0,
         expiresAt,
       },
     });
 
-    // 9. Envoi de l'OTP par Email
-    const emailSubject = `Code de vérification KPSyDesk — ${companyName}`;
-    const emailText = `Bonjour ${adminFirstName},\n\nVotre code de vérification Email pour finaliser la création de votre espace KPSyDesk est : ${emailOtp}\n\nCe code expire dans 15 minutes.`;
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
-        <h2 style="color: #3b82f6;">Code de vérification KPSyDesk</h2>
-        <p>Bonjour <strong>${adminFirstName}</strong>,</p>
-        <p>Merci pour votre inscription ! Voici votre code de vérification Email :</p>
-        <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #8b5cf6; padding: 15px; background: #f1f5f9; border-radius: 8px; display: inline-block; margin: 15px 0;">
-          ${emailOtp}
+    // 9. Envoi de l'OTP selon le canal choisi
+    if (channel === 'email') {
+      const emailSubject = `Code de vérification KPSyDesk — ${companyName}`;
+      const emailText = `Bonjour ${adminFirstName},\n\nVotre code de vérification pour finaliser la création de votre espace KPSyDesk est : ${otp}\n\nCe code expire dans 15 minutes.`;
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+          <h2 style="color: #3b82f6;">Code de vérification KPSyDesk</h2>
+          <p>Bonjour <strong>${adminFirstName}</strong>,</p>
+          <p>Merci pour votre inscription ! Voici votre code de vérification Email :</p>
+          <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #8b5cf6; padding: 15px; background: #f1f5f9; border-radius: 8px; display: inline-block; margin: 15px 0;">
+            ${otp}
+          </div>
+          <p style="font-size: 12px; color: #64748b;">Ce code est valide pendant 15 minutes.</p>
         </div>
-        <p style="font-size: 12px; color: #64748b;">Ce code est valide pendant 15 minutes.</p>
-      </div>
-    `;
-    await this.mailService.sendMail(adminEmail, emailSubject, emailText, emailHtml);
-
-    // 10. Envoi de l'OTP par SMS
-    const smsMessage = `[KPSyDesk] Votre code de vérification SMS pour la création de votre espace est : ${phoneOtp} (Valide 15 min).`;
-    await this.smsNotificationService.sendSms(adminPhone, smsMessage);
+      `;
+      await this.mailService.sendMail(adminEmail, emailSubject, emailText, emailHtml);
+    } else {
+      const smsMessage = `[KPSyDesk] Votre code de vérification SMS pour la création de votre espace est : ${otp} (Valide 15 min).`;
+      await this.smsNotificationService.sendSms(adminPhone, smsMessage);
+    }
 
     return {
       success: true,
       pendingId: pending.id,
-      message: 'Codes de vérification envoyés par email et SMS.',
+      verificationChannel: channel,
+      message: `Code de vérification envoyé par ${channel === 'email' ? 'email' : 'SMS'}.`,
       expiresAt: expiresAt.toISOString(),
     };
   }
 
   async verifySignup(dto: VerifySignupDto) {
-    const { pendingId, emailOtp, phoneOtp } = dto;
+    const { pendingId, otp } = dto;
 
     const pending = await this.prisma.pendingSignup.findUnique({
       where: { id: pendingId },
@@ -158,20 +160,19 @@ export class TenantsService {
       throw new BadRequestException('Nombre maximal de tentatives dépassé. Veuillez recommencer l\'inscription.');
     }
 
-    // Vérifier les 2 codes
-    const isEmailValid = pending.emailOtp === emailOtp.trim();
-    const isPhoneValid = pending.phoneOtp === phoneOtp.trim();
+    // Vérification du code OTP
+    const isOtpValid = pending.otp === otp.trim();
 
-    if (!isEmailValid || !isPhoneValid) {
+    if (!isOtpValid) {
       const updated = await this.prisma.pendingSignup.update({
         where: { id: pendingId },
         data: { attempts: { increment: 1 } },
       });
       const remaining = 5 - updated.attempts;
-      throw new BadRequestException(`Code(s) de vérification incorrect(s). Tentatives restantes : ${remaining}.`);
+      throw new BadRequestException(`Code de vérification incorrect. Tentatives restantes : ${remaining}.`);
     }
 
-    // Codes valides → Création effective du Tenant & Admin
+    // Code valide → Création effective du Tenant & Admin
     const signupResult = await this.signupFromPending(pending);
 
     // Supprimer le PendingSignup
@@ -194,44 +195,42 @@ export class TenantsService {
       throw new BadRequestException('Demande d\'inscription expirée. Veuillez recommencer.');
     }
 
-    // Régénérer les codes et réinitialiser la durée d'expiration (15 min)
-    const emailOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    const phoneOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Régénérer le code OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     await this.prisma.pendingSignup.update({
       where: { id: dto.pendingId },
       data: {
-        emailOtp,
-        phoneOtp,
+        otp,
         attempts: 0,
         expiresAt,
       },
     });
 
-    // Envoi Email
-    const emailSubject = `Nouveau code de vérification KPSyDesk — ${pending.companyName}`;
-    const emailText = `Bonjour ${pending.adminFirstName},\n\nVoici votre nouveau code de vérification Email : ${emailOtp}\n\nCe code expire dans 15 minutes.`;
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
-        <h2 style="color: #3b82f6;">Nouveau code de vérification KPSyDesk</h2>
-        <p>Bonjour <strong>${pending.adminFirstName}</strong>,</p>
-        <p>Voici votre nouveau code de vérification Email :</p>
-        <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #8b5cf6; padding: 15px; background: #f1f5f9; border-radius: 8px; display: inline-block; margin: 15px 0;">
-          ${emailOtp}
+    if (pending.verificationChannel === 'email') {
+      const emailSubject = `Nouveau code de vérification KPSyDesk — ${pending.companyName}`;
+      const emailText = `Bonjour ${pending.adminFirstName},\n\nVoici votre nouveau code de vérification Email : ${otp}\n\nCe code expire dans 15 minutes.`;
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+          <h2 style="color: #3b82f6;">Nouveau code de vérification KPSyDesk</h2>
+          <p>Bonjour <strong>${pending.adminFirstName}</strong>,</p>
+          <p>Voici votre nouveau code de vérification Email :</p>
+          <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; color: #8b5cf6; padding: 15px; background: #f1f5f9; border-radius: 8px; display: inline-block; margin: 15px 0;">
+            ${otp}
+          </div>
+          <p style="font-size: 12px; color: #64748b;">Ce code est valide pendant 15 minutes.</p>
         </div>
-        <p style="font-size: 12px; color: #64748b;">Ce code est valide pendant 15 minutes.</p>
-      </div>
-    `;
-    await this.mailService.sendMail(pending.adminEmail, emailSubject, emailText, emailHtml);
-
-    // Envoi SMS
-    const smsMessage = `[KPSyDesk] Votre nouveau code de vérification SMS est : ${phoneOtp} (Valide 15 min).`;
-    await this.smsNotificationService.sendSms(pending.adminPhone, smsMessage);
+      `;
+      await this.mailService.sendMail(pending.adminEmail, emailSubject, emailText, emailHtml);
+    } else {
+      const smsMessage = `[KPSyDesk] Votre nouveau code de vérification SMS est : ${otp} (Valide 15 min).`;
+      await this.smsNotificationService.sendSms(pending.adminPhone, smsMessage);
+    }
 
     return {
       success: true,
-      message: 'Nouveaux codes de vérification envoyés.',
+      message: `Nouveau code de vérification envoyé par ${pending.verificationChannel === 'email' ? 'email' : 'SMS'}.`,
       expiresAt: expiresAt.toISOString(),
     };
   }
