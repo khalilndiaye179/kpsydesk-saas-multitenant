@@ -32,9 +32,11 @@ docker rm -f itam_backend || true
 docker compose down || true
 docker compose up -d --build --remove-orphans
 
-# ── 4. Migrations Prisma / Synchronisation Schema ──
-log "🗄️  [3/4] Synchronisation de la base de données avec Prisma..."
+# ── 4. Migrations Prisma / Synchronisation Schema & Seed ──
+log "🗄️  [3/4] Synchronisation de la base de données et exécution du seed..."
 docker compose exec -T backend npx prisma db push --accept-data-loss
+docker compose exec -T backend npx prisma db seed || log "⚠️  Seed déjà exécuté"
+
 
 
 # ── 5. Vérification ──

@@ -87,8 +87,8 @@ async function main() {
   if (existingAdmin) {
     console.log('   ✅ Super-Admin déjà existant, aucune modification effectuée sur son compte.\n');
   } else {
-    const temporaryPassword = crypto.randomBytes(12).toString('base64url');
-    const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
+    const defaultPassword = '@Passer123';
+    const hashedPassword = await bcrypt.hash(defaultPassword, 12);
 
     await prisma.user.create({
       data: {
@@ -104,8 +104,7 @@ async function main() {
       },
     });
     
-    console.log('   ✅ Super-Admin créé : admin@entreprise.com');
-    console.log(`   ⚠️  Mot de passe temporaire du Super-Admin (à changer immédiatement) : ${temporaryPassword}\n`);
+    console.log('   ✅ Super-Admin créé : admin@entreprise.com (Mot de passe: @Passer123)');
   }
 
   // ─────────────────────────────────────────────────────────────────
