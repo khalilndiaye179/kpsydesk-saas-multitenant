@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
+import { applyTenantTheme } from '../themeUtils';
 
 const getLogoUrl = (logoPath: string): string => {
   return logoPath || '';
@@ -10,6 +11,7 @@ export const TenantSettingsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [useLogoColors, setUseLogoColors] = useState(false);
   
   const [formData, setFormData] = useState({
     companyAddress: '',
@@ -38,6 +40,7 @@ export const TenantSettingsView: React.FC = () => {
           companyEmail: res.data.tenant.companyEmail || '',
           companyTaxId: res.data.tenant.companyTaxId || '',
         });
+        setUseLogoColors(res.data.tenant.useLogoColors || false);
         if (res.data.tenant.logoUrl) {
           setLogoPreview(getLogoUrl(res.data.tenant.logoUrl));
         }
@@ -104,6 +107,7 @@ export const TenantSettingsView: React.FC = () => {
       data.append('companyPhone', formData.companyPhone);
       data.append('companyEmail', formData.companyEmail);
       data.append('companyTaxId', formData.companyTaxId);
+      data.append('useLogoColors', String(useLogoColors));
 
       const res = await api.patch('/tenants/me/branding', data, {
         headers: {
@@ -116,6 +120,10 @@ export const TenantSettingsView: React.FC = () => {
       if (res.data && res.data.logoUrl) {
         setLogoPreview(getLogoUrl(res.data.logoUrl));
         setLogoFile(null); // On reset le fichier après upload
+      }
+
+      if (res.data) {
+        applyTenantTheme(res.data.logoUrl || tenant?.logoUrl, res.data.useLogoColors);
       }
       
     } catch (err: any) {
@@ -234,6 +242,27 @@ export const TenantSettingsView: React.FC = () => {
                   placeholder="Ex: NINEA 123456789"
                   style={{ width: '100%', padding: '10px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
                 />
+              </div>
+            </div>
+
+            {/* Options de Thème */}
+            <div style={{ gridColumn: 'span 2', marginTop: '1rem', padding: '15px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setUseLogoColors(!useLogoColors)}>
+                <input 
+                  type="checkbox" 
+                  checked={useLogoColors}
+                  onChange={(e) => setUseLogoColors(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div>
+                  <label style={{ fontWeight: 600, cursor: 'pointer', display: 'block', color: 'var(--text-primary)' }}>
+                    🎨 Adopter automatiquement les couleurs du logo de l'entreprise
+                  </label>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Si activé, l'interface s'adaptera automatiquement à la couleur dominante de votre logo d'entreprise.
+                  </span>
+                </div>
               </div>
             </div>
 

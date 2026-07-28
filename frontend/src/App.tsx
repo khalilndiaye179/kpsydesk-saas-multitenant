@@ -28,6 +28,7 @@ import { DepreciationView } from './components/DepreciationView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { SupportPerformanceView } from './components/SupportPerformanceView';
 import { TenantInvoiceView } from './components/TenantInvoiceView';
+import { applyTenantTheme } from './themeUtils';
 // Multi-tenant views
 import { SignupView } from './components/SignupView';
 import { PricingView } from './components/PricingView';
@@ -222,6 +223,8 @@ function App() {
           if (res.data.tenant) {
             setTenantStatus(res.data.tenant.status);
             setTenantName(res.data.tenant.name || '');
+            // Appliquer le thème automatiquement aux couleurs du logo si activé
+            applyTenantTheme(res.data.tenant.logoUrl, res.data.tenant.useLogoColors);
           }
           if (res.data.subscription) {
             setSubscriptionStatus(res.data.subscription.status);

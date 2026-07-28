@@ -785,6 +785,7 @@ export class TenantsService {
         companyPhone: brandingData.companyPhone,
         companyEmail: brandingData.companyEmail,
         companyTaxId: brandingData.companyTaxId,
+        useLogoColors: brandingData.useLogoColors,
       },
       select: {
         id: true,
@@ -794,6 +795,7 @@ export class TenantsService {
         companyPhone: true,
         companyEmail: true,
         companyTaxId: true,
+        useLogoColors: true,
       }
     });
   }

@@ -235,7 +235,10 @@ export class TenantsController {
       throw new BadRequestException('Tenant introuvable');
     }
 
-    const brandingData: any = { ...body };
+    const brandingData: any = { 
+      ...body,
+      useLogoColors: (body.useLogoColors as any) === 'true' || body.useLogoColors === true
+    };
     if (file) {
       const isValid = await this.validateImageMagicBytes(file.path);
       if (!isValid) {

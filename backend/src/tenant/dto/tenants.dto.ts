@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsNotEmpty, IsEmail, MinLength, Matches, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsNotEmpty, IsEmail, MinLength, Matches, IsIn, IsBoolean } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class UpdateTenantSettingsDto {
   @IsString()
@@ -16,6 +17,11 @@ export class UpdateTenantSettingsDto {
   @IsString()
   @IsOptional()
   companyTaxId?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  useLogoColors?: boolean;
 }
 
 export const PHONE_REGEX = /^(\+?[1-9]\d{7,14}|(?:\+221|00221)?\s?(?:7[05678]|33)\d{7})$/;
