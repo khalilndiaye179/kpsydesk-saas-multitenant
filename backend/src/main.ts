@@ -35,6 +35,13 @@ async function bootstrap() {
   });
 
   // Servir statiquement le dossier des uploads (ex: logos des tenants)
+  // IMPORTANT: Ajouter les headers CORS sur les assets statiques pour que le canvas HTML5 puisse
+  // lire les pixels de l'image du logo sans erreur "tainted canvas" (SecurityError).
+  app.use('/uploads/', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  });
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
   });
