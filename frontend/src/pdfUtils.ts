@@ -2,15 +2,7 @@ import { api } from './api';
 import axios from 'axios';
 
 function getLogoUrl(logoPath: string): string {
-  if (!logoPath) return '';
-  if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
-    return logoPath;
-  }
-  const apiBaseUrl = (import.meta as any).env?.VITE_API_URL || '';
-  const baseUrl = apiBaseUrl.endsWith('/api') 
-    ? apiBaseUrl.slice(0, -4) 
-    : apiBaseUrl;
-  return `${baseUrl}${logoPath}`;
+  return logoPath || '';
 }
 
 export async function addBrandingToPdf(doc: any, startY: number, title: string) {
