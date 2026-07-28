@@ -28,7 +28,7 @@ import { DepreciationView } from './components/DepreciationView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { SupportPerformanceView } from './components/SupportPerformanceView';
 import { TenantInvoiceView } from './components/TenantInvoiceView';
-import { applyTenantTheme } from './themeUtils';
+import { applyTenantTheme, applyThemeFromCache } from './themeUtils';
 // Multi-tenant views
 import { SignupView } from './components/SignupView';
 import { PricingView } from './components/PricingView';
@@ -57,6 +57,11 @@ interface UserSession {
 }
 
 function App() {
+  // Appliquer immédiatement le thème depuis le cache localStorage (avant tout appel API).
+  // Cela évite le "flash" vert lors du rechargement de page ou de la reconnexion.
+  // L'appel est synchrone et se termine en <1ms.
+  applyThemeFromCache();
+
   // Authentication & Session States
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<UserSession | null>(null);

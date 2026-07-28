@@ -1,6 +1,37 @@
 const THEME_STORAGE_KEY = 'tenant_theme_colors';
 
 /**
+ * Applique immédiatement le thème depuis le cache (localStorage) si disponible.
+ * À appeler au tout début du chargement de l'app, avant même l'appel API.
+ */
+export function applyThemeFromCache() {
+  const cached = localStorage.getItem(THEME_STORAGE_KEY);
+  if (cached) {
+    try {
+      const { color } = JSON.parse(cached);
+      if (color) applyColorToRootEarly(color);
+    } catch { /* ignore */ }
+  }
+}
+
+/**
+ * Applique directement une couleur sur le :root — version "early" utilisable
+ * avant l'initialisation complète des autres fonctions du module.
+ */
+function applyColorToRootEarly(color: string) {
+  const root = document.documentElement;
+  const match = color.match(/\d+/g);
+  if (!match || match.length < 3) return;
+  const r = parseInt(match[0]), g = parseInt(match[1]), b = parseInt(match[2]);
+  root.style.setProperty('--accent-primary', color);
+  root.style.setProperty('--accent-hover', color);
+  root.style.setProperty('--accent-glow', `rgba(${r}, ${g}, ${b}, 0.35)`);
+  root.style.setProperty('--accent-soft', `rgba(${r}, ${g}, ${b}, 0.1)`);
+  root.style.setProperty('--success', color);
+  root.style.setProperty('--primary', color);
+}
+
+/**
  * Extrait la couleur dominante d'un logo via un canvas masqué.
  * L'image doit être sur la même origine (pas de CORS).
  */
@@ -201,7 +232,9 @@ function applyColorToRoot(dominantColor: string) {
   root.style.setProperty('--primary', dominantColor);
 }
 
-/** Réinitialise les variables CSS au thème vert K'PSy d'origine */
+/** Réinitialise les variables CSS au thème vert K'PSy d'origine.
+ * NE SUPPRIME PAS le cache localStorage — le thème doit survivre à la déconnexion.
+ * Pour supprimer le cache (ex: tenant désactive l'option), appeler clearTenantThemeCache(). */
 function resetToKPSyTheme() {
   const root = document.documentElement;
   root.style.setProperty('--accent-primary', '#7ED957');
@@ -210,6 +243,14 @@ function resetToKPSyTheme() {
   root.style.setProperty('--accent-soft', 'rgba(126, 217, 87, 0.1)');
   root.style.setProperty('--success', '#7ED957');
   root.style.setProperty('--primary', '#7ED957');
+  // ⚠️ Ne pas supprimer THEME_STORAGE_KEY ici — il est vidé uniquement par clearTenantThemeCache()
+}
+
+/**
+ * Supprime explicitement le cache du thème tenant.
+ * À appeler UNIQUEMENT quand le tenant désactive définitivement l'option useLogoColors.
+ */
+export function clearTenantThemeCache() {
   localStorage.removeItem(THEME_STORAGE_KEY);
 }
 
@@ -222,6 +263,8 @@ function resetToKPSyTheme() {
  */
 export async function applyTenantTheme(logoUrl: string | null | undefined, useLogoColors: boolean) {
   if (!useLogoColors || !logoUrl) {
+    // L'utilisateur a explicitement désactivé l'option → effacer le cache ET restaurer le thème
+    clearTenantThemeCache();
     resetToKPSyTheme();
     return;
   }
