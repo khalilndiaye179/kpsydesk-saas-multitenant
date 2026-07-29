@@ -1,0 +1,180 @@
+[
+  {
+    "id": "tab-gsc",
+    "type": "tab",
+    "label": "📈 Google Search Console",
+    "disabled": false,
+    "info": "Suivi hebdomadaire du positionnement SEO via l'API Google Search Console.\n\nPré-requis :\n1. Site kpsyinformatique.com vérifié dans Google Search Console\n2. Projet Google Cloud avec Search Console API activée\n3. OAuth 2.0 credentials (client_id + client_secret + refresh_token)\n   → Stockés dans les credentials Node-RED (jamais en clair)\n\nCrontab : chaque lundi à 7h00 (UTC)"
+  },
+
+  {
+    "id": "gsc-cron",
+    "type": "inject",
+    "z": "tab-gsc",
+    "name": "⏰ Chaque lundi 7h UTC",
+    "props": [{ "p": "payload", "v": "", "vt": "date" }],
+    "repeat": "",
+    "crontab": "0 7 * * 1",
+    "once": false,
+    "x": 160,
+    "y": 100,
+    "wires": [["gsc-fn-get-token"]]
+  },
+
+  {
+    "id": "gsc-inject-test",
+    "type": "inject",
+    "z": "tab-gsc",
+    "name": "🚀 Test manuel maintenant",
+    "props": [{ "p": "payload", "v": "", "vt": "date" }],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "x": 160,
+    "y": 180,
+    "wires": [["gsc-fn-get-token"]]
+  },
+
+  {
+    "id": "gsc-fn-get-token",
+    "type": "function",
+    "z": "tab-gsc",
+    "name": "🔑 Rafraîchir le token OAuth",
+    "func": "// Récupérer les credentials depuis Node-RED (stockés chiffrés)\nconst clientId     = flow.get('google_client_id')     || env.get('GOOGLE_CLIENT_ID');\nconst clientSecret = flow.get('google_client_secret') || env.get('GOOGLE_CLIENT_SECRET');\nconst refreshToken = flow.get('google_refresh_token') || env.get('GOOGLE_REFRESH_TOKEN');\n\nif (!clientId || !clientSecret || !refreshToken) {\n  node.error('Credentials Google OAuth manquants. Configurer google_client_id, google_client_secret, google_refresh_token dans le context flow.', msg);\n  return null;\n}\n\nmsg.googleCreds = { clientId, clientSecret, refreshToken };\n\n// Appel token endpoint Google\nmsg.payload = {\n  client_id:     clientId,\n  client_secret: clientSecret,\n  refresh_token: refreshToken,\n  grant_type:    'refresh_token'\n};\nmsg.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };\nmsg.method = 'POST';\nmsg.url = 'https://oauth2.googleapis.com/token';\n\n// Encoder en x-www-form-urlencoded\nconst params = new URLSearchParams(msg.payload);\nmsg.payload = params.toString();\n\nreturn msg;",
+    "outputs": 1,
+    "x": 420,
+    "y": 140,
+    "wires": [["gsc-http-token"]]
+  },
+
+  {
+    "id": "gsc-http-token",
+    "type": "http request",
+    "z": "tab-gsc",
+    "name": "📡 Obtenir access_token",
+    "method": "POST",
+    "ret": "obj",
+    "url": "https://oauth2.googleapis.com/token",
+    "x": 660,
+    "y": 140,
+    "wires": [["gsc-fn-build-query"]]
+  },
+
+  {
+    "id": "gsc-fn-build-query",
+    "type": "function",
+    "z": "tab-gsc",
+    "name": "📋 Construire la requête GSC",
+    "func": "if (!msg.payload.access_token) {\n  node.error(`Échec OAuth Google : ${JSON.stringify(msg.payload)}`, msg);\n  return null;\n}\n\nmsg.accessToken = msg.payload.access_token;\n\n// Date range : 7 derniers jours complets\nconst today = new Date();\ntoday.setDate(today.getDate() - 1); // Hier (dernière date disponible dans GSC)\nconst endDate = today.toISOString().slice(0, 10);\nconst startDate = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);\n\nmsg.weekStart = startDate;\nmsg.weekEnd   = endDate;\n\nconst siteUrl = flow.get('gsc_site_url') || env.get('GSC_SITE_URL') || 'sc-domain:kpsyinformatique.com';\nmsg.gscSiteUrl = siteUrl;\n\n// Requête GSC : top 50 mots-clés par clics\nmsg.payload = {\n  startDate: startDate,\n  endDate:   endDate,\n  dimensions: ['query'],\n  rowLimit:   50,\n  startRow:   0\n};\n\nmsg.headers = {\n  'Authorization': `Bearer ${msg.accessToken}`,\n  'Content-Type': 'application/json'\n};\n\n// URL encodée pour l'API GSC\nconst encodedSite = encodeURIComponent(siteUrl);\nmsg.url = `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodedSite}/searchAnalytics/query`;\n\nreturn msg;",
+    "outputs": 1,
+    "x": 880,
+    "y": 140,
+    "wires": [["gsc-http-query"]]
+  },
+
+  {
+    "id": "gsc-http-query",
+    "type": "http request",
+    "z": "tab-gsc",
+    "name": "📡 Requête Search Console API",
+    "method": "POST",
+    "ret": "obj",
+    "url": "",
+    "x": 1100,
+    "y": 140,
+    "wires": [["gsc-fn-process-data"]]
+  },
+
+  {
+    "id": "gsc-fn-process-data",
+    "type": "function",
+    "z": "tab-gsc",
+    "name": "📊 Traiter + comparer positions",
+    "func": "if (msg.statusCode !== 200 || !msg.payload.rows) {\n  node.error(`Erreur API GSC ${msg.statusCode}: ${JSON.stringify(msg.payload)}`, msg);\n  return null;\n}\n\nconst rows = msg.payload.rows;\nconst fs = require('fs');\nconst path = require('path');\n\n// Formater les données de la semaine\nconst weekData = rows.map(r => ({\n  keyword:     r.keys[0],\n  clicks:      r.clicks,\n  impressions: r.impressions,\n  ctr:         Math.round(r.ctr * 10000) / 100,  // en %\n  position:    Math.round(r.position * 10) / 10   // 1 décimale\n}));\n\n// Charger l'historique précédent\nconst historyFile = '/data/rankings/history.json';\nlet history = {};\ntry {\n  if (fs.existsSync(historyFile)) {\n    history = JSON.parse(fs.readFileSync(historyFile, 'utf8'));\n  }\n} catch(e) { node.warn('Pas d\\'historique précédent — première exécution.'); }\n\n// Détecter les baisses significatives\nconst threshold = parseInt(env.get('RANKING_ALERT_THRESHOLD') || '3');\nconst alerts = [];\n\nweekData.forEach(item => {\n  const prev = history[item.keyword];\n  if (prev && (item.position - prev.position) > threshold) {\n    alerts.push({\n      keyword:   item.keyword,\n      prevPos:   prev.position,\n      currPos:   item.position,\n      drop:      Math.round((item.position - prev.position) * 10) / 10\n    });\n  }\n});\n\n// Mettre à jour l'historique\nweekData.forEach(item => {\n  history[item.keyword] = { position: item.position, lastUpdated: msg.weekEnd };\n});\n\nmsg.weekData     = weekData;\nmsg.alerts       = alerts;\nmsg.historyFile  = historyFile;\nmsg.historyToSave = JSON.stringify(history, null, 2);\n\nnode.log(`GSC: ${weekData.length} mots-clés traités, ${alerts.length} alertes`);\nnode.status({ fill: alerts.length ? 'red' : 'green', shape: 'dot', text: `${weekData.length} kw | ${alerts.length} alertes` });\n\nreturn msg;",
+    "outputs": 1,
+    "x": 1320,
+    "y": 140,
+    "wires": [["gsc-fn-save-csv", "gsc-fn-check-alerts"]]
+  },
+
+  {
+    "id": "gsc-fn-save-csv",
+    "type": "function",
+    "z": "tab-gsc",
+    "name": "💾 Sauvegarder CSV + JSON",
+    "func": "const fs = require('fs');\nconst path = require('path');\n\n// Créer les dossiers si besoin\nfs.mkdirSync('/data/rankings', { recursive: true });\n\n// 1. Sauvegarder l'historique JSON\nfs.writeFileSync(msg.historyFile, msg.historyToSave, 'utf8');\n\n// 2. Ajouter au CSV mensuel\nconst csvFile = `/data/rankings/${msg.weekEnd.slice(0, 7)}.csv`;\nconst csvExists = fs.existsSync(csvFile);\n\nconst header = 'date,keyword,clicks,impressions,ctr_pct,position\\n';\nconst rows = msg.weekData.map(r => \n  `${msg.weekEnd},\"${r.keyword.replace(/\"/g, '\"\"')}\",${r.clicks},${r.impressions},${r.ctr},${r.position}`\n).join('\\n');\n\nif (!csvExists) {\n  fs.writeFileSync(csvFile, header + rows + '\\n', 'utf8');\n} else {\n  fs.appendFileSync(csvFile, rows + '\\n', 'utf8');\n}\n\nnode.log(`CSV mis à jour : ${csvFile}`);\nreturn msg;",
+    "outputs": 1,
+    "x": 1560,
+    "y": 100,
+    "wires": [["gsc-debug-data"]]
+  },
+
+  {
+    "id": "gsc-debug-data",
+    "type": "debug",
+    "z": "tab-gsc",
+    "name": "🔍 Debug données",
+    "active": true,
+    "tosidebar": true,
+    "complete": "weekData",
+    "x": 1780,
+    "y": 100,
+    "wires": []
+  },
+
+  {
+    "id": "gsc-fn-check-alerts",
+    "type": "function",
+    "z": "tab-gsc",
+    "name": "🚨 Vérifier alertes position",
+    "func": "if (!msg.alerts || !msg.alerts.length) {\n  node.status({ fill: 'green', shape: 'dot', text: 'Aucune alerte' });\n  return null;  // Pas d'alerte → stop\n}\n\n// Construire le corps de l'email d'alerte\nconst alertList = msg.alerts.map(a =>\n  `• \"${a.keyword}\" : position ${a.prevPos} → ${a.currPos} (−${a.drop} rangs)`\n).join('\\n');\n\nmsg.emailSubject = `⚠️ KPSy SEO — ${msg.alerts.length} mot(s)-clé(s) en baisse (${msg.weekEnd})`;\nmsg.emailBody = `Bonjour,\\n\\nL'analyse hebdomadaire Google Search Console de ${msg.weekEnd} a détecté les baisses suivantes :\\n\\n${alertList}\\n\\nSite surveillé : ${msg.gscSiteUrl}\\nPériode analysée : ${msg.weekStart} → ${msg.weekEnd}\\n\\n→ Consulter le rapport complet dans /data/rankings/${msg.weekEnd.slice(0,7)}.csv\\n\\n---\\nKPSy Automation | Node-RED`;\n\nmsg.payload = msg.emailBody;\nmsg.topic   = msg.emailSubject;\n\nreturn msg;",
+    "outputs": 1,
+    "x": 1560,
+    "y": 200,
+    "wires": [["gsc-email-alert", "gsc-debug-alerts"]]
+  },
+
+  {
+    "id": "gsc-email-alert",
+    "type": "e-mail",
+    "z": "tab-gsc",
+    "name": "📧 Email d'alerte",
+    "server": "${SMTP_HOST}",
+    "port": "587",
+    "secure": false,
+    "tls": true,
+    "to": "${ALERT_EMAIL_TO}",
+    "from": "${SMTP_FROM}",
+    "subject": "",
+    "userid": "${SMTP_USER}",
+    "password": "",
+    "authtype": "PLAIN",
+    "x": 1780,
+    "y": 180,
+    "wires": []
+  },
+
+  {
+    "id": "gsc-debug-alerts",
+    "type": "debug",
+    "z": "tab-gsc",
+    "name": "🚨 Debug alertes",
+    "active": true,
+    "tosidebar": true,
+    "complete": "alerts",
+    "x": 1780,
+    "y": 240,
+    "wires": []
+  },
+
+  {
+    "id": "gsc-comment",
+    "type": "comment",
+    "z": "tab-gsc",
+    "name": "📌 Configuration Google Search Console",
+    "info": "## Pré-requis (à faire une seule fois)\n\n### 1. Vérifier le site dans Google Search Console\nhttps://search.google.com/search-console\n→ Ajouter la propriété `kpsyinformatique.com`\n→ Méthode de vérification : fichier HTML dans le dossier public ou balise meta\n\n### 2. Créer les credentials Google Cloud\nhttps://console.cloud.google.com\n1. Créer un projet (ex: kpsy-seo)\n2. Activer l'API : \"Google Search Console API\"\n3. Créer un identifiant OAuth 2.0 (type: Web application)\n4. URI de redirection : http://localhost:8080\n\n### 3. Générer le refresh token\n```bash\n# Sur le VPS ou ton poste local avec gcloud CLI :\ncurl -d \"client_id=CLIENT_ID&client_secret=CLIENT_SECRET&scope=https://www.googleapis.com/auth/webmasters.readonly&access_type=offline&response_type=code&redirect_uri=http://localhost\" https://accounts.google.com/o/oauth2/auth\n# Ouvrir l'URL dans le navigateur, autoriser, copier le code\n# Puis :\ncurl -d \"code=CODE&client_id=CLIENT_ID&client_secret=CLIENT_SECRET&redirect_uri=http://localhost&grant_type=authorization_code\" https://oauth2.googleapis.com/token\n# Copier refresh_token du résultat\n```\n\n### 4. Configurer dans Node-RED (flow context)\n```\ngoogle_client_id     = xxxxx.apps.googleusercontent.com\ngoogle_client_secret = GOCSPX-xxxxx\ngoogle_refresh_token = 1//xxxxx\ngsc_site_url         = sc-domain:kpsyinformatique.com\n```\n\n### 5. Configurer le nœud Email\nDouble-cliquer sur le nœud email → saisir SMTP + mot de passe",
+    "x": 200,
+    "y": 380,
+    "wires": []
+  }
+]
