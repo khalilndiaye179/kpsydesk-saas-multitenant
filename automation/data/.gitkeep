@@ -1,0 +1,3 @@
+# Placeholder pour que Git suive le dossier data/
+# Ce dossier contiendra les données Node-RED (flows, credentials chiffrés, rapports)
+# Le contenu réel est exclu du versioning via .gitignore
