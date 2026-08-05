@@ -512,17 +512,26 @@ function App() {
   };
 
   // MFA code submission
+  const [isUsingBackupCode, setIsUsingBackupCode] = useState(false);
+
   const handleMfaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMfaError('');
 
-    if (mfaCode.length < 6) {
-      setMfaError('Code MFA invalide.');
+    const cleanCode = mfaCode.trim().toUpperCase();
+
+    if (!isUsingBackupCode && cleanCode.length !== 6) {
+      setMfaError('Veuillez entrer un code à 6 chiffres.');
+      return;
+    }
+
+    if (isUsingBackupCode && cleanCode.length < 6) {
+      setMfaError('Veuillez entrer un code de secours valide (ex: 8 caractères).');
       return;
     }
 
     try {
-      const response = await api.post('/auth/mfa/validate', { tempToken, token: mfaCode });
+      const response = await api.post('/auth/mfa/validate', { tempToken, token: cleanCode });
       const { access_token, user } = response.data;
 
       // Compléter la connexion comme un login normal
@@ -995,28 +1004,49 @@ function App() {
           <div className="auth-card">
             <div className="auth-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <img src="/logo.png" alt="K'PSy Informatique" style={{ maxHeight: '60px', maxWidth: '200px', width: 'auto', marginBottom: '15px' }} />
-              <div className="auth-subtitle">Authentification multifacteur requise pour sécuriser l'accès</div>
+              <div className="auth-subtitle">
+                {isUsingBackupCode ? 'Saisie du Code de Secours' : 'Authentification multifacteur requise'}
+              </div>
             </div>
             {mfaError && <div className="auth-alert-error">{mfaError}</div>}
             <div className="auth-alert-info" style={{ textAlign: 'center' }}>
-              Utilisez le code de test <strong>123456</strong> pour valider.
+              {isUsingBackupCode 
+                ? 'Entrez un de vos 10 codes de secours (8 caractères) générés lors de l’activation.'
+                : 'Scannez votre application Authenticator ou utilisez le code à 6 chiffres.'}
             </div>
             <form onSubmit={handleMfaSubmit} className="auth-form">
               <div className="auth-field">
-                <label>Entrez le code à 6 chiffres</label>
+                <label>{isUsingBackupCode ? 'Code de secours (8 caractères)' : 'Code à 6 chiffres'}</label>
                 <input 
                   type="text"
-                  maxLength={6}
+                  maxLength={isUsingBackupCode ? 12 : 6}
                   className="auth-input"
-                  placeholder="123456"
+                  placeholder={isUsingBackupCode ? 'A1B2C3D4' : '123456'}
                   value={mfaCode}
                   onChange={(e) => setMfaCode(e.target.value)}
-                  style={{ textAlign: 'center', letterSpacing: '8px', fontSize: '1.5rem', fontWeight: 'bold' }}
+                  style={{ textAlign: 'center', letterSpacing: isUsingBackupCode ? '4px' : '8px', fontSize: '1.4rem', fontWeight: 'bold', textTransform: 'uppercase' }}
                   required
                 />
               </div>
-              <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '10px' }}>Valider le code</button>
-              <button type="button" className="btn-icon" onClick={() => { setShowMfa(false); setTempUser(null); }} style={{ width: '100%', borderColor: 'transparent', color: 'var(--text-muted)' }}>Annuler</button>
+              <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '10px' }}>
+                {isUsingBackupCode ? 'Valider le code de secours' : 'Valider le code OTP'}
+              </button>
+              
+              <div style={{ textAlign: 'center', marginTop: '14px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setIsUsingBackupCode(!isUsingBackupCode);
+                    setMfaCode('');
+                    setMfaError('');
+                  }} 
+                  style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'underline' }}
+                >
+                  {isUsingBackupCode ? '← Utiliser Google Authenticator (6 chiffres)' : '🔑 Perdu l’accès ? Utiliser un code de secours'}
+                </button>
+              </div>
+
+              <button type="button" className="btn-icon" onClick={() => { setShowMfa(false); setTempUser(null); setMfaCode(''); setIsUsingBackupCode(false); }} style={{ width: '100%', borderColor: 'transparent', color: 'var(--text-muted)', marginTop: '8px' }}>Annuler</button>
             </form>
           </div>
         </div>
