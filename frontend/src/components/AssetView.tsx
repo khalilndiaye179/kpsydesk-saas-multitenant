@@ -556,8 +556,22 @@ export const AssetView: React.FC = () => {
             return undefined;
           };
 
+          const brand = getVal("marque", "brand", "fabricant", "constructeur");
+          const modelStr = getVal("modele", "model", "modele / nom", "modele et nom");
+          const genericName = getVal("nom", "equipement", "designation", "name", "libelle");
+
+          let name = 'Équipement';
+          if (brand && modelStr) {
+            name = modelStr.toLowerCase().includes(brand.toLowerCase()) ? modelStr : `${brand} ${modelStr}`;
+          } else if (brand) {
+            name = genericName ? `${brand} (${genericName})` : brand;
+          } else if (modelStr) {
+            name = modelStr;
+          } else if (genericName) {
+            name = genericName;
+          }
+
           const invCode = getVal("code", "code inventaire", "inventorycode") || `INV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
-          const name = getVal("modele / nom", "nom", "modele", "equipement", "designation", "name") || 'Équipement importé';
           const type = getVal("type", "categorie") || 'Ordinateur Portable';
           const serialNumber = getVal("n° serie", "serial", "serie", "sn", "serialnumber");
           const hostname = getVal("nom d'hote it", "nom d'hote", "hostname", "hote", "nom hote");
@@ -569,8 +583,7 @@ export const AssetView: React.FC = () => {
           const os = getVal("os", "systeme");
           const ipAddress = getVal("ip", "adresse ip");
           const macAddress = getVal("mac", "adresse mac");
-          const manufacturer = getVal("fabricant", "constructeur", "marque");
-          const modelStr = getVal("modele");
+          const manufacturer = brand || getVal("fabricant", "constructeur", "marque");
 
           // Détection automatique de l'emplacement (Site)
           const siteStr = getVal("site", "emplacement", "magasin", "localisation");
@@ -879,7 +892,11 @@ export const AssetView: React.FC = () => {
                       </td>
                     )}
                     <td><strong>{asset.inventoryCode}</strong></td>
-                    <td>{asset.name}</td>
+                    <td>
+                      {asset.manufacturer && !asset.name.toLowerCase().includes(asset.manufacturer.toLowerCase()) 
+                        ? `${asset.manufacturer} ${asset.name}` 
+                        : asset.name}
+                    </td>
                     <td>{asset.type}</td>
                     <td>{asset.serialNumber || '-'}</td>
                     <td><code style={{ fontSize: '0.82rem', color: '#38bdf8' }}>{asset.hostname || '-'}</code></td>
