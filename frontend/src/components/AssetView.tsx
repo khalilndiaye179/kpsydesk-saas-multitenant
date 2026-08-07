@@ -411,12 +411,19 @@ export const AssetView: React.FC = () => {
       "Nom / Modèle": a.name,
       "Type": a.type,
       "N° Série": a.serialNumber || '-',
+      "Nom d'hôte IT": a.hostname || '-',
       "Pays": a.country || '-',
-      "Date Achat": a.purchaseDate ? new Date(a.purchaseDate).toLocaleDateString() : '-',
       "Garantie (mois)": a.warrantyMonths || '-',
       "Statut": a.status,
       "Assigné à": a.user ? `${a.user.firstName} ${a.user.lastName}` : 'Non assigné',
-      "Site": a.location ? a.location.name : '-'
+      "Site": a.location ? a.location.name : '-',
+      "Commentaires": a.notes || '-',
+      "Processeur": a.cpu || '-',
+      "RAM": a.ram || '-',
+      "Stockage": a.storage || '-',
+      "OS": a.os || '-',
+      "Adresse IP": a.ipAddress || '-',
+      "Adresse MAC": a.macAddress || '-'
     }));
 
     const ws = XLSX.utils.json_to_sheet([]);
@@ -491,27 +498,76 @@ export const AssetView: React.FC = () => {
 
         let added = 0;
         for (const row of json) {
-          const invCode = row["Code Inventaire"] || row["Code"] || `INV-${Date.now()}-${Math.floor(Math.random() * 100)}`;
-          // Simuler ou poster
+          // Helper de recherche de clé tolérant aux majuscules, accents et espaces
+          const getVal = (...possibleKeys: string[]) => {
+            for (const key of possibleKeys) {
+              for (const rowKey of Object.keys(row)) {
+                const cleanRowKey = rowKey.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const cleanKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                if (cleanRowKey === cleanKey || cleanRowKey.includes(cleanKey)) {
+                  if (row[rowKey] !== undefined && row[rowKey] !== null) return String(row[rowKey]).trim();
+                }
+              }
+            }
+            return '';
+          };
+
+          const invCode = getVal("code", "code inventaire", "inventorycode") || `INV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+          const name = getVal("modele / nom", "nom", "modele", "equipement", "designation", "name") || 'Équipement importé';
+          const type = getVal("type", "categorie") || 'Ordinateur Portable';
+          const serialNumber = getVal("n° serie", "serial", "serie", "sn", "serialnumber");
+          const hostname = getVal("nom d'hote it", "nom d'hote", "hostname", "hote", "nom hote");
+          const country = getVal("pays", "country") || 'Sénégal';
+          const notes = getVal("commentaires", "remarques", "notes", "commentaire");
+          const cpu = getVal("cpu", "processeur");
+          const ram = getVal("ram", "memoire");
+          const storage = getVal("stockage", "disque");
+          const os = getVal("os", "systeme");
+          const ipAddress = getVal("ip", "adresse ip");
+          const macAddress = getVal("mac", "adresse mac");
+          const manufacturer = getVal("fabricant", "constructeur", "marque");
+          const modelStr = getVal("modele");
+
+          const rawStatus = getVal("statut", "etat");
+          let status = 'IN_STOCK';
+          if (rawStatus) {
+            const sLower = rawStatus.toLowerCase();
+            if (sLower.includes('actif') || sLower.includes('assign') || sLower.includes('deploy')) status = 'ASSIGNED';
+            else if (sLower.includes('panne') || sLower.includes('cass')) status = 'BROKEN';
+            else if (sLower.includes('maint')) status = 'IN_MAINTENANCE';
+            else if (sLower.includes('reform')) status = 'RETIRED';
+            else if (sLower.includes('obsol')) status = 'OBSOLETE';
+          }
+
           await api.post('/assets', {
             inventoryCode: invCode,
-            name: row["Nom / Modèle"] || row["Nom"] || 'Équipement importé',
-            type: row["Type"] || 'Autre',
-            status: 'IN_STOCK',
-            serialNumber: row["N° Série"] || row["Série"] || '',
+            name: name,
+            type: type,
+            status: status,
+            serialNumber: serialNumber,
+            hostname: hostname,
+            country: country,
+            notes: notes,
+            cpu: cpu,
+            ram: ram,
+            storage: storage,
+            os: os,
+            ipAddress: ipAddress,
+            macAddress: macAddress,
+            manufacturer: manufacturer,
+            model: modelStr,
             purchaseDate: new Date().toISOString().split('T')[0],
-            warrantyMonths: 36,
-            country: 'Sénégal',
+            warrantyMonths: parseInt(getVal("garantie", "garantie (mois)")) || 36,
             performedBy: 'admin'
           });
           added++;
         }
 
-        alert(`${added} actifs importés avec succès !`);
+        alert(`✓ ${added} actif(s) importé(s) avec succès avec l'ensemble des colonnes !`);
         fetchAllData();
       } catch (err) {
         console.error(err);
-        alert("Erreur lors de l'importation Excel");
+        alert("Erreur lors de l'importation Excel : vérifiez le format du fichier.");
       }
     };
     reader.readAsArrayBuffer(file);
