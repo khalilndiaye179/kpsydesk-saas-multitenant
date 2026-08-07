@@ -78,6 +78,154 @@ export const UserView: React.FC = () => {
   const [selectedAssetId, setSelectedAssetId] = useState('');
   const [assignTargetUser, setAssignTargetUser] = useState<User | null>(null);
 
+  // Barre de progression Upload Collaborateurs Excel / CSV
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, pct: 0 });
+  const [importDoneNotification, setImportDoneNotification] = useState<string | null>(null);
+
+  const handleImportUsersXLSX = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event: any) => {
+      const XLSX = (window as any).XLSX;
+      if (!XLSX) {
+        alert("Bibliothèque XLSX introuvable.");
+        return;
+      }
+
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const ws = workbook.Sheets[workbook.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(ws) as any[];
+
+        const totalRows = json.length;
+        if (totalRows === 0) {
+          alert("Le fichier Excel sélectionné est vide.");
+          return;
+        }
+
+        setIsImporting(true);
+        setImportProgress({ current: 0, total: totalRows, pct: 0 });
+
+        let added = 0;
+        for (let i = 0; i < json.length; i++) {
+          const row = json[i];
+
+          const getVal = (...possibleKeys: string[]): string | undefined => {
+            for (const key of possibleKeys) {
+              for (const rowKey of Object.keys(row)) {
+                const cleanRowKey = rowKey.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const cleanKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                if (cleanRowKey === cleanKey) {
+                  const val = row[rowKey];
+                  if (val !== undefined && val !== null && String(val).trim() !== '') return String(val).trim();
+                }
+              }
+            }
+            for (const key of possibleKeys) {
+              for (const rowKey of Object.keys(row)) {
+                const cleanRowKey = rowKey.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const cleanKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                if (cleanRowKey.includes(cleanKey)) {
+                  const val = row[rowKey];
+                  if (val !== undefined && val !== null && String(val).trim() !== '') return String(val).trim();
+                }
+              }
+            }
+            return undefined;
+          };
+
+          const firstName = getVal("prenom", "firstname", "first name") || 'Collaborateur';
+          const lastName = getVal("nom", "lastname", "last name") || 'Importé';
+          const email = getVal("email", "e-mail", "courriel", "mail") || `user.${Date.now()}.${i}@kpsy.local`;
+          const position = getVal("poste", "fonction", "position", "job", "titre");
+          const country = getVal("pays", "country") || 'Sénégal';
+          const status = getVal("statut", "status") || 'Actif';
+          const sysRoleStr = getVal("role", "role systeme", "systemrole") || 'Collaborateur';
+
+          // Résolution intelligente du département (ou création automatique)
+          const deptStr = getVal("departement", "department", "service", "direction");
+          let departmentId: string | null = null;
+          if (deptStr) {
+            const matchedDept = departments.find(d => d.name.toLowerCase().includes(deptStr.toLowerCase()) || deptStr.toLowerCase().includes(d.name.toLowerCase()));
+            if (matchedDept) {
+              departmentId = matchedDept.id;
+            } else {
+              // Créer le département à la volée s'il n'existe pas encore
+              try {
+                const newDeptRes = await api.post('/departments', { name: deptStr });
+                if (newDeptRes.data?.id) {
+                  departmentId = newDeptRes.data.id;
+                  setDepartments(prev => [...prev, newDeptRes.data]);
+                }
+              } catch (e) {
+                console.warn("Impossible de créer le département", deptStr);
+              }
+            }
+          }
+
+          // Détermination du rôle d'accès
+          let role = 'USER';
+          if (sysRoleStr.toLowerCase().includes('admin')) role = 'ADMIN';
+          else if (sysRoleStr.toLowerCase().includes('tech')) role = 'TECHNICIAN';
+
+          const password = getVal("mot de passe", "password") || 'Kpsy2026!Pass';
+
+          const payload: any = {
+            firstName,
+            lastName,
+            email,
+            position,
+            country,
+            status,
+            systemRole: sysRoleStr,
+            role,
+            password,
+            departmentId: departmentId || null
+          };
+
+          const rawSalary = getVal("salaire", "base salary", "salaire de base");
+          if (rawSalary) payload.baseSalary = Number(rawSalary) || null;
+
+          const rawTransport = getVal("transport", "prime transport", "indemnite");
+          if (rawTransport) payload.transportAllowance = Number(rawTransport) || null;
+
+          const rawExec = getVal("cadre", "executive");
+          if (rawExec) payload.isExecutive = ['oui', 'yes', 'true', '1'].includes(rawExec.toLowerCase());
+
+          try {
+            await api.post('/users', payload);
+            added++;
+          } catch (err) {
+            console.warn(`Erreur lors de l'import du collaborateur ligne ${i+1}`, err);
+          }
+
+          const currentCount = i + 1;
+          const currentPct = Math.round((currentCount / totalRows) * 100);
+          setImportProgress({ current: currentCount, total: totalRows, pct: currentPct });
+        }
+
+        setIsImporting(false);
+        setImportDoneNotification(`🎉 Importation terminée avec succès : ${added} collaborateur(s) sur ${totalRows} enregistré(s) !`);
+        fetchAllData();
+
+        setTimeout(() => {
+          setImportDoneNotification(null);
+        }, 6000);
+      } catch (err: any) {
+        setIsImporting(false);
+        console.error(err);
+        const errorMsg = err.response?.data?.message || err.message || "Erreur de format";
+        alert(`Erreur lors de l'importation du fichier Excel/CSV : ${errorMsg}`);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
+  };
+
   const fetchAllData = async () => {
     try {
       const [usersRes, assetsRes, deptsRes] = await Promise.all([
@@ -379,6 +527,45 @@ export const UserView: React.FC = () => {
 
   return (
     <div className="fade-in">
+      {/* MODALE BARRE DE PROGRESSION UPLOAD COLLABORATEURS */}
+      {isImporting && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(4px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '30px', maxWidth: '460px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', textAlign: 'center', color: 'white' }}>
+            <div style={{ width: '60px', height: '60px', margin: '0 auto 16px', borderRadius: '50%', backgroundColor: 'rgba(56, 189, 248, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className="ph ph-upload-simple" style={{ fontSize: '2rem', color: '#38bdf8' }}></i>
+            </div>
+            
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 8px 0' }}>Importation des Collaborateurs...</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 20px 0' }}>
+              Enregistrement en cours : <strong>{importProgress.current}</strong> / {importProgress.total} ({importProgress.pct}%)
+            </p>
+
+            <div style={{ width: '100%', height: '12px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)', marginBottom: '12px' }}>
+              <div 
+                style={{ 
+                  height: '100%', 
+                  width: `${importProgress.pct}%`, 
+                  background: 'linear-gradient(90deg, #38bdf8, #4ba32b)', 
+                  transition: 'width 0.2s ease-in-out',
+                  borderRadius: '6px'
+                }} 
+              />
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: 600 }}>
+              Création des profils & départements associés...
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NOTIFICATION FLOTTANTE DE SUCCÈS */}
+      {importDoneNotification && (
+        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, backgroundColor: '#064e3b', border: '1px solid #10b981', color: '#ecfdf5', padding: '16px 20px', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '12px', maxWidth: '420px', animation: 'fadeIn 0.3s ease-in' }}>
+          <i className="ph-fill ph-check-circle" style={{ fontSize: '1.6rem', color: '#34d399', flexShrink: 0 }} />
+          <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{importDoneNotification}</div>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Collaborateurs & Départements</h1>
@@ -386,6 +573,11 @@ export const UserView: React.FC = () => {
         </div>
         {activeSubTab === 'users' ? (
           <div style={{ display: 'flex', gap: '10px' }}>
+            <label className="btn-icon" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '8px', fontWeight: 600 }}>
+              <i className="ph ph-upload-simple" style={{ color: '#38bdf8', fontSize: '1.2rem' }}></i> Importer Excel / CSV
+              <input type="file" accept=".xlsx, .xls, .csv" onChange={handleImportUsersXLSX} style={{ display: 'none' }} />
+            </label>
+
             <button className="btn-icon" onClick={handleExportXLSX} title="Exporter en Excel" style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <i className="ph ph-file-xls" style={{ color: '#107c41', fontSize: '1.2rem' }}></i> Excel
             </button>
