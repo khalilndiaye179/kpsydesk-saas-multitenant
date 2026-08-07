@@ -23,6 +23,8 @@ interface Asset {
   warrantyEnd?: string;
   warrantyMonths?: number;
   country?: string;
+  hostname?: string;
+  notes?: string;
   userId?: string;
   user?: User;
   locationId?: string;
@@ -85,6 +87,8 @@ export const AssetView: React.FC = () => {
     purchaseDate: '',
     warrantyMonths: 36,
     country: 'Sénégal',
+    hostname: '',
+    notes: '',
     userId: '',
     locationId: '',
     assignmentDate: '',
@@ -199,6 +203,8 @@ export const AssetView: React.FC = () => {
       purchaseDate: new Date().toISOString().split('T')[0],
       warrantyMonths: 36,
       country: 'Sénégal',
+      hostname: '',
+      notes: '',
       userId: '',
       locationId: '',
       assignmentDate: '',
@@ -225,6 +231,8 @@ export const AssetView: React.FC = () => {
       purchaseDate: asset.purchaseDate ? asset.purchaseDate.split('T')[0] : '',
       warrantyMonths: asset.warrantyMonths || 36,
       country: asset.country || 'Sénégal',
+      hostname: asset.hostname || '',
+      notes: asset.notes || '',
       userId: asset.userId || '',
       locationId: asset.locationId || '',
       assignmentDate: asset.assignmentDate ? asset.assignmentDate.split('T')[0] : '',
@@ -512,7 +520,10 @@ export const AssetView: React.FC = () => {
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.inventoryCode.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           asset.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (asset.serialNumber && asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase()));
+                          (asset.serialNumber && asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          (asset.hostname && asset.hostname.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          (asset.country && asset.country.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          (asset.notes && asset.notes.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesType = filterType === '' || asset.type === filterType;
     const matchesStatus = filterStatus === '' || asset.status === filterStatus;
     return matchesSearch && matchesType && matchesStatus;
@@ -656,17 +667,20 @@ export const AssetView: React.FC = () => {
                 <th>Modèle / Nom</th>
                 <th>Type</th>
                 <th>N° Série</th>
+                <th>Nom d'hôte IT</th>
+                <th>Pays</th>
                 <th>Garantie</th>
                 <th>État</th>
                 <th>Assigné à</th>
                 <th>Site</th>
+                <th>Commentaires</th>
                 {!isReadOnly && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
               {filteredAssets.length === 0 ? (
                 <tr>
-                  <td colSpan={isReadOnly ? 8 : 10} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun actif trouvé</td>
+                  <td colSpan={isReadOnly ? 11 : 13} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun actif trouvé</td>
                 </tr>
               ) : (
                 filteredAssets.map(asset => (
@@ -684,6 +698,8 @@ export const AssetView: React.FC = () => {
                     <td>{asset.name}</td>
                     <td>{asset.type}</td>
                     <td>{asset.serialNumber || '-'}</td>
+                    <td><code style={{ fontSize: '0.82rem', color: '#38bdf8' }}>{asset.hostname || '-'}</code></td>
+                    <td>{asset.country || '-'}</td>
                     <td>{asset.warrantyMonths ? asset.warrantyMonths + ' mois' : '-'}</td>
                     <td>
                       <span className={`status-badge ${asset.status.toLowerCase()}`}>
@@ -692,6 +708,9 @@ export const AssetView: React.FC = () => {
                     </td>
                     <td>{asset.user ? `${asset.user.firstName} ${asset.user.lastName}` : 'Non assigné'}</td>
                     <td>{asset.location ? asset.location.name : '-'}</td>
+                    <td style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={asset.notes || ''}>
+                      {asset.notes || '-'}
+                    </td>
                     {!isReadOnly && (
                       <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -867,11 +886,22 @@ export const AssetView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem' }}>Pays d'origine</label>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem' }}>Pays</label>
                   <input 
                     type="text" 
                     value={formFields.country} 
                     onChange={e => setFormFields({...formFields, country: e.target.value})} 
+                    placeholder="Ex: Sénégal, Côte d'Ivoire..."
+                    style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem', color: '#38bdf8', fontWeight: 600 }}>Nom d'hôte réseau (IT)</label>
+                  <input 
+                    type="text" 
+                    value={formFields.hostname} 
+                    onChange={e => setFormFields({...formFields, hostname: e.target.value})} 
+                    placeholder="Ex: PC-SRV-01.local"
                     style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
                   />
                 </div>
@@ -915,6 +945,16 @@ export const AssetView: React.FC = () => {
                       <option key={l.id} value={l.id}>{l.name}</option>
                     ))}
                   </select>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', marginBottom: '5px', fontSize: '0.85rem' }}>Commentaires / Remarques (Optionnel)</label>
+                  <textarea 
+                    rows={2}
+                    value={formFields.notes} 
+                    onChange={e => setFormFields({...formFields, notes: e.target.value})} 
+                    placeholder="Remarques particulières, état physique, historique..."
+                    style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
+                  />
                 </div>
 
                 {(!editingAsset || !editingAsset.lastAgentCommunication) ? (
@@ -1372,14 +1412,23 @@ export const AssetView: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div><strong style={{ color: 'var(--text-muted)' }}>Type :</strong> {selectedAssetForDetail.type}</div>
                   <div><strong style={{ color: 'var(--text-muted)' }}>État de l'actif :</strong> <span className={`status-badge ${selectedAssetForDetail.status.toLowerCase()}`}>{selectedAssetForDetail.status}</span></div>
+                  <div><strong style={{ color: 'var(--text-muted)' }}>Nom d'hôte IT :</strong> <code style={{ color: '#38bdf8' }}>{selectedAssetForDetail.hostname || '-'}</code></div>
+                  <div><strong style={{ color: 'var(--text-muted)' }}>Pays :</strong> {selectedAssetForDetail.country || '-'}</div>
                   <div><strong style={{ color: 'var(--text-muted)' }}>Utilisateur assigné :</strong> {selectedAssetForDetail.user ? `${selectedAssetForDetail.user.firstName} ${selectedAssetForDetail.user.lastName}` : 'Non assigné'}</div>
                   <div><strong style={{ color: 'var(--text-muted)' }}>Magasin / Emplacement :</strong> {selectedAssetForDetail.location ? selectedAssetForDetail.location.name : 'Aucun'}</div>
+                  {selectedAssetForDetail.notes && (
+                    <div style={{ marginTop: '8px', padding: '10px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                      <strong style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Commentaires / Remarques :</strong>
+                      <span style={{ fontSize: '0.88rem', color: 'white' }}>{selectedAssetForDetail.notes}</span>
+                    </div>
+                  )}
                 </div>
               )}
 
               {detailActiveTab === 'specs' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div><strong style={{ color: 'var(--text-muted)' }}>Numéro de série (S/N) :</strong> {selectedAssetForDetail.serialNumber || '-'}</div>
+                  <div><strong style={{ color: 'var(--text-muted)' }}>Nom d'hôte (Hostname) :</strong> <code style={{ color: '#38bdf8' }}>{selectedAssetForDetail.hostname || '-'}</code></div>
                   <div><strong style={{ color: 'var(--text-muted)' }}>Processeur (CPU) :</strong> {selectedAssetForDetail.cpu || '-'}</div>
                   <div><strong style={{ color: 'var(--text-muted)' }}>Mémoire RAM :</strong> {selectedAssetForDetail.ram || '-'}</div>
                   <div><strong style={{ color: 'var(--text-muted)' }}>Stockage :</strong> {selectedAssetForDetail.storage || '-'}</div>

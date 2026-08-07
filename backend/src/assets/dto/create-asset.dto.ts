@@ -44,6 +44,10 @@ export class CreateAssetDto {
 
   @IsString()
   @IsOptional()
+  hostname?: string;
+
+  @IsString()
+  @IsOptional()
   userId?: string;
 
   @IsString()

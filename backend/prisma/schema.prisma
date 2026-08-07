@@ -205,6 +205,8 @@ model Asset {
   assignmentDate         DateTime?
   warrantyMonths         Int?
   country                String?
+  hostname               String?
+  notes                  String?
   userId                 String?
   locationId             String?
   tenantId               String?
