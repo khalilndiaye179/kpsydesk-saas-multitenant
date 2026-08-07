@@ -77,6 +77,11 @@ export const AssetView: React.FC = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Barre de progression Upload Excel
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, pct: 0 });
+  const [importDoneNotification, setImportDoneNotification] = useState<string | null>(null);
+
   // Form fields
   const [formFields, setFormFields] = useState({
     inventoryCode: '',
@@ -513,11 +518,21 @@ export const AssetView: React.FC = () => {
         const ws = workbook.Sheets[workbook.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(ws) as any[];
 
+        const totalRows = json.length;
+        if (totalRows === 0) {
+          alert("Le fichier Excel sélectionné est vide.");
+          return;
+        }
+
+        setIsImporting(true);
+        setImportProgress({ current: 0, total: totalRows, pct: 0 });
+
         let added = 0;
-        for (const row of json) {
+        for (let i = 0; i < json.length; i++) {
+          const row = json[i];
+          
           // Helper de recherche de clé ultra-robuste
           const getVal = (...possibleKeys: string[]): string | undefined => {
-            // 1. Passer en revue chaque clé possible
             for (const key of possibleKeys) {
               for (const rowKey of Object.keys(row)) {
                 const cleanRowKey = rowKey.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -528,7 +543,6 @@ export const AssetView: React.FC = () => {
                 }
               }
             }
-            // 2. Deuxième passe avec recherche par inclusion (includes)
             for (const key of possibleKeys) {
               for (const rowKey of Object.keys(row)) {
                 const cleanRowKey = rowKey.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -588,7 +602,6 @@ export const AssetView: React.FC = () => {
             else if (sLower.includes('obsol')) status = 'OBSOLETE';
           }
 
-          // Construction de l'objet propre sans clés indéfinies
           const payload: any = {
             inventoryCode: invCode,
             name: name,
@@ -615,19 +628,37 @@ export const AssetView: React.FC = () => {
           const rawWarranty = getVal("garantie", "garantie (mois)");
           if (rawWarranty) payload.warrantyMonths = parseInt(rawWarranty) || 36;
 
-          await api.post('/assets', payload);
-          added++;
+          try {
+            await api.post('/assets', payload);
+            added++;
+          } catch (err) {
+            console.warn(`Erreur import ligne ${i+1}`, err);
+          }
+
+          // Mise à jour de la barre de progression en temps réel
+          const currentCount = i + 1;
+          const currentPct = Math.round((currentCount / totalRows) * 100);
+          setImportProgress({ current: currentCount, total: totalRows, pct: currentPct });
         }
 
-        alert(`✓ ${added} actif(s) importé(s) avec succès !`);
+        setIsImporting(false);
+        setImportDoneNotification(`🎉 Importation terminée avec succès : ${added} équipement(s) sur ${totalRows} ont été enregistrés !`);
         fetchAllData();
+
+        // Réinitialiser la notification d'information après 6 secondes
+        setTimeout(() => {
+          setImportDoneNotification(null);
+        }, 6000);
       } catch (err: any) {
+        setIsImporting(false);
         console.error(err);
         const errorMsg = err.response?.data?.message || err.message || "Erreur de format";
         alert(`Erreur lors de l'importation Excel : ${errorMsg}`);
       }
     };
     reader.readAsArrayBuffer(file);
+    // Réinitialiser le file input pour ré-autoriser la même sélection
+    e.target.value = '';
   };
 
   const filteredAssets = assets.filter(asset => {
@@ -645,6 +676,46 @@ export const AssetView: React.FC = () => {
   return (
     <div className="fade-in" style={{ paddingBottom: isOffline || localUnsyncedAssets.length > 0 ? '60px' : '0px' }}>
       
+      {/* MODALE BARRE DE PROGRESSION UPLOAD EXCEL */}
+      {isImporting && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(4px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '30px', maxWidth: '460px', width: '100%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', textAlign: 'center', color: 'white' }}>
+            <div style={{ width: '60px', height: '60px', margin: '0 auto 16px', borderRadius: '50%', backgroundColor: 'rgba(56, 189, 248, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className="ph ph-upload-simple" style={{ fontSize: '2rem', color: '#38bdf8' }}></i>
+            </div>
+            
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 8px 0' }}>Importation Excel en cours...</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 20px 0' }}>
+              Enregistrement des équipements : <strong>{importProgress.current}</strong> / {importProgress.total} ({importProgress.pct}%)
+            </p>
+
+            {/* Barre de Progression Visuelle */}
+            <div style={{ width: '100%', height: '12px', backgroundColor: 'var(--bg-primary)', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-color)', marginBottom: '12px' }}>
+              <div 
+                style={{ 
+                  height: '100%', 
+                  width: `${importProgress.pct}%`, 
+                  background: 'linear-gradient(90deg, #38bdf8, #4ba32b)', 
+                  transition: 'width 0.2s ease-in-out',
+                  borderRadius: '6px'
+                }} 
+              />
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: 600 }}>
+              Veuillez patienter pendant l'écriture en base de données...
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NOTIFICATION FLOTTANTE SUCCÈS D'ACHÈVEMENT UPLOAD */}
+      {importDoneNotification && (
+        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, backgroundColor: '#064e3b', border: '1px solid #10b981', color: '#ecfdf5', padding: '16px 20px', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: '12px', maxWidth: '420px', animation: 'fadeIn 0.3s ease-in' }}>
+          <i className="ph-fill ph-check-circle" style={{ fontSize: '1.6rem', color: '#34d399', flexShrink: 0 }} />
+          <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{importDoneNotification}</div>
+        </div>
+      )}
+
       {/* BANDEAU DE SYNCHRONISATION OFFLINE */}
       {(isOffline || localUnsyncedAssets.length > 0) && (
         <div className="offline-sync-banner">
