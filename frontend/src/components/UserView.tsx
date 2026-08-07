@@ -502,6 +502,8 @@ export const UserView: React.FC = () => {
     if (!jspdf) {
       alert("La bibliothèque d'export PDF n'est pas chargée.");
       return;
+    }
+
     const doc = new jspdf.jsPDF('landscape');
     
     import('../pdfUtils').then(async ({ addBrandingToPdf }) => {
