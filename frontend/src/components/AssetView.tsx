@@ -515,18 +515,31 @@ export const AssetView: React.FC = () => {
 
         let added = 0;
         for (const row of json) {
-          // Helper de recherche de clé tolérant aux majuscules, accents et espaces
-          const getVal = (...possibleKeys: string[]) => {
+          // Helper de recherche de clé ultra-robuste
+          const getVal = (...possibleKeys: string[]): string | undefined => {
+            // 1. Passer en revue chaque clé possible
             for (const key of possibleKeys) {
               for (const rowKey of Object.keys(row)) {
                 const cleanRowKey = rowKey.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
                 const cleanKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                if (cleanRowKey === cleanKey || cleanRowKey.includes(cleanKey)) {
-                  if (row[rowKey] !== undefined && row[rowKey] !== null) return String(row[rowKey]).trim();
+                if (cleanRowKey === cleanKey) {
+                  const val = row[rowKey];
+                  if (val !== undefined && val !== null && String(val).trim() !== '') return String(val).trim();
                 }
               }
             }
-            return '';
+            // 2. Deuxième passe avec recherche par inclusion (includes)
+            for (const key of possibleKeys) {
+              for (const rowKey of Object.keys(row)) {
+                const cleanRowKey = rowKey.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const cleanKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                if (cleanRowKey.includes(cleanKey)) {
+                  const val = row[rowKey];
+                  if (val !== undefined && val !== null && String(val).trim() !== '') return String(val).trim();
+                }
+              }
+            }
+            return undefined;
           };
 
           const invCode = getVal("code", "code inventaire", "inventorycode") || `INV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
@@ -545,6 +558,25 @@ export const AssetView: React.FC = () => {
           const manufacturer = getVal("fabricant", "constructeur", "marque");
           const modelStr = getVal("modele");
 
+          // Détection automatique de l'emplacement (Site)
+          const siteStr = getVal("site", "emplacement", "magasin", "localisation");
+          let locationId: string | undefined = undefined;
+          if (siteStr && locations.length > 0) {
+            const matchedLoc = locations.find(l => l.name.toLowerCase().includes(siteStr.toLowerCase()) || siteStr.toLowerCase().includes(l.name.toLowerCase()));
+            if (matchedLoc) locationId = matchedLoc.id;
+          }
+
+          // Détection automatique de l'utilisateur assigné
+          const userStr = getVal("assigne a", "assigne", "utilisateur", "affecte a");
+          let userId: string | undefined = undefined;
+          if (userStr && users.length > 0) {
+            const matchedUser = users.find(u => {
+              const fullName = `${u.firstName} ${u.lastName}`.toLowerCase();
+              return fullName.includes(userStr.toLowerCase()) || userStr.toLowerCase().includes(u.firstName.toLowerCase());
+            });
+            if (matchedUser) userId = matchedUser.id;
+          }
+
           const rawStatus = getVal("statut", "etat");
           let status = 'IN_STOCK';
           if (rawStatus) {
@@ -556,35 +588,43 @@ export const AssetView: React.FC = () => {
             else if (sLower.includes('obsol')) status = 'OBSOLETE';
           }
 
-          await api.post('/assets', {
+          // Construction de l'objet propre sans clés indéfinies
+          const payload: any = {
             inventoryCode: invCode,
             name: name,
             type: type,
             status: status,
-            serialNumber: serialNumber,
-            hostname: hostname,
-            country: country,
-            notes: notes,
-            cpu: cpu,
-            ram: ram,
-            storage: storage,
-            os: os,
-            ipAddress: ipAddress,
-            macAddress: macAddress,
-            manufacturer: manufacturer,
-            model: modelStr,
-            purchaseDate: new Date().toISOString().split('T')[0],
-            warrantyMonths: parseInt(getVal("garantie", "garantie (mois)")) || 36,
             performedBy: 'admin'
-          });
+          };
+
+          if (serialNumber) payload.serialNumber = serialNumber;
+          if (hostname) payload.hostname = hostname;
+          if (country) payload.country = country;
+          if (notes) payload.notes = notes;
+          if (cpu) payload.cpu = cpu;
+          if (ram) payload.ram = ram;
+          if (storage) payload.storage = storage;
+          if (os) payload.os = os;
+          if (ipAddress) payload.ipAddress = ipAddress;
+          if (macAddress) payload.macAddress = macAddress;
+          if (manufacturer) payload.manufacturer = manufacturer;
+          if (modelStr) payload.model = modelStr;
+          if (locationId) payload.locationId = locationId;
+          if (userId) payload.userId = userId;
+
+          const rawWarranty = getVal("garantie", "garantie (mois)");
+          if (rawWarranty) payload.warrantyMonths = parseInt(rawWarranty) || 36;
+
+          await api.post('/assets', payload);
           added++;
         }
 
-        alert(`✓ ${added} actif(s) importé(s) avec succès avec l'ensemble des colonnes !`);
+        alert(`✓ ${added} actif(s) importé(s) avec succès !`);
         fetchAllData();
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        alert("Erreur lors de l'importation Excel : vérifiez le format du fichier.");
+        const errorMsg = err.response?.data?.message || err.message || "Erreur de format";
+        alert(`Erreur lors de l'importation Excel : ${errorMsg}`);
       }
     };
     reader.readAsArrayBuffer(file);
