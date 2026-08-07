@@ -197,10 +197,17 @@ export const AssetView: React.FC = () => {
     }
   };
 
+  const generateNextInventoryCode = (currentAssets: Asset[], offset = 0) => {
+    const year = new Date().getFullYear();
+    const seqNumber = currentAssets.length + 1 + offset;
+    const formattedSeq = String(seqNumber).padStart(4, '0');
+    return `INV-${year}-${formattedSeq}`;
+  };
+
   const openAddModal = () => {
     setEditingAsset(null);
     setFormFields({
-      inventoryCode: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      inventoryCode: generateNextInventoryCode(assets),
       name: '',
       type: 'Ordinateur Portable',
       status: 'IN_STOCK',
@@ -339,7 +346,7 @@ export const AssetView: React.FC = () => {
       const wantsToCreate = window.confirm(`L'actif avec le code ou n° série "${code}" n'existe pas encore. Voulez-vous le créer maintenant ?`);
       if (wantsToCreate) {
         setFormFields({
-          inventoryCode: code.startsWith('INV-') ? code : `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+          inventoryCode: code.startsWith('INV-') ? code : generateNextInventoryCode(assets),
           name: 'Nouvel Actif Scanné',
           type: 'Ordinateur Portable',
           status: 'IN_STOCK',
@@ -571,7 +578,7 @@ export const AssetView: React.FC = () => {
             name = genericName;
           }
 
-          const invCode = getVal("code", "code inventaire", "inventorycode") || `INV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+          const invCode = getVal("code", "code inventaire", "inventorycode") || generateNextInventoryCode(assets, i);
           const type = getVal("type", "categorie") || 'Ordinateur Portable';
           const serialNumber = getVal("n° serie", "serial", "serie", "sn", "serialnumber");
           const hostname = getVal("nom d'hote it", "nom d'hote", "hostname", "hote", "nom hote");
