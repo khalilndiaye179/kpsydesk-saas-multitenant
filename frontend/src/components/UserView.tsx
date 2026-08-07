@@ -141,6 +141,14 @@ export const UserView: React.FC = () => {
           const firstName = getVal("prenom", "firstname", "first name") || 'Collaborateur';
           const lastName = getVal("nom", "lastname", "last name") || 'Importé';
           const email = getVal("email", "e-mail", "courriel", "mail") || `user.${Date.now()}.${i}@kpsy.local`;
+          let username = getVal("nom d'utilisateur", "username", "identifiant", "user name", "pseudo");
+
+          if (!username && firstName && lastName) {
+            const cleanFirst = firstName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+            const cleanLast = lastName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+            username = `${cleanFirst}.${cleanLast}`;
+          }
+
           const position = getVal("poste", "fonction", "position", "job", "titre");
           const country = getVal("pays", "country") || 'Sénégal';
           const status = getVal("statut", "status") || 'Actif';
@@ -177,6 +185,7 @@ export const UserView: React.FC = () => {
           const payload: any = {
             firstName,
             lastName,
+            username,
             email,
             position,
             country,
@@ -493,24 +502,23 @@ export const UserView: React.FC = () => {
     if (!jspdf) {
       alert("La bibliothèque d'export PDF n'est pas chargée.");
       return;
-    }
-
     const doc = new jspdf.jsPDF('landscape');
     
     import('../pdfUtils').then(async ({ addBrandingToPdf }) => {
       let startY = 15;
       if (activeSubTab === 'users') {
         startY = await addBrandingToPdf(doc, startY, "Liste des Collaborateurs");
-        const columns = ["Nom Complet", "Email", "Poste", "Departement", "Statut", "Materiels"];
+        const columns = ["Prénom", "Nom", "Nom d'utilisateur", "Email", "Poste", "Département", "Statut"];
         const rows = filteredUsers.map(u => [
-          `${u.firstName} ${u.lastName}`,
+          u.firstName,
+          u.lastName,
+          u.username || '-',
           u.email,
           u.position || '-',
           u.department ? u.department.name : '-',
-          u.status || 'Actif',
-          u.assets ? u.assets.length.toString() : '0'
+          u.status || 'Actif'
         ]);
-        doc.autoTable({ head: [columns], body: rows, startY, theme: 'grid', styles: { fontSize: 9 } });
+        doc.autoTable({ head: [columns], body: rows, startY, theme: 'grid', styles: { fontSize: 8 } });
         doc.save("Liste_Collaborateurs.pdf");
       } else {
         startY = await addBrandingToPdf(doc, startY, "Liste des Départements");
@@ -657,38 +665,41 @@ export const UserView: React.FC = () => {
       <div className="module-container">
         {activeSubTab === 'users' ? (
           <>
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.25rem 0.75rem', width: '300px' }}>
-                <i className="ph ph-magnifying-glass" style={{ color: 'var(--text-muted)' }}></i>
-                <input 
-                  type="text" 
-                  placeholder="Rechercher un utilisateur..." 
-                  value={search} 
-                  onChange={(e) => setSearch(e.target.value)} 
-                  style={{ background: 'transparent', border: 'none', color: 'white', outline: 'none', width: '100%' }}
-                />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
+                  <i className="ph ph-magnifying-glass" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}></i>
+                  <input 
+                    type="text" 
+                    placeholder="Rechercher par nom, email, poste..." 
+                    value={search} 
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{ width: '100%', paddingLeft: '38px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', color: 'white', height: '38px' }}
+                  />
+                </div>
+                <select 
+                  value={filterDept} 
+                  onChange={(e) => setFilterDept(e.target.value)}
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white' }}
+                >
+                  <option value="">Tous les départements</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
               </div>
-              <select 
-                value={filterDept} 
-                onChange={(e) => setFilterDept(e.target.value)}
-                style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white' }}
-              >
-                <option value="">Tous les départements</option>
-                {departments.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
             </div>
 
             <div className="table-responsive">
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Utilisateur</th>
+                    <th>Prénom</th>
+                    <th>Nom</th>
+                    <th>Nom d'utilisateur</th>
+                    <th>E-mail</th>
                     <th>Département</th>
                     <th>Poste</th>
-                    <th>Pays</th>
-                    <th>Date d'entrée</th>
                     <th>Matériel Assigné</th>
                     <th>État</th>
                     <th>Actions</th>
@@ -697,21 +708,17 @@ export const UserView: React.FC = () => {
                 <tbody>
                   {filteredUsers.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun utilisateur trouvé</td>
+                      <td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun utilisateur trouvé</td>
                     </tr>
                   ) : (
                     filteredUsers.map(user => (
                       <tr key={user.id}>
-                        <td>
-                          <div>
-                            <strong>{`${user.firstName} ${user.lastName}`}</strong>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user.email} | @{user.username || 'n/a'}</div>
-                          </div>
-                        </td>
+                        <td><strong>{user.firstName}</strong></td>
+                        <td><strong>{user.lastName}</strong></td>
+                        <td><code style={{ fontSize: '0.82rem', color: '#38bdf8' }}>@{user.username || 'n/a'}</code></td>
+                        <td><a href={`mailto:${user.email}`} style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>{user.email}</a></td>
                         <td>{user.department ? user.department.name : '-'}</td>
                         <td>{user.position || '-'}</td>
-                        <td>{user.country || '-'}</td>
-                        <td>{user.entryDate ? new Date(user.entryDate).toLocaleDateString() : '-'}</td>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {user.assets && user.assets.length > 0 ? (
