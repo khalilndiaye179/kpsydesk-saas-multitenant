@@ -377,12 +377,29 @@ export const AssetView: React.FC = () => {
   };
 
   const handleBulkDelete = async () => {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer les ${selectedIds.length} équipements sélectionnés ?`)) {
-      try {
-        await Promise.all(selectedIds.map(id => api.delete(`/assets/${id}?performedBy=admin`)));
-        setSelectedIds([]);
-        fetchAllData();
-      } catch (err: any) { const msg = err.response?.data?.message || err.message || "Erreur inconnue"; alert("Erreur lors de la suppression groupée : " + msg); }
+    if (confirm(`Êtes-vous sûr de vouloir supprimer les ${selectedIds.length} équipement(s) sélectionné(s) ?`)) {
+      let successCount = 0;
+      for (const id of selectedIds) {
+        if (id.startsWith('offline-')) {
+          // Supprimer du stockage hors-ligne local
+          const remainingUnsynced = localUnsyncedAssets.filter(a => a.id !== id);
+          setLocalUnsyncedAssets(remainingUnsynced);
+          localStorage.setItem('kpsy_unsynced_scans', JSON.stringify(remainingUnsynced));
+          successCount++;
+        } else {
+          try {
+            await api.delete(`/assets/${id}?performedBy=admin`);
+            successCount++;
+          } catch (err) {
+            console.warn(`Impossible de supprimer l'actif ${id}`, err);
+          }
+        }
+      }
+      setSelectedIds([]);
+      fetchAllData();
+      if (successCount > 0) {
+        alert(`✓ ${successCount} équipement(s) supprimé(s) avec succès.`);
+      }
     }
   };
 
