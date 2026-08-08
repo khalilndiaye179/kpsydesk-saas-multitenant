@@ -8,6 +8,7 @@ interface Asset {
   name: string;
   type: string;
   status: string;
+  hostname?: string;
 }
 
 interface Department {
@@ -1023,9 +1024,14 @@ export const UserView: React.FC = () => {
                   required
                 >
                   <option value="">Sélectionner un équipement...</option>
-                  {freeAssets.map(a => (
-                    <option key={a.id} value={a.id}>{`${a.inventoryCode} - ${a.name} (${a.type})`}</option>
-                  ))}
+                  {freeAssets.map(a => {
+                    const hostLabel = a.hostname ? ` [Hôte: ${a.hostname}]` : '';
+                    return (
+                      <option key={a.id} value={a.id}>
+                        {`${a.inventoryCode} - ${a.name}${hostLabel} (${a.type})`}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
