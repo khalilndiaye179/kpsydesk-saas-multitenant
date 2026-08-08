@@ -579,7 +579,17 @@ export const AssetView: React.FC = () => {
           }
 
           const invCode = getVal("code", "code inventaire", "inventorycode") || generateNextInventoryCode(assets, i);
-          const type = getVal("type", "categorie") || 'Ordinateur Portable';
+          let type = getVal("type", "categorie");
+          if (!type) {
+            const checkStr = `${brand || ''} ${modelStr || ''} ${genericName || ''}`.toLowerCase();
+            if (checkStr.includes('macbook air')) type = 'MacBook Air';
+            else if (checkStr.includes('macbook pro')) type = 'MacBook Pro';
+            else if (checkStr.includes('imac')) type = 'iMac';
+            else if (checkStr.includes('mac mini')) type = 'Mac mini';
+            else if (checkStr.includes('ipad')) type = 'iPad';
+            else if (checkStr.includes('iphone')) type = 'iPhone';
+            else type = 'Ordinateur Portable';
+          }
           const serialNumber = getVal("n° serie", "serial", "serie", "sn", "serialnumber");
           const hostname = getVal("nom d'hote it", "nom d'hote", "hostname", "hote", "nom hote");
           const country = getVal("pays", "country") || 'Sénégal';
@@ -819,6 +829,15 @@ export const AssetView: React.FC = () => {
               style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white', flex: '1 1 120px' }}
             >
               <option value="">Tous les types</option>
+              <optgroup label="── Produits Apple 🍎 ──">
+                <option value="MacBook Air">MacBook Air</option>
+                <option value="MacBook Pro">MacBook Pro</option>
+                <option value="iMac">iMac</option>
+                <option value="Mac mini">Mac mini</option>
+                <option value="Mac Studio / Pro">Mac Studio / Mac Pro</option>
+                <option value="iPad">iPad / iPad Pro</option>
+                <option value="iPhone">iPhone</option>
+              </optgroup>
               <optgroup label="── Informatique ──">
                 <option value="Ordinateur Portable">Ordinateur Portable</option>
                 <option value="Ordinateur de Bureau">Ordinateur de Bureau</option>
@@ -827,8 +846,18 @@ export const AssetView: React.FC = () => {
                 <option value="Tablette">Tablette</option>
               </optgroup>
               <optgroup label="── Téléphonie ──">
+                <option value="Téléphone Portable">Téléphone Portable</option>
                 <option value="Smartphone">Smartphone</option>
                 <option value="Téléphone IP">Téléphone IP (VoIP)</option>
+              </optgroup>
+              <optgroup label="── Réseau & Périphériques ──">
+                <option value="Switch Réseau">Switch Réseau</option>
+                <option value="Routeur">Routeur</option>
+                <option value="Point d'accès WiFi">Point d'accès WiFi</option>
+                <option value="Imprimante">Imprimante</option>
+                <option value="Imprimante Multifonction">Imprimante Multifonction</option>
+                <option value="Écran">Écran / Moniteur</option>
+                <option value="Onduleur">Onduleur (UPS)</option>
               </optgroup>
               <option value="Autre">Autre</option>
             </select>
@@ -1023,6 +1052,16 @@ export const AssetView: React.FC = () => {
                     onChange={e => setFormFields({...formFields, type: e.target.value})} 
                     style={{ width: '100%', padding: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'white', borderRadius: '6px' }}
                   >
+                    <optgroup label="── Produits Apple 🍎 ──">
+                      <option value="MacBook Air">MacBook Air</option>
+                      <option value="MacBook Pro">MacBook Pro</option>
+                      <option value="iMac">iMac</option>
+                      <option value="Mac mini">Mac mini</option>
+                      <option value="Mac Studio / Pro">Mac Studio / Mac Pro</option>
+                      <option value="iPad">iPad / iPad Air / iPad Pro</option>
+                      <option value="iPhone">iPhone</option>
+                      <option value="Apple Watch">Apple Watch</option>
+                    </optgroup>
                     <optgroup label="── Informatique ──">
                       <option value="Ordinateur Portable">Ordinateur Portable</option>
                       <option value="Ordinateur de Bureau">Ordinateur de Bureau</option>
