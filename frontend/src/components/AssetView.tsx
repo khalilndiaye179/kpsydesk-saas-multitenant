@@ -1216,6 +1216,7 @@ export const AssetView: React.FC = () => {
                         </button>
                       </div>
                     </div>
+                  )}
                 </div>
               );
             })
