@@ -53,10 +53,17 @@ export const AssetView: React.FC = () => {
   const isUser = currentUser && currentUser.role === 'USER';
   const isReadOnly = isRH || isUser;
   
-  // Filters
+  // Filters multi-colonnes
   const [filterType, setFilterType] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterCountry, setFilterCountry] = useState<string>('');
+  const [filterLocation, setFilterLocation] = useState<string>('');
+  const [filterUserAssignment, setFilterUserAssignment] = useState<string>('');
+  const [filterWarranty, setFilterWarranty] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Vue principale (Tableau vs Dashboard Statistiques & Analyses)
+  const [activeMainView, setActiveMainView] = useState<'table' | 'analytics'>('table');
 
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -691,16 +698,88 @@ export const AssetView: React.FC = () => {
     e.target.value = '';
   };
 
+  // Extraction dynamique de la liste des pays et emplacements uniques pour les filtres
+  const uniqueCountries = Array.from(new Set(assets.map(a => a.country).filter(Boolean))) as string[];
+
   const filteredAssets = assets.filter(asset => {
-    const matchesSearch = asset.inventoryCode.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          asset.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (asset.serialNumber && asset.serialNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (asset.hostname && asset.hostname.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (asset.country && asset.country.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (asset.notes && asset.notes.toLowerCase().includes(searchTerm.toLowerCase()));
+    const term = searchTerm.toLowerCase().trim();
+    const matchesSearch = !term || 
+      asset.inventoryCode.toLowerCase().includes(term) || 
+      asset.name.toLowerCase().includes(term) || 
+      (asset.serialNumber && asset.serialNumber.toLowerCase().includes(term)) ||
+      (asset.hostname && asset.hostname.toLowerCase().includes(term)) ||
+      (asset.country && asset.country.toLowerCase().includes(term)) ||
+      (asset.notes && asset.notes.toLowerCase().includes(term)) ||
+      (asset.manufacturer && asset.manufacturer.toLowerCase().includes(term)) ||
+      (asset.model && asset.model.toLowerCase().includes(term)) ||
+      (asset.user && `${asset.user.firstName} ${asset.user.lastName}`.toLowerCase().includes(term)) ||
+      (asset.location && asset.location.name.toLowerCase().includes(term));
+
     const matchesType = filterType === '' || asset.type === filterType;
     const matchesStatus = filterStatus === '' || asset.status === filterStatus;
-    return matchesSearch && matchesType && matchesStatus;
+    const matchesCountry = filterCountry === '' || asset.country === filterCountry;
+    const matchesLocation = filterLocation === '' || asset.locationId === filterLocation;
+
+    let matchesUserAssignment = true;
+    if (filterUserAssignment === 'ASSIGNED') matchesUserAssignment = !!asset.userId;
+    else if (filterUserAssignment === 'UNASSIGNED') matchesUserAssignment = !asset.userId;
+    else if (filterUserAssignment !== '') matchesUserAssignment = asset.userId === filterUserAssignment;
+
+    let matchesWarranty = true;
+    if (filterWarranty !== '') {
+      const isExpired = asset.warrantyEnd ? new Date(asset.warrantyEnd) < new Date() : false;
+      if (filterWarranty === 'ACTIVE') matchesWarranty = !isExpired;
+      else if (filterWarranty === 'EXPIRED') matchesWarranty = isExpired;
+    }
+
+    return matchesSearch && matchesType && matchesStatus && matchesCountry && matchesLocation && matchesUserAssignment && matchesWarranty;
+  });
+
+  const resetAllFilters = () => {
+    setSearchTerm('');
+    setFilterType('');
+    setFilterStatus('');
+    setFilterCountry('');
+    setFilterLocation('');
+    setFilterUserAssignment('');
+    setFilterWarranty('');
+  };
+
+  // ── AGRÉGATIONS ET STATISTIQUES DU PARC INFORMATIQUE ──
+  const totalAssetsCount = assets.length;
+  const assignedAssetsCount = assets.filter(a => a.status === 'ASSIGNED').length;
+  const inStockAssetsCount = assets.filter(a => a.status === 'IN_STOCK').length;
+  const maintenanceAssetsCount = assets.filter(a => a.status === 'IN_MAINTENANCE' || a.status === 'BROKEN').length;
+  
+  const activeWarrantyCount = assets.filter(a => !a.warrantyEnd || new Date(a.warrantyEnd) >= new Date()).length;
+  const expiredWarrantyCount = assets.filter(a => a.warrantyEnd && new Date(a.warrantyEnd) < new Date()).length;
+
+  // Groupements par Marque / Constructeur
+  const brandStats: { [key: string]: number } = {};
+  assets.forEach(a => {
+    const brand = a.manufacturer || 'Inconnu / Non spécifié';
+    brandStats[brand] = (brandStats[brand] || 0) + 1;
+  });
+
+  // Groupements par Type
+  const typeStats: { [key: string]: number } = {};
+  assets.forEach(a => {
+    const type = a.type || 'Autre';
+    typeStats[type] = (typeStats[type] || 0) + 1;
+  });
+
+  // Groupements par Pays
+  const countryStats: { [key: string]: number } = {};
+  assets.forEach(a => {
+    const country = a.country || 'Sénégal';
+    countryStats[country] = (countryStats[country] || 0) + 1;
+  });
+
+  // Groupements par Site / Emplacement
+  const locationStats: { [key: string]: number } = {};
+  assets.forEach(a => {
+    const locName = a.location ? a.location.name : 'Non spécifié';
+    locationStats[locName] = (locationStats[locName] || 0) + 1;
   });
 
   return (
@@ -810,77 +889,192 @@ export const AssetView: React.FC = () => {
       </div>
 
       <div className="module-container">
-        {/* RECHERCHE ET FILTRES */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', width: '100%' }}>
-            <div style={{ display: 'flex', flex: '1 1 200px', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem 0.75rem' }}>
-              <i className="ph ph-magnifying-glass" style={{ color: 'var(--text-muted)' }}></i>
-              <input 
-                type="text" 
-                placeholder="Rechercher code, n° série..." 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                style={{ background: 'transparent', border: 'none', color: 'white', outline: 'none', width: '100%' }}
-              />
-            </div>
-            <select 
-              value={filterType} 
-              onChange={(e) => setFilterType(e.target.value)}
-              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white', flex: '1 1 120px' }}
-            >
-              <option value="">Tous les types</option>
-              <optgroup label="── Produits Apple 🍎 ──">
-                <option value="MacBook Air">MacBook Air</option>
-                <option value="MacBook Pro">MacBook Pro</option>
-                <option value="iMac">iMac</option>
-                <option value="Mac mini">Mac mini</option>
-                <option value="Mac Studio / Pro">Mac Studio / Mac Pro</option>
-                <option value="iPad">iPad / iPad Pro</option>
-                <option value="iPhone">iPhone</option>
-              </optgroup>
-              <optgroup label="── Informatique ──">
-                <option value="Ordinateur Portable">Ordinateur Portable</option>
-                <option value="Ordinateur de Bureau">Ordinateur de Bureau</option>
-                <option value="Serveur">Serveur</option>
-                <option value="Station de Travail">Station de Travail</option>
-                <option value="Tablette">Tablette</option>
-              </optgroup>
-              <optgroup label="── Téléphonie ──">
-                <option value="Téléphone Portable">Téléphone Portable</option>
-                <option value="Smartphone">Smartphone</option>
-                <option value="Téléphone IP">Téléphone IP (VoIP)</option>
-              </optgroup>
-              <optgroup label="── Réseau & Périphériques ──">
-                <option value="Switch Réseau">Switch Réseau</option>
-                <option value="Routeur">Routeur</option>
-                <option value="Point d'accès WiFi">Point d'accès WiFi</option>
-                <option value="Imprimante">Imprimante</option>
-                <option value="Imprimante Multifonction">Imprimante Multifonction</option>
-                <option value="Écran">Écran / Moniteur</option>
-                <option value="Onduleur">Onduleur (UPS)</option>
-              </optgroup>
-              <option value="Autre">Autre</option>
-            </select>
-            <select 
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value)}
-              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white', flex: '1 1 120px' }}
-            >
-              <option value="">Tous les statuts</option>
-              <option value="IN_STOCK">En Stock</option>
-              <option value="ASSIGNED">Assigné (Actif)</option>
-              <option value="BROKEN">En panne</option>
-              <option value="IN_MAINTENANCE">En maintenance</option>
-              <option value="RETIRED">Réformé</option>
-            </select>
-          </div>
+      {/* MENU D'ONGLETS PRINCIPAUX : INVENTAIRE VS ANALYSES & STATISTIQUES */}
+      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem', paddingLeft: '0.5rem' }}>
+        <button 
+          onClick={() => setActiveMainView('table')} 
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            borderBottom: activeMainView === 'table' ? '3px solid var(--accent-primary)' : '3px solid transparent', 
+            color: activeMainView === 'table' ? 'var(--text-primary)' : 'var(--text-muted)', 
+            paddingBottom: '0.75rem', 
+            fontWeight: 700, 
+            cursor: 'pointer',
+            fontSize: '1.05rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <i className="ph ph-desktop" style={{ fontSize: '1.2rem', color: activeMainView === 'table' ? '#38bdf8' : 'inherit' }}></i>
+          Inventaire & Liste Actifs ({filteredAssets.length})
+        </button>
+        <button 
+          onClick={() => setActiveMainView('analytics')} 
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            borderBottom: activeMainView === 'analytics' ? '3px solid var(--accent-primary)' : '3px solid transparent', 
+            color: activeMainView === 'analytics' ? 'var(--text-primary)' : 'var(--text-muted)', 
+            paddingBottom: '0.75rem', 
+            fontWeight: 700, 
+            cursor: 'pointer',
+            fontSize: '1.05rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <i className="ph ph-chart-pie-slice" style={{ fontSize: '1.2rem', color: activeMainView === 'analytics' ? '#4ba32b' : 'inherit' }}></i>
+          Analyses & Statistiques Parc
+        </button>
+      </div>
 
-          {!isReadOnly && selectedIds.length > 0 && (
-            <button className="btn-primary" style={{ backgroundColor: 'var(--danger)', alignSelf: 'flex-start' }} onClick={handleBulkDelete}>
-              <i className="ph ph-trash"></i> Supprimer sélectionnés ({selectedIds.length})
-            </button>
-          )}
-        </div>
+      <div className="module-container">
+        {activeMainView === 'table' ? (
+          <>
+            {/* BARRE DE FILTRAGE MULTI-CRITÈRES AVANCÉE PAR COLONNE */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <i className="ph ph-funnel" /> Filtrage avancé multi-colonnes :
+              </div>
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', width: '100%' }}>
+                {/* 1. Recherche globale (Code, Nom, Serie, Hote...) */}
+                <div style={{ display: 'flex', flex: '1 1 220px', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem 0.75rem' }}>
+                  <i className="ph ph-magnifying-glass" style={{ color: 'var(--text-muted)' }}></i>
+                  <input 
+                    type="text" 
+                    placeholder="Code, n° série, nom d'hôte IT..." 
+                    value={searchTerm} 
+                    onChange={(e) => setSearchTerm(e.target.value)} 
+                    style={{ background: 'transparent', border: 'none', color: 'white', outline: 'none', width: '100%' }}
+                  />
+                </div>
+
+                {/* 2. Filtre Type */}
+                <select 
+                  value={filterType} 
+                  onChange={(e) => setFilterType(e.target.value)}
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white', flex: '1 1 140px' }}
+                >
+                  <option value="">Tous les types</option>
+                  <optgroup label="── Produits Apple 🍎 ──">
+                    <option value="MacBook Air">MacBook Air</option>
+                    <option value="MacBook Pro">MacBook Pro</option>
+                    <option value="iMac">iMac</option>
+                    <option value="Mac mini">Mac mini</option>
+                    <option value="Mac Studio / Pro">Mac Studio / Mac Pro</option>
+                    <option value="iPad">iPad / iPad Pro</option>
+                    <option value="iPhone">iPhone</option>
+                  </optgroup>
+                  <optgroup label="── Informatique ──">
+                    <option value="Ordinateur Portable">Ordinateur Portable</option>
+                    <option value="Ordinateur de Bureau">Ordinateur de Bureau</option>
+                    <option value="Serveur">Serveur</option>
+                    <option value="Station de Travail">Station de Travail</option>
+                    <option value="Tablette">Tablette</option>
+                  </optgroup>
+                  <optgroup label="── Téléphonie ──">
+                    <option value="Téléphone Portable">Téléphone Portable</option>
+                    <option value="Smartphone">Smartphone</option>
+                    <option value="Téléphone IP">Téléphone IP (VoIP)</option>
+                  </optgroup>
+                  <optgroup label="── Réseau & Périphériques ──">
+                    <option value="Switch Réseau">Switch Réseau</option>
+                    <option value="Routeur">Routeur</option>
+                    <option value="Point d'accès WiFi">Point d'accès WiFi</option>
+                    <option value="Imprimante">Imprimante</option>
+                    <option value="Imprimante Multifonction">Imprimante Multifonction</option>
+                    <option value="Écran">Écran / Moniteur</option>
+                    <option value="Onduleur">Onduleur (UPS)</option>
+                  </optgroup>
+                  <option value="Autre">Autre</option>
+                </select>
+
+                {/* 3. Filtre État / Statut */}
+                <select 
+                  value={filterStatus} 
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white', flex: '1 1 130px' }}
+                >
+                  <option value="">Tous les états</option>
+                  <option value="IN_STOCK">En Stock</option>
+                  <option value="ASSIGNED">Assigné (Actif)</option>
+                  <option value="BROKEN">En panne</option>
+                  <option value="IN_MAINTENANCE">En maintenance</option>
+                  <option value="RETIRED">Réformé</option>
+                </select>
+
+                {/* 4. Filtre Pays */}
+                <select 
+                  value={filterCountry} 
+                  onChange={(e) => setFilterCountry(e.target.value)}
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white', flex: '1 1 120px' }}
+                >
+                  <option value="">Tous les pays</option>
+                  {uniqueCountries.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+
+                {/* 5. Filtre Site / Emplacement */}
+                <select 
+                  value={filterLocation} 
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white', flex: '1 1 140px' }}
+                >
+                  <option value="">Tous les sites</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name}</option>
+                  ))}
+                </select>
+
+                {/* 6. Filtre Assignation / Collaborateur */}
+                <select 
+                  value={filterUserAssignment} 
+                  onChange={(e) => setFilterUserAssignment(e.target.value)}
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white', flex: '1 1 140px' }}
+                >
+                  <option value="">Tous les collaborateurs</option>
+                  <option value="ASSIGNED">Sur le terrain (Assigné)</option>
+                  <option value="UNASSIGNED">Non assigné (Libre)</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{`${u.firstName} ${u.lastName}`}</option>
+                  ))}
+                </select>
+
+                {/* 7. Filtre Garantie */}
+                <select 
+                  value={filterWarranty} 
+                  onChange={(e) => setFilterWarranty(e.target.value)}
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius)', padding: '0.5rem', color: 'white', flex: '1 1 130px' }}
+                >
+                  <option value="">Toutes garanties</option>
+                  <option value="ACTIVE">Sous Garantie Active</option>
+                  <option value="EXPIRED">Garantie Expirée</option>
+                </select>
+
+                {/* Bouton de Réinitialisation */}
+                {(searchTerm || filterType || filterStatus || filterCountry || filterLocation || filterUserAssignment || filterWarranty) && (
+                  <button 
+                    onClick={resetAllFilters}
+                    style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#ef4444', padding: '0.5rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <i className="ph ph-x" /> Effacer filtres
+                  </button>
+                )}
+              </div>
+
+              {!isReadOnly && selectedIds.length > 0 && (
+                <button className="btn-primary" style={{ backgroundColor: 'var(--danger)', alignSelf: 'flex-start', marginTop: '10px' }} onClick={handleBulkDelete}>
+                  <i className="ph ph-trash"></i> Supprimer sélectionnés ({selectedIds.length})
+                </button>
+              )}
+            </div>
 
         {/* ── RENDU TABLEAU (DESKTOP / TABLETTE) ── */}
         <div className="table-responsive hide-on-mobile-block">
@@ -1011,12 +1205,214 @@ export const AssetView: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  )}
                 </div>
               );
             })
           )}
         </div>
+      </div>
+    </>
+  ) : (
+          /* ── DASHBOARD D'ANALYSES, DONNÉES ET STATISTIQUES DU PARC INFORMATIQUE ── */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            
+            {/* 1. CARTES KPI / CHIFFRES CLÉS GLOBAUX */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              
+              <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Total Actifs IT</span>
+                  <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8' }}>
+                    <i className="ph ph-desktop" style={{ fontSize: '1.4rem' }} />
+                  </div>
+                </div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--text-primary)' }}>{totalAssetsCount}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Matériels recensés dans le parc</div>
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Taux Déploiement (Terrain)</span>
+                  <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981' }}>
+                    <i className="ph ph-user-check" style={{ fontSize: '1.4rem' }} />
+                  </div>
+                </div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#10b981' }}>
+                  {assignedAssetsCount} <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-muted)' }}>({totalAssetsCount > 0 ? Math.round((assignedAssetsCount / totalAssetsCount) * 100) : 0}%)</span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Équipements assignés aux collaborateurs</div>
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>En Stock (Disponible)</span>
+                  <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(168, 85, 247, 0.15)', color: '#a855f7' }}>
+                    <i className="ph ph-archive-box" style={{ fontSize: '1.4rem' }} />
+                  </div>
+                </div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#a855f7' }}>
+                  {inStockAssetsCount} <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-muted)' }}>({totalAssetsCount > 0 ? Math.round((inStockAssetsCount / totalAssetsCount) * 100) : 0}%)</span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Prêts pour affectation immédiate</div>
+              </div>
+
+              <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Maintenance / Pannes</span>
+                  <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' }}>
+                    <i className="ph ph-wrench" style={{ fontSize: '1.4rem' }} />
+                  </div>
+                </div>
+                <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#ef4444' }}>{maintenanceAssetsCount}</div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Matériels nécessitant réparation ou réforme</div>
+              </div>
+
+            </div>
+
+            {/* 2. ÉTAT DES GARANTIES & SANTÉ DU PARC */}
+            <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '24px' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <i className="ph ph-shield-check" style={{ color: '#34d399' }} /> Santé des Garanties Constructeurs
+              </h3>
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'center' }}>
+                <div style={{ flex: '1 1 250px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
+                    <span>Sous garantie active : <strong>{activeWarrantyCount}</strong></span>
+                    <span style={{ color: '#10b981', fontWeight: 700 }}>{totalAssetsCount > 0 ? Math.round((activeWarrantyCount / totalAssetsCount) * 100) : 0}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '10px', backgroundColor: 'var(--bg-primary)', borderRadius: '5px', overflow: 'hidden' }}>
+                    <div style={{ width: `${totalAssetsCount > 0 ? (activeWarrantyCount / totalAssetsCount) * 100 : 0}%`, height: '100%', backgroundColor: '#10b981', borderRadius: '5px' }} />
+                  </div>
+                </div>
+
+                <div style={{ flex: '1 1 250px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px' }}>
+                    <span>Garantie expirée : <strong>{expiredWarrantyCount}</strong></span>
+                    <span style={{ color: '#ef4444', fontWeight: 700 }}>{totalAssetsCount > 0 ? Math.round((expiredWarrantyCount / totalAssetsCount) * 100) : 0}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '10px', backgroundColor: 'var(--bg-primary)', borderRadius: '5px', overflow: 'hidden' }}>
+                    <div style={{ width: `${totalAssetsCount > 0 ? (expiredWarrantyCount / totalAssetsCount) * 100 : 0}%`, height: '100%', backgroundColor: '#ef4444', borderRadius: '5px' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. GRILLES DES RÉPARTITIONS STATISTIQUES */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+              
+              {/* Répartition par Marque / Fabricant */}
+              <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 16px 0', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="ph ph-apple-logo" /> Répartition par Marque / Fabricant
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {Object.entries(brandStats).length === 0 ? (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Aucune donnée</div>
+                  ) : (
+                    Object.entries(brandStats).sort((a, b) => b[1] - a[1]).map(([brand, count]) => {
+                      const pct = Math.round((count / totalAssetsCount) * 100);
+                      return (
+                        <div key={brand}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                            <span><strong>{brand}</strong></span>
+                            <span>{count} ({pct}%)</span>
+                          </div>
+                          <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', backgroundColor: '#38bdf8', borderRadius: '4px' }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Répartition par Type d'Équipement */}
+              <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 16px 0', color: '#a855f7', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="ph ph-laptop" /> Répartition par Type de matériel
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {Object.entries(typeStats).length === 0 ? (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Aucune donnée</div>
+                  ) : (
+                    Object.entries(typeStats).sort((a, b) => b[1] - a[1]).map(([tName, count]) => {
+                      const pct = Math.round((count / totalAssetsCount) * 100);
+                      return (
+                        <div key={tName}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                            <span><strong>{tName}</strong></span>
+                            <span>{count} ({pct}%)</span>
+                          </div>
+                          <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', backgroundColor: '#a855f7', borderRadius: '4px' }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Répartition par Pays */}
+              <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 16px 0', color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="ph ph-globe-hemisphere-west" /> Répartition Géographique (Pays)
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {Object.entries(countryStats).length === 0 ? (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Aucune donnée</div>
+                  ) : (
+                    Object.entries(countryStats).sort((a, b) => b[1] - a[1]).map(([country, count]) => {
+                      const pct = Math.round((count / totalAssetsCount) * 100);
+                      return (
+                        <div key={country}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                            <span><strong>{country}</strong></span>
+                            <span>{count} ({pct}%)</span>
+                          </div>
+                          <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', backgroundColor: '#f59e0b', borderRadius: '4px' }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Répartition par Site / Emplacement */}
+              <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '20px' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: '0 0 16px 0', color: '#10b981', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="ph ph-buildings" /> Répartition par Site / Emplacement
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {Object.entries(locationStats).length === 0 ? (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Aucune donnée</div>
+                  ) : (
+                    Object.entries(locationStats).sort((a, b) => b[1] - a[1]).map(([locName, count]) => {
+                      const pct = Math.round((count / totalAssetsCount) * 100);
+                      return (
+                        <div key={locName}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                            <span><strong>{locName}</strong></span>
+                            <span>{count} ({pct}%)</span>
+                          </div>
+                          <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', backgroundColor: '#10b981', borderRadius: '4px' }} />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
