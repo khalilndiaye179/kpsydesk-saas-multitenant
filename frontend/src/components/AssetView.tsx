@@ -889,53 +889,52 @@ export const AssetView: React.FC = () => {
       </div>
 
       <div className="module-container">
-      {/* MENU D'ONGLETS PRINCIPAUX : INVENTAIRE VS ANALYSES & STATISTIQUES */}
-      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem', paddingLeft: '0.5rem' }}>
-        <button 
-          onClick={() => setActiveMainView('table')} 
-          style={{ 
-            background: 'none', 
-            border: 'none', 
-            borderBottom: activeMainView === 'table' ? '3px solid var(--accent-primary)' : '3px solid transparent', 
-            color: activeMainView === 'table' ? 'var(--text-primary)' : 'var(--text-muted)', 
-            paddingBottom: '0.75rem', 
-            fontWeight: 700, 
-            cursor: 'pointer',
-            fontSize: '1.05rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <i className="ph ph-desktop" style={{ fontSize: '1.2rem', color: activeMainView === 'table' ? '#38bdf8' : 'inherit' }}></i>
-          Inventaire & Liste Actifs ({filteredAssets.length})
-        </button>
-        <button 
-          onClick={() => setActiveMainView('analytics')} 
-          style={{ 
-            background: 'none', 
-            border: 'none', 
-            borderBottom: activeMainView === 'analytics' ? '3px solid var(--accent-primary)' : '3px solid transparent', 
-            color: activeMainView === 'analytics' ? 'var(--text-primary)' : 'var(--text-muted)', 
-            paddingBottom: '0.75rem', 
-            fontWeight: 700, 
-            cursor: 'pointer',
-            fontSize: '1.05rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          <i className="ph ph-chart-pie-slice" style={{ fontSize: '1.2rem', color: activeMainView === 'analytics' ? '#4ba32b' : 'inherit' }}></i>
-          Analyses & Statistiques Parc
-        </button>
-      </div>
+        {/* MENU D'ONGLETS PRINCIPAUX : INVENTAIRE VS ANALYSES & STATISTIQUES */}
+        <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem', paddingLeft: '0.5rem' }}>
+          <button 
+            onClick={() => setActiveMainView('table')} 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              borderBottom: activeMainView === 'table' ? '3px solid var(--accent-primary)' : '3px solid transparent', 
+              color: activeMainView === 'table' ? 'var(--text-primary)' : 'var(--text-muted)', 
+              paddingBottom: '0.75rem', 
+              fontWeight: 700, 
+              cursor: 'pointer',
+              fontSize: '1.05rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <i className="ph ph-desktop" style={{ fontSize: '1.2rem', color: activeMainView === 'table' ? '#38bdf8' : 'inherit' }}></i>
+            Inventaire & Liste Actifs ({filteredAssets.length})
+          </button>
+          <button 
+            onClick={() => setActiveMainView('analytics')} 
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              borderBottom: activeMainView === 'analytics' ? '3px solid var(--accent-primary)' : '3px solid transparent', 
+              color: activeMainView === 'analytics' ? 'var(--text-primary)' : 'var(--text-muted)', 
+              paddingBottom: '0.75rem', 
+              fontWeight: 700, 
+              cursor: 'pointer',
+              fontSize: '1.05rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <i className="ph ph-chart-pie-slice" style={{ fontSize: '1.2rem', color: activeMainView === 'analytics' ? '#4ba32b' : 'inherit' }}></i>
+            Analyses & Statistiques Parc
+          </button>
+        </div>
 
-      <div className="module-container">
         {activeMainView === 'table' ? (
-          <>
+          <div>
             {/* BARRE DE FILTRAGE MULTI-CRITÈRES AVANCÉE PAR COLONNE */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
               <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1211,7 +1210,6 @@ export const AssetView: React.FC = () => {
           )}
         </div>
       </div>
-    </>
   ) : (
           /* ── DASHBOARD D'ANALYSES, DONNÉES ET STATISTIQUES DU PARC INFORMATIQUE ── */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
