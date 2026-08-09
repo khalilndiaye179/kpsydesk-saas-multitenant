@@ -797,28 +797,61 @@ export const AssetView: React.FC = () => {
     setFilterDuplicatesOnly(false);
   };
 
-  // 🧹 PURGE ET SUPPRESSION AUTOMATIQUE DES DOUBLONS DE NOM D'HÔTE
+  // 🧹 PURGE ET SUPPRESSION AUTOMATIQUE DES DOUBLONS DE NOM D'HÔTE (AVEC PROTECTION DES COMMENTAIRES)
   const handlePurgeDuplicateHostnames = async () => {
-    const seenHostnames = new Map<string, string>();
-    const duplicateIdsToDelete: string[] = [];
-
+    const groups = new Map<string, Asset[]>();
     assets.forEach(a => {
       if (a.hostname && a.hostname.trim() !== '' && a.hostname.trim() !== '-') {
         const cleanHost = a.hostname.trim().toLowerCase();
-        if (!seenHostnames.has(cleanHost)) {
-          seenHostnames.set(cleanHost, a.id);
-        } else {
-          duplicateIdsToDelete.push(a.id);
+        if (!groups.has(cleanHost)) groups.set(cleanHost, []);
+        groups.get(cleanHost)!.push(a);
+      }
+    });
+
+    const duplicateIdsToDelete: string[] = [];
+    let skippedWithNotesCount = 0;
+
+    groups.forEach((groupAssets) => {
+      if (groupAssets.length > 1) {
+        // Trier pour prioriser la conservation des actifs avec commentaires
+        const sorted = [...groupAssets].sort((a, b) => {
+          const aHasNotes = a.notes && a.notes.trim() !== '' && a.notes.trim() !== '-';
+          const bHasNotes = b.notes && b.notes.trim() !== '' && b.notes.trim() !== '-';
+          if (aHasNotes && !bHasNotes) return -1;
+          if (!aHasNotes && bHasNotes) return 1;
+          return 0;
+        });
+
+        // Le 1er actif du groupe est conservé (original ou documenté)
+        for (let i = 1; i < sorted.length; i++) {
+          const candidate = sorted[i];
+          const hasNotes = candidate.notes && candidate.notes.trim() !== '' && candidate.notes.trim() !== '-';
+          
+          if (hasNotes) {
+            // 🛡️ PROTECTION : On conserve tout doublon possédant un commentaire
+            skippedWithNotesCount++;
+          } else {
+            duplicateIdsToDelete.push(candidate.id);
+          }
         }
       }
     });
 
     if (duplicateIdsToDelete.length === 0) {
-      alert("Aucun doublon de nom d'hôte IT n'a été détecté.");
+      if (skippedWithNotesCount > 0) {
+        alert(`🔒 Les ${skippedWithNotesCount} doublon(s) de nom d'hôte détectés possèdent tous des commentaires et ont été automatiquement PRÉSERVÉS !`);
+      } else {
+        alert("Aucun doublon de nom d'hôte IT à supprimer.");
+      }
       return;
     }
 
-    const confirmMsg = `⚠️ VOULEZ-VOUS SUPPRIMER ${duplicateIdsToDelete.length} DOUBLON(S) DE NOM D'HÔTE IT ?\n\nPour chaque nom d'hôte identique, le 1er équipement sera conservé et toutes les copies secondaires seront supprimées.\n\nCette action est irréversible. Confirmer la suppression ?`;
+    let noteInfoMsg = "";
+    if (skippedWithNotesCount > 0) {
+      noteInfoMsg = `\n\n🔒 Remarque : ${skippedWithNotesCount} doublon(s) avec des commentaires ont été automatiquement PRÉSERVÉS et ne seront pas supprimés.`;
+    }
+
+    const confirmMsg = `⚠️ VOULEZ-VOUS SUPPRIMER ${duplicateIdsToDelete.length} DOUBLON(S) DE NOM D'HÔTE SANS COMMENTAIRES ?\n\nPour chaque nom d'hôte identique, l'équipement d'origine (ou documenté) est conservé, et seules les copies VIDES de commentaires seront supprimées.${noteInfoMsg}\n\nConfirmer la suppression ?`;
     
     if (!confirm(confirmMsg)) return;
 
@@ -832,7 +865,7 @@ export const AssetView: React.FC = () => {
       }
     }
 
-    setImportDoneNotification(`🧹 Nettoyage terminé avec succès : ${deletedCount} doublon(s) de nom d'hôte IT ont été supprimés !`);
+    setImportDoneNotification(`🧹 Nettoyage terminé avec succès : ${deletedCount} doublon(s) sans commentaires ont été supprimés !${skippedWithNotesCount > 0 ? ` (${skippedWithNotesCount} préservé(s))` : ''}`);
     setFilterDuplicatesOnly(false);
     fetchAllData();
 
