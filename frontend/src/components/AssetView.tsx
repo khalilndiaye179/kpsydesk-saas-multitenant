@@ -542,6 +542,7 @@ export const AssetView: React.FC = () => {
         setImportProgress({ current: 0, total: totalRows, pct: 0 });
 
         let added = 0;
+        const processedCodesSet = new Set<string>(assets.map(a => (a.inventoryCode || '').toUpperCase()));
         for (let i = 0; i < json.length; i++) {
           const row = json[i];
           
@@ -585,7 +586,18 @@ export const AssetView: React.FC = () => {
             name = genericName;
           }
 
-          const invCode = getVal("code", "code inventaire", "inventorycode") || generateNextInventoryCode(assets, i);
+          // Registre dynamique des codes d'inventaire déjà traités pour éviter les doublons durant l'import
+          let invCode = getVal("code", "code inventaire", "inventorycode");
+          if (!invCode || processedCodesSet.has(invCode.toUpperCase())) {
+            invCode = generateNextInventoryCode(assets, i);
+            let counter = 1;
+            while (processedCodesSet.has(invCode.toUpperCase())) {
+              invCode = generateNextInventoryCode(assets, i + counter);
+              counter++;
+            }
+          }
+          processedCodesSet.add(invCode.toUpperCase());
+
           let type = getVal("type", "categorie");
           if (!type) {
             const checkStr = `${brand || ''} ${modelStr || ''} ${genericName || ''}`.toLowerCase();
@@ -668,8 +680,16 @@ export const AssetView: React.FC = () => {
           try {
             await api.post('/assets', payload);
             added++;
-          } catch (err) {
-            console.warn(`Erreur import ligne ${i+1}`, err);
+          } catch (err: any) {
+            // Tentative de re-essai automatique avec un code inventaire unique garanti en cas de conflit 409
+            try {
+              const fallbackCode = `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}-${i+1}`;
+              payload.inventoryCode = fallbackCode;
+              await api.post('/assets', payload);
+              added++;
+            } catch (retryErr) {
+              console.warn(`Erreur import ligne ${i+1}`, retryErr);
+            }
           }
 
           // Mise à jour de la barre de progression en temps réel
