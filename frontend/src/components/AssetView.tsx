@@ -699,21 +699,33 @@ export const AssetView: React.FC = () => {
   };
 
   // Extraction dynamique de la liste des pays et emplacements uniques pour les filtres
-  const uniqueCountries = Array.from(new Set(assets.map(a => a.country).filter(Boolean))) as string[];
+  const uniqueCountries = Array.from(new Set(assets.map(a => a?.country).filter(Boolean))) as string[];
 
   const filteredAssets = assets.filter(asset => {
+    if (!asset) return false;
     const term = searchTerm.toLowerCase().trim();
+    const invCode = (asset.inventoryCode || '').toLowerCase();
+    const name = (asset.name || '').toLowerCase();
+    const serial = (asset.serialNumber || '').toLowerCase();
+    const host = (asset.hostname || '').toLowerCase();
+    const country = (asset.country || '').toLowerCase();
+    const notes = (asset.notes || '').toLowerCase();
+    const manuf = (asset.manufacturer || '').toLowerCase();
+    const mod = (asset.model || '').toLowerCase();
+    const userName = asset.user ? `${asset.user.firstName || ''} ${asset.user.lastName || ''}`.toLowerCase() : '';
+    const locName = asset.location ? (asset.location.name || '').toLowerCase() : '';
+
     const matchesSearch = !term || 
-      asset.inventoryCode.toLowerCase().includes(term) || 
-      asset.name.toLowerCase().includes(term) || 
-      (asset.serialNumber && asset.serialNumber.toLowerCase().includes(term)) ||
-      (asset.hostname && asset.hostname.toLowerCase().includes(term)) ||
-      (asset.country && asset.country.toLowerCase().includes(term)) ||
-      (asset.notes && asset.notes.toLowerCase().includes(term)) ||
-      (asset.manufacturer && asset.manufacturer.toLowerCase().includes(term)) ||
-      (asset.model && asset.model.toLowerCase().includes(term)) ||
-      (asset.user && `${asset.user.firstName} ${asset.user.lastName}`.toLowerCase().includes(term)) ||
-      (asset.location && asset.location.name.toLowerCase().includes(term));
+      invCode.includes(term) || 
+      name.includes(term) || 
+      serial.includes(term) ||
+      host.includes(term) ||
+      country.includes(term) ||
+      notes.includes(term) ||
+      manuf.includes(term) ||
+      mod.includes(term) ||
+      userName.includes(term) ||
+      locName.includes(term);
 
     const matchesType = filterType === '' || asset.type === filterType;
     const matchesStatus = filterStatus === '' || asset.status === filterStatus;
@@ -1122,21 +1134,21 @@ export const AssetView: React.FC = () => {
                     )}
                     <td><strong>{asset.inventoryCode}</strong></td>
                     <td>
-                      {asset.manufacturer && !asset.name.toLowerCase().includes(asset.manufacturer.toLowerCase()) 
+                      {asset.manufacturer && asset.name && !asset.name.toLowerCase().includes(asset.manufacturer.toLowerCase()) 
                         ? `${asset.manufacturer} ${asset.name}` 
-                        : asset.name}
+                        : (asset.name || '-')}
                     </td>
-                    <td>{asset.type}</td>
+                    <td>{asset.type || '-'}</td>
                     <td>{asset.serialNumber || '-'}</td>
                     <td><code style={{ fontSize: '0.82rem', color: '#38bdf8' }}>{asset.hostname || '-'}</code></td>
                     <td>{asset.country || '-'}</td>
                     <td>{asset.warrantyMonths ? asset.warrantyMonths + ' mois' : '-'}</td>
                     <td>
-                      <span className={`status-badge ${asset.status.toLowerCase()}`}>
-                        {asset.status === 'ASSIGNED' ? 'Actif' : asset.status === 'IN_STOCK' ? 'En Stock' : asset.status === 'BROKEN' ? 'En Panne' : asset.status === 'IN_MAINTENANCE' ? 'Maintenance' : asset.status}
+                      <span className={`status-badge ${(asset.status || 'IN_STOCK').toLowerCase()}`}>
+                        {asset.status === 'ASSIGNED' ? 'Actif' : asset.status === 'IN_STOCK' ? 'En Stock' : asset.status === 'BROKEN' ? 'En Panne' : asset.status === 'IN_MAINTENANCE' ? 'Maintenance' : (asset.status || 'En Stock')}
                       </span>
                     </td>
-                    <td>{asset.user ? `${asset.user.firstName} ${asset.user.lastName}` : 'Non assigné'}</td>
+                    <td>{asset.user ? `${asset.user.firstName || ''} ${asset.user.lastName || ''}`.trim() : 'Non assigné'}</td>
                     <td>{asset.location ? asset.location.name : '-'}</td>
                     <td style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={asset.notes || ''}>
                       {asset.notes || '-'}
@@ -1176,8 +1188,8 @@ export const AssetView: React.FC = () => {
                 >
                   <div className="card-row">
                     <span className="card-code">{asset.inventoryCode}</span>
-                    <span className={`status-badge ${asset.status.toLowerCase()}`}>
-                      {asset.status === 'ASSIGNED' ? 'Actif' : asset.status === 'IN_STOCK' ? 'En Stock' : asset.status === 'BROKEN' ? 'En Panne' : asset.status}
+                    <span className={`status-badge ${(asset.status || 'IN_STOCK').toLowerCase()}`}>
+                      {asset.status === 'ASSIGNED' ? 'Actif' : asset.status === 'IN_STOCK' ? 'En Stock' : asset.status === 'BROKEN' ? 'En Panne' : (asset.status || 'En Stock')}
                     </span>
                   </div>
                   <div className="card-title" style={{ marginTop: '4px' }}>{asset.name}</div>
