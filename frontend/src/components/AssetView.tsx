@@ -60,6 +60,7 @@ export const AssetView: React.FC = () => {
   const [filterLocation, setFilterLocation] = useState<string>('');
   const [filterUserAssignment, setFilterUserAssignment] = useState<string>('');
   const [filterWarranty, setFilterWarranty] = useState<string>('');
+  const [filterDuplicatesOnly, setFilterDuplicatesOnly] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   // Vue principale (Tableau vs Dashboard Statistiques & Analyses)
@@ -718,6 +719,19 @@ export const AssetView: React.FC = () => {
     e.target.value = '';
   };
 
+  // ── DÉTECTION DES DOUBLONS DE NOM D'HÔTE IT (HOSTNAME) ──
+  const hostnameCounts: { [key: string]: number } = {};
+  assets.forEach(a => {
+    if (a.hostname && a.hostname.trim() !== '' && a.hostname.trim() !== '-') {
+      const cleanHost = a.hostname.trim().toLowerCase();
+      hostnameCounts[cleanHost] = (hostnameCounts[cleanHost] || 0) + 1;
+    }
+  });
+
+  const duplicateHostnames = new Set(
+    Object.keys(hostnameCounts).filter(host => hostnameCounts[host] > 1)
+  );
+
   // Extraction dynamique de la liste des pays et emplacements uniques pour les filtres
   const uniqueCountries = Array.from(new Set(assets.map(a => a?.country).filter(Boolean))) as string[];
 
@@ -764,7 +778,12 @@ export const AssetView: React.FC = () => {
       else if (filterWarranty === 'EXPIRED') matchesWarranty = isExpired;
     }
 
-    return matchesSearch && matchesType && matchesStatus && matchesCountry && matchesLocation && matchesUserAssignment && matchesWarranty;
+    let matchesDuplicates = true;
+    if (filterDuplicatesOnly) {
+      matchesDuplicates = !!(asset.hostname && duplicateHostnames.has(asset.hostname.trim().toLowerCase()));
+    }
+
+    return matchesSearch && matchesType && matchesStatus && matchesCountry && matchesLocation && matchesUserAssignment && matchesWarranty && matchesDuplicates;
   });
 
   const resetAllFilters = () => {
@@ -775,6 +794,51 @@ export const AssetView: React.FC = () => {
     setFilterLocation('');
     setFilterUserAssignment('');
     setFilterWarranty('');
+    setFilterDuplicatesOnly(false);
+  };
+
+  // 🧹 PURGE ET SUPPRESSION AUTOMATIQUE DES DOUBLONS DE NOM D'HÔTE
+  const handlePurgeDuplicateHostnames = async () => {
+    const seenHostnames = new Map<string, string>();
+    const duplicateIdsToDelete: string[] = [];
+
+    assets.forEach(a => {
+      if (a.hostname && a.hostname.trim() !== '' && a.hostname.trim() !== '-') {
+        const cleanHost = a.hostname.trim().toLowerCase();
+        if (!seenHostnames.has(cleanHost)) {
+          seenHostnames.set(cleanHost, a.id);
+        } else {
+          duplicateIdsToDelete.push(a.id);
+        }
+      }
+    });
+
+    if (duplicateIdsToDelete.length === 0) {
+      alert("Aucun doublon de nom d'hôte IT n'a été détecté.");
+      return;
+    }
+
+    const confirmMsg = `⚠️ VOULEZ-VOUS SUPPRIMER ${duplicateIdsToDelete.length} DOUBLON(S) DE NOM D'HÔTE IT ?\n\nPour chaque nom d'hôte identique, le 1er équipement sera conservé et toutes les copies secondaires seront supprimées.\n\nCette action est irréversible. Confirmer la suppression ?`;
+    
+    if (!confirm(confirmMsg)) return;
+
+    let deletedCount = 0;
+    for (const id of duplicateIdsToDelete) {
+      try {
+        await api.delete(`/assets/${id}`);
+        deletedCount++;
+      } catch (err) {
+        console.warn(`Erreur suppression doublon ${id}`, err);
+      }
+    }
+
+    setImportDoneNotification(`🧹 Nettoyage terminé avec succès : ${deletedCount} doublon(s) de nom d'hôte IT ont été supprimés !`);
+    setFilterDuplicatesOnly(false);
+    fetchAllData();
+
+    setTimeout(() => {
+      setImportDoneNotification(null);
+    }, 6000);
   };
 
   // ── AGRÉGATIONS ET STATISTIQUES DU PARC INFORMATIQUE ──
@@ -1089,22 +1153,58 @@ export const AssetView: React.FC = () => {
                   <option value="EXPIRED">Garantie Expirée</option>
                 </select>
 
+                {/* 8. Filtre / Alerte Doublons Hôtes IT */}
+                {duplicateHostnames.size > 0 && (
+                  <button 
+                    onClick={() => setFilterDuplicatesOnly(!filterDuplicatesOnly)}
+                    style={{ 
+                      background: filterDuplicatesOnly ? '#ef4444' : 'rgba(239, 68, 68, 0.15)', 
+                      border: '1px solid #ef4444', 
+                      color: filterDuplicatesOnly ? 'white' : '#ef4444', 
+                      padding: '0.5rem 0.8rem', 
+                      borderRadius: '6px', 
+                      cursor: 'pointer', 
+                      fontWeight: 700, 
+                      fontSize: '0.82rem', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '6px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <i className="ph ph-warning-octagon" style={{ fontSize: '1rem' }} />
+                    {filterDuplicatesOnly ? "Affichage : Doublons hôtes uniquement" : `Voir doublons Hôtes (${duplicateHostnames.size})`}
+                  </button>
+                )}
+
                 {/* Bouton de Réinitialisation */}
-                {(searchTerm || filterType || filterStatus || filterCountry || filterLocation || filterUserAssignment || filterWarranty) && (
+                {(searchTerm || filterType || filterStatus || filterCountry || filterLocation || filterUserAssignment || filterWarranty || filterDuplicatesOnly) && (
                   <button 
                     onClick={resetAllFilters}
-                    style={{ background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#ef4444', padding: '0.5rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid var(--border-color)', color: 'white', padding: '0.5rem 0.8rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
                     <i className="ph ph-x" /> Effacer filtres
                   </button>
                 )}
               </div>
 
-              {!isReadOnly && selectedIds.length > 0 && (
-                <button className="btn-primary" style={{ backgroundColor: 'var(--danger)', alignSelf: 'flex-start', marginTop: '10px' }} onClick={handleBulkDelete}>
-                  <i className="ph ph-trash"></i> Supprimer sélectionnés ({selectedIds.length})
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '6px' }}>
+                {!isReadOnly && selectedIds.length > 0 && (
+                  <button className="btn-primary" style={{ backgroundColor: 'var(--danger)' }} onClick={handleBulkDelete}>
+                    <i className="ph ph-trash"></i> Supprimer sélectionnés ({selectedIds.length})
+                  </button>
+                )}
+
+                {!isReadOnly && duplicateHostnames.size > 0 && (
+                  <button 
+                    className="btn-primary" 
+                    style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)', display: 'flex', alignItems: 'center', gap: '6px' }} 
+                    onClick={handlePurgeDuplicateHostnames}
+                  >
+                    <i className="ph ph-broom" style={{ fontSize: '1.1rem' }}></i> Nettoyer & Supprimer Doublons Hôtes IT
+                  </button>
+                )}
+              </div>
             </div>
 
         {/* ── RENDU TABLEAU (DESKTOP / TABLETTE) ── */}
