@@ -727,15 +727,15 @@ export const AssetView: React.FC = () => {
       userName.includes(term) ||
       locName.includes(term);
 
-    const matchesType = filterType === '' || asset.type === filterType;
-    const matchesStatus = filterStatus === '' || asset.status === filterStatus;
-    const matchesCountry = filterCountry === '' || asset.country === filterCountry;
-    const matchesLocation = filterLocation === '' || asset.locationId === filterLocation;
+    const matchesType = filterType === '' || (asset.type || '').toLowerCase() === filterType.toLowerCase() || (filterType === 'Ordinateur Portable' && (asset.type || '').toLowerCase().includes('laptop'));
+    const matchesStatus = filterStatus === '' || (asset.status || '').toUpperCase() === filterStatus.toUpperCase();
+    const matchesCountry = filterCountry === '' || (asset.country || '').toLowerCase() === filterCountry.toLowerCase();
+    const matchesLocation = filterLocation === '' || asset.locationId === filterLocation || asset.location?.id === filterLocation;
 
     let matchesUserAssignment = true;
-    if (filterUserAssignment === 'ASSIGNED') matchesUserAssignment = !!asset.userId;
-    else if (filterUserAssignment === 'UNASSIGNED') matchesUserAssignment = !asset.userId;
-    else if (filterUserAssignment !== '') matchesUserAssignment = asset.userId === filterUserAssignment;
+    if (filterUserAssignment === 'ASSIGNED') matchesUserAssignment = !!asset.userId || !!asset.user;
+    else if (filterUserAssignment === 'UNASSIGNED') matchesUserAssignment = !asset.userId && !asset.user;
+    else if (filterUserAssignment !== '') matchesUserAssignment = asset.userId === filterUserAssignment || asset.user?.id === filterUserAssignment;
 
     let matchesWarranty = true;
     if (filterWarranty !== '') {
