@@ -1140,7 +1140,13 @@ export const AssetView: React.FC = () => {
                     </td>
                     <td>{asset.type || '-'}</td>
                     <td>{asset.serialNumber || '-'}</td>
-                    <td><code style={{ fontSize: '0.82rem', color: '#38bdf8' }}>{asset.hostname || '-'}</code></td>
+                    <td>
+                      {asset.hostname ? (
+                        <code style={{ fontSize: '0.95rem', fontWeight: 800, color: '#7ED957', background: 'rgba(126, 217, 87, 0.1)', padding: '3px 8px', borderRadius: '6px', border: '1px solid rgba(126, 217, 87, 0.25)' }}>
+                          {asset.hostname}
+                        </code>
+                      ) : '-'}
+                    </td>
                     <td>{asset.country || '-'}</td>
                     <td>{asset.warrantyMonths ? asset.warrantyMonths + ' mois' : '-'}</td>
                     <td>
