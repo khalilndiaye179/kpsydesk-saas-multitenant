@@ -74,26 +74,20 @@ function App() {
   const [enteredPassword, setEnteredPassword] = useState(''); // Keep track for first login check
 
   const [publicRoute, setPublicRoute] = useState<'landing' | 'login' | 'signup' | 'pricing' | 'recovery' | 'superadmin-recovery' | 'privacy'>(() => {
-    // 1. Check for ?skip=true in URL parameter
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('skip') === 'true') {
-      localStorage.setItem('hasSeenLandingScreen', 'true');
-      return 'login';
-    }
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('skip') === 'true') {
+        try { localStorage.setItem('hasSeenLandingScreen', 'true'); } catch {}
+        return 'login';
+      }
 
-    // 2. Check if already authenticated (has active token or session)
-    const token = localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('currentUser');
-    if (token) {
-      return 'login'; // Let session check hook handle auto-login
-    }
+      const token = localStorage.getItem('access_token') || localStorage.getItem('token') || localStorage.getItem('currentUser');
+      if (token) return 'login';
 
-    // 3. Check if they have already seen the landing screen
-    const hasSeen = localStorage.getItem('hasSeenLandingScreen') === 'true';
-    if (hasSeen) {
-      return 'login';
-    }
-
-    return 'landing';
+      const hasSeen = localStorage.getItem('hasSeenLandingScreen') === 'true';
+      if (hasSeen) return 'login';
+    } catch {}
+    return 'login';
   });
 
   // Security Steps
@@ -116,7 +110,11 @@ function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [tenantFeatures, setTenantFeatures] = useState<Record<string, boolean>>({});
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
+    try {
+      return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
+    } catch {
+      return 'dark';
+    }
   });
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [userMenuOpen, setUserMenuOpen] = useState<boolean>(false);

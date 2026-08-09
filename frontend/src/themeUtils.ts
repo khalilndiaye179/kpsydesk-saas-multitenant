@@ -5,13 +5,13 @@ const THEME_STORAGE_KEY = 'tenant_theme_colors';
  * À appeler au tout début du chargement de l'app, avant même l'appel API.
  */
 export function applyThemeFromCache() {
-  const cached = localStorage.getItem(THEME_STORAGE_KEY);
-  if (cached) {
-    try {
+  try {
+    const cached = localStorage.getItem(THEME_STORAGE_KEY);
+    if (cached) {
       const { color } = JSON.parse(cached);
       if (color) applyColorToRootEarly(color);
-    } catch { /* ignore */ }
-  }
+    }
+  } catch { /* ignore navigation privée ou localStorage bloqué */ }
 }
 
 /**
